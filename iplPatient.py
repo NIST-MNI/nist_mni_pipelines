@@ -76,9 +76,6 @@ class LngPatient(dict):
         self.run_skullreg = False  # default - do not attempt to run skull registration
         self.large_atrophy = False  # default - do not use the ventricle mask for the linear template creation
         self.geo_corr = False  # default - do not perform distortion correction
-        self.dohc = False  #  default - do not perform hippocampi segmentation
-        self.dovent = False  #  default - do not perform ventricle segmentation
-        self.doface = False  #  default - do not perform FACE cortical segmntation
         self.dodbm = False  #  default - do not perform ventricle segmentation
         self.vbm_options = {} # VBM options
 
@@ -620,13 +617,6 @@ def setFilenames(patient):
         patient[tp].vbm['ixfm']  = vbmdir + 'vbm_xfm_'    + patient.id + '_' + tp + '_inverse.xfm'
         patient[tp].vbm['igrid'] = vbmdir + 'vbm_xfm_'    + patient.id + '_' + tp + '_inverse_grid_0.mnc'
 
-        # FACE
-        patient[tp].face['basedir'] = facedir
-        patient[tp].face['Makefile'] = facedir + 'Makefile'
-        patient[tp].face['qc'] = facedir + os.sep + 'verify' + os.sep \
-            + 'verify_surfaces.jpg'
-        patient[tp].face['lobes'] = facedir + os.sep + 'atlas' + os.sep \
-            + 'lobes.csv'
 
         # TODO: add more needed files
         # end of timepoints
