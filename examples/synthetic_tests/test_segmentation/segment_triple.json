@@ -1,0 +1,25 @@
+{
+  "initial_local_register": true,
+  "non_linear_pairwise": false,
+  "non_linear_register": false,
+
+  "simple_fusion": false,
+  "non_linear_register_level": 4,
+  "pairwise_level": 4,
+
+  "resample_order": 2,
+  "resample_baa": true,
+  "library_preselect": 3,
+  "segment_symmetric": false,
+
+  "fuse_options":
+  {
+      "patch": 1,
+      "search": 1,
+      "threshold": 0.0,
+      "gco_diagonal": false,
+      "gco_wlabel": 0.001,
+      "gco":false
+  }
+
+}

@@ -1,0 +1,28 @@
+{
+  "initial_local_register": false,
+  "non_linear_pairwise": false,
+  "non_linear_register": true,
+  "non_linear_register_ants": true,
+
+  "simple_fusion": false,
+  "non_linear_register_level": 4,
+  "pairwise_level": 4,
+
+  "resample_order": 2,
+  "resample_baa": true,
+  "library_preselect": 3,
+  "segment_symmetric": true,
+
+  "fuse_options":
+  {
+      "patch": 0,
+      "search": 0,
+      "threshold": 0.0,
+      "gco_diagonal": false,
+      "gco_wlabel": 0.001,
+      "gco":false
+  },
+  
+  "pre_filter":  {"denoise":true},
+  "post_filter": {"label_norm":{"order":3}}
+}

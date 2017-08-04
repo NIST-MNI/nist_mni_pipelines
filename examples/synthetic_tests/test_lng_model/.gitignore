@@ -1,0 +1,7 @@
+data
+subjects_cut.lst
+subjects.lst
+*.pyc
+tmp_regress_*
+subjects_fix_vel.lst
+subjects_lim.lst

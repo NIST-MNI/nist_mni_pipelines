@@ -1,0 +1,7 @@
+*.pyc
+*.mnc
+tmp
+tmp_nl
+tmp_sym
+tmp_nl_sym
+tmp_*

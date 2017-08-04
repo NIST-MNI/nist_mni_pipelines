@@ -1,0 +1,11 @@
+{
+  "method" : "AdaBoost",
+  "method_n" : 100,
+  "border_mask": true,
+  "border_mask_width": 3,
+  "use_coord": true,
+  "use_joint": true,
+
+  "train_rounds": 3,
+  "train_cv": 2
+}

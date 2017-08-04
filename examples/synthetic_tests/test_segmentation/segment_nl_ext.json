@@ -1,0 +1,23 @@
+{
+  "local_linear_register": true,
+  "non_linear_pairwise": false,
+  "non_linear_register": false,
+
+  "simple_fusion": false,
+  "non_linear_register_level": 4,
+  "pairwise_level": 4,
+
+  "resample_order": 1,
+  "resample_baa": true,
+  "library_preselect": 3,
+  "segment_symmetric": false,
+  
+  "generate_library": false,
+
+  "fuse_options":
+  {
+      "ext":"cp {model_atlas} {output}",
+      "gco":false
+  }
+
+}

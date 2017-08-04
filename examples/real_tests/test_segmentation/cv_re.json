@@ -1,0 +1,8 @@
+{
+  "validation_library":"ec_library_bbox_re.csv",
+  "iterations":-1,
+  "cv":1,
+  "fuse_variant":"fuse_1",
+  "cv_variant":"cv_2",
+  "regularize_variant":"reg_1"
+}

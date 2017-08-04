@@ -1,0 +1,14 @@
+{
+  "method" : "xgb",
+  "method2" : "xgb",
+  
+  "border_mask": true,
+  "border_mask_width": 3,
+  "patch_size": 0,
+  "use_coord": false,
+  "use_joint": false,
+  "use_raw": true,
+
+  "train_rounds": 3,
+  "train_cv": 2
+}

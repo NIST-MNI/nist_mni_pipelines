@@ -1,0 +1,21 @@
+{
+  "reference_model": "data/ellipse_0_blur.mnc",
+  "reference_mask":  "data/ellipse_0_mask.mnc",
+  "reference_local_model" : null,
+  "reference_local_mask" :  null,
+  "library":"seg_subjects.lst",
+  "build_remap":         [ [1, 1], [2,2], [3,3], [4,4], [5,5], [6,6],  [7,7], [8,8] ],
+  "build_flip_remap":    null,
+  "parts": 0,
+  "classes": 9,
+  "build_symmetric": false,
+  "build_symmetric_flip": false,
+  "symmetric_lut": null,
+  "denoise": false,
+  "denoise_beta": null,
+  "linear_register": false,
+  "local_linear_register": true,
+  "non_linear_register": false,
+  "resample_order": 2,
+  "resample_baa": true
+}

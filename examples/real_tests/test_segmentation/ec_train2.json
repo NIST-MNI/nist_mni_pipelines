@@ -1,0 +1,16 @@
+{
+  "method" :   "AdaBoostPP",
+  "method_n" : 500,
+  
+  "method2" :   "AdaBoostPP",
+  "method2_n" : 500,
+  
+  "border_mask":       true,
+  "border_mask_width": 4,
+  
+  "use_coord": true,
+  "use_joint": true,
+
+  "train_rounds": -1,
+  "train_cv": 1
+}

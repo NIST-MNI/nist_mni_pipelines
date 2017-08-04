@@ -1,0 +1,20 @@
+{
+  "method"    : "AdaBoost",
+  "method_n"  : 200,
+  "border_mask": true,
+  "border_mask_width": 2,
+  "use_coord": true,
+  "use_joint": true,
+  "patch_size": 1  ,
+  "use_raw":    true,
+
+  "normalize_input": false,
+  "primary_features": 1,
+  "max_samples": -1,
+  "sample_pick": "first",
+
+  "antialias_labels": false,
+  "blur_labels": 2,
+  "expit_labels": 2,
+  "normalize_labels": true
+}

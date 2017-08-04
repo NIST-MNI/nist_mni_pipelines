@@ -1,0 +1,5 @@
+# ignore all automatically generated files and outputs
+*.xfm
+*.mnc
+*.txt
+*.log

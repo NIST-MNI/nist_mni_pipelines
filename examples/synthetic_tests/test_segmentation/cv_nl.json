@@ -1,0 +1,5 @@
+{
+  "validation_library":"seg_subjects.lst",
+  "iterations":-1,
+  "cv":1
+}

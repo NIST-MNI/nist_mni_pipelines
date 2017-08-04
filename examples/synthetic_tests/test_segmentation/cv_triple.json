@@ -1,0 +1,9 @@
+{
+  "validation_library":"seg_subjects_triple.lst",
+  "iterations":10,
+  "cv":2,
+  "fuse_variant":"fuse_1",
+  "ec_variant":"ec_1",
+  "cv_variant":"cv_1",
+  "regularize_variant":"reg_1"
+}

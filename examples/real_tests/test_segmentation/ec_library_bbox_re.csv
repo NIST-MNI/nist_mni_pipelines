@@ -1,0 +1,8 @@
+adni_ec_bbox/t1w/ADNI001.mnc,adni_ec_bbox/seg_ec/full_sub001_fin.mnc,test_cv_nl2/ADNI001_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI005.mnc,adni_ec_bbox/seg_ec/full_sub005_fin.mnc,test_cv_nl2/ADNI005_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI006.mnc,adni_ec_bbox/seg_ec/full_sub006_fin.mnc,test_cv_nl2/ADNI006_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI007.mnc,adni_ec_bbox/seg_ec/full_sub007_fin.mnc,test_cv_nl2/ADNI007_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI008.mnc,adni_ec_bbox/seg_ec/full_sub008_fin.mnc,test_cv_nl2/ADNI008_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI009.mnc,adni_ec_bbox/seg_ec/full_sub009_fin.mnc,test_cv_nl2/ADNI009_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI011.mnc,adni_ec_bbox/seg_ec/full_sub011_fin.mnc,test_cv_nl2/ADNI011_cv_2_seg.mnc
+adni_ec_bbox/t1w/ADNI012.mnc,adni_ec_bbox/seg_ec/full_sub012_fin.mnc,test_cv_nl2/ADNI012_cv_2_seg.mnc

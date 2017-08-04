@@ -1,0 +1,12 @@
+MNI Transform File
+%
+% Created by xfmavg with a bit of help from octave
+%    http://www.octave.org/
+%
+% Tue Oct  6 15:22:13 EDT 2015>>>> xfmavg tmp_lsq6_downsample/4/ellipse_1.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_2.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_3.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_4.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_5.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_6.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_7.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_8.mnc_corr.004.xfm tmp_lsq6_downsample/4/ellipse_9.mnc_corr.004.xfm test_std.xfm 
+
+Transform_Type = Linear;
+Linear_Transform =
+ 9.99990658e-01 1.41336445e-03 -4.08492676e-03 3.23595092e-01
+ -1.47889049e-03 9.99869585e-01 -1.60819040e-02 -3.64787875e-01
+ 4.06166498e-03 1.60877979e-02 9.99862333e-01 -5.46621577e-01;

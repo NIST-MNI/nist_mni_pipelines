@@ -1,0 +1,50 @@
+{
+  "reference_model": "snipe_library/NC/T1/ADNI.stx_011_S_0002_m00_bbox_snipe.mnc",
+  "reference_mask":  "snipe_library/whole.mnc",
+  
+  "reference_local_model" : null,
+  "reference_local_mask" :  null,
+  "library":"snipe_library.lst",
+
+  "build_remap":         [ [2,1],
+                           [4,2],
+                           [19,3],
+                           [21,4]],
+                            
+  "build_flip_remap":    null,
+  "parts": 0,
+  "classes": 5,
+  "groups": 2,
+  "build_symmetric": false,
+  "build_symmetric_flip": false,
+  "symmetric_lut": null,
+  "denoise": false,
+  "denoise_beta": null,
+  
+  "initial_register": false,
+  "initial_local_register": false,
+  
+  "non_linear_register": true,
+  "non_linear_register_type": "ants",
+  
+  "non_linear_register_level": 2,
+  "non_linear_register_start": 8,
+  
+  "non_linear_register_options": {
+        "conf":   {"8":100,"4":40,"2":40,"1": 20  },
+        "blur":   {"8":8  ,"4":4 ,"2":2, "1": 1   },
+        "shrink": {"8":8  ,"4":4 ,"2":2, "1": 1   },
+
+        "transformation": "SyN[ .25, 1.0 , 1.0 ]",
+        "use_histogram_matching": true,
+        "cost_function":"CC",
+        "cost_function_par":"1,3,Regular,1.0"
+  },
+  
+  "resample_order": 1,
+  "resample_baa": true,
+  "extend_boundary": 4,
+  "op_mask": "E[2] D[4]",
+  
+  "create_patch_norm_lib": false
+}
