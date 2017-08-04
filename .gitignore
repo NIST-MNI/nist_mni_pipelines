@@ -1,0 +1,8 @@
+# backup files
+*~
+# kate temporary files
+*.kate-swp
+# python precompiled files
+*.pyc
+# minc volumes
+*.mnc
