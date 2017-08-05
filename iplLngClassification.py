@@ -65,9 +65,9 @@ def create_prior(priors,masks,outs,fwhm=8.0):
             if len(outs)==4:
                 minc.calc([priors[i],masks[i]],'if(A[0]<0.5 && A[1]>0.5){1}else{0}', bkg)
             
-            minc.calc([priors[i]],'A[0]>0.5&A[1]<1.5?1:0',csf,labels=True)
-            minc.calc([priors[i]],'A[0]>1.5&A[1]<2.5?1:0',gm ,labels=True)
-            minc.calc([priors[i]],'A[0]>2.5&A[1]<3.5?1:0',wm ,labels=True)
+            minc.calc([priors[i]],'A[0]>0.5&&A[1]<1.5?1:0',csf,labels=True)
+            minc.calc([priors[i]],'A[0]>1.5&&A[1]<2.5?1:0',gm ,labels=True)
+            minc.calc([priors[i]],'A[0]>2.5&&A[1]<3.5?1:0',wm ,labels=True)
             
             wms.append(wm)
             gms.append(gm)
