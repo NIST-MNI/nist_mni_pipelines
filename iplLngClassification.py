@@ -65,9 +65,9 @@ def create_prior(priors,masks,outs,fwhm=8.0):
             if len(outs)==4:
                 minc.calc([priors[i],masks[i]],'if(A[0]<0.5 && A[1]>0.5){1}else{0}', bkg)
             
-            minc.calc([priors[i]],'A[0]>0.5&&A[1]<1.5?1:0',csf,labels=True)
-            minc.calc([priors[i]],'A[0]>1.5&&A[1]<2.5?1:0',gm ,labels=True)
-            minc.calc([priors[i]],'A[0]>2.5&&A[1]<3.5?1:0',wm ,labels=True)
+            minc.calc([priors[i]],'A[0]>0.5&&A[0]<1.5?1:0',csf,labels=True)
+            minc.calc([priors[i]],'A[0]>1.5&&A[0]<2.5?1:0',gm ,labels=True)
+            minc.calc([priors[i]],'A[0]>2.5&&A[0]<3.5?1:0',wm ,labels=True)
             
             wms.append(wm)
             gms.append(gm)
@@ -163,253 +163,242 @@ def lng_classification_v10(patient):
     # ######################
     
     with mincTools() as minc:
-        try:
-            tmpdir  = minc.tempdir
-            tmp_bkg = tmpdir + 'prior_bkg.mnc'
-            tmp_csf = tmpdir + 'prior_csf.mnc'
-            tmp_gm  = tmpdir + 'prior_gm.mnc'
-            tmp_wm  = tmpdir + 'prior_wm.mnc'
+        tmpdir  = minc.tempdir
+        tmp_bkg = tmpdir + 'prior_bkg.mnc'
+        tmp_csf = tmpdir + 'prior_csf.mnc'
+        tmp_gm  = tmpdir + 'prior_gm.mnc'
+        tmp_wm  = tmpdir + 'prior_wm.mnc'
 
-            # take all cross sectional segmentations
+        # take all cross sectional segmentations
 
+        masks = []
+        clss = []
+        for (i, tp) in patient.iteritems():
+            if os.path.exists(tp.stx2_mnc['classification']):
+                clss.append(tp.stx2_mnc['classification'])
+                masks.append(tp.stx2_mnc['masknoles'])
+
+        # create priors - background prior removed by SFE because of syntax problems
+        # comm=['pipeline_create_prior.pl','--o',tmp_bkg+","+tmp_csf+","+tmp_gm+","+tmp_wm,'--mask',",".join(masks)]
+        
+        create_prior(clss, masks, [tmp_bkg, tmp_csf, tmp_gm, tmp_wm])
+
+        # final classification method
+
+        if lng_cls == 'doGC4D':
+
+            # use GC4D for regularization
+            # ############################
+            # NOT READY!!
+            # @warning only using T1-w for GC segmentation
+            # @todo INCLUDE A MASK FOR EVERY TIMEPOINT
+
+            # # @todo include the other sequences ing gcut4D
+            # @todo compute for each timepoint, (mask-tmp_tissue)
+
+            t1 = []
             masks = []
-            clss = []
+
+            gcut1 = []
+            gcut2 = []
+            lngclassif = []
             for (i, tp) in patient.iteritems():
-                if os.path.exists(tp.stx2_mnc['classification']):
-                    clss.append(tp.stx2_mnc['classification'])
+                if os.path.exists(tp.stx2_mnc['t1']):
+                    t1.append(tp.stx2_mnc['t1'])
+                if os.path.exists(tp.stx2_mnc['masknoles']):
                     masks.append(tp.stx2_mnc['masknoles'])
 
-            # create priors - background prior removed by SFE because of syntax problems
-            # comm=['pipeline_create_prior.pl','--o',tmp_bkg+","+tmp_csf+","+tmp_gm+","+tmp_wm,'--mask',",".join(masks)]
-            
-            create_prior(clss, masks, [tmp_bkg, tmp_csf, tmp_gm, tmp_wm])
+                # constructing tmpoutput
 
-            # final classification method
+                gcut1.append(tmpdir + 'gcut1_' + i + '.mnc')
+                gcut2.append(tmpdir + 'gcut2_' + i + '.mnc')
+                lngclassif.append(tp.stx2_mnc['lng_classification'])
 
-            if lng_cls == 'doGC4D':
+            # constructing output list
 
-                # use GC4D for regularization
-                # ############################
-                # NOT READY!!
-                # @warning only using T1-w for GC segmentation
-                # @todo INCLUDE A MASK FOR EVERY TIMEPOINT
+            # 1. Sum gw, wm
 
-                # # @todo include the other sequences ing gcut4D
-                # @todo compute for each timepoint, (mask-tmp_tissue)
+            tmp_black = tmpdir + 'dark_apriori.mnc'
+            tmp_bright = tmpdir + 'bright_apriori.mnc'
+            minc.command(['mincmath', '-add', tmp_wm, tmp_gm, tmp_bright],inputs=[tmp_wm, tmp_gm], outputs=[tmp_bright])
 
-                t1 = []
-                masks = []
+            # 2. Sum csf+gm
+            minc.command(['mincmath', '-add', tmp_gm, tmp_csf, tmp_black],inputs=[tmp_gm, tmp_csf],outputs=[tmp_black])
 
-                gcut1 = []
-                gcut2 = []
-                lngclassif = []
-                for (i, tp) in patient.iteritems():
-                    if os.path.exists(tp.stx2_mnc['t1']):
-                        t1.append(tp.stx2_mnc['t1'])
-                    if os.path.exists(tp.stx2_mnc['masknoles']):
-                        masks.append(tp.stx2_mnc['masknoles'])
+            # 3. Do gc csf vs. gm+wm
 
-                    # constructing tmpoutput
+            tmp_tissue = tmpdir + 'tmp_tissue.mnc'
+            minc.command([ 'gcut4D', '-i', ','.join(t1), '-m',masks,
+                '-t', tmp_bright, '-b', tmp_csf,
+                '-a', '10', '-s', '10', '-n','2', '-p', '-o', ','.join(gcut1) ],
+                inputs=t1 + masks + [tmp_bright, tmp_csf],
+                outputs=gcut1)
 
-                    gcut1.append(tmpdir + 'gcut1_' + i + '.mnc')
-                    gcut2.append(tmpdir + 'gcut2_' + i + '.mnc')
-                    lngclassif.append(tp.stx2_mnc['lng_classification'])
+            # 4. Do gc gm vs.wm in the target of 3
+            #    We include CSF in the GM proba to avoid errors with the csf
+            #    The masks are the output of the first gc
 
-                # constructing output list
+            binary_wm = tmpdir + 'binary_wm.mnc'
+            minc.command(['gcut4D', '-i', ','.join(t1),
+                '-m', ','.join(gcut1),'-t', tmp_wm,'-b', tmp_black, 
+                '-a','10','-s','10', '-n', '2', '-p',
+                '-o', ','.join(gcut2)],t1 + gcut1 + [tmp_wm, tmp_black],outputs=gcut2)
 
-                # 1. Sum gw, wm
+            # There is no background class so a third gc is not necessary
+            # tmp_nottissue=tmpdir+"tmp_nottissue.mnc"
+            # 5. Do gc csf vs. bkg in mask-target of 3.
+            # binary_csf=tmpdir+"binary_csf.mnc"
+            # comm=["gcut4D","-i",",".join(t1),"-m",tmp_nottissue,"-t",tmp_csf,"-b",tmp_bkg,"-a","10","-s","10","-n","2","-o",binary_csf]
 
-                tmp_black = tmpdir + 'dark_apriori.mnc'
-                tmp_bright = tmpdir + 'bright_apriori.mnc'
-                minc.command(['mincmath', '-add', tmp_wm, tmp_gm, tmp_bright],inputs=[tmp_wm, tmp_gm], outputs=[tmp_bright])
+            # 6 Combine results
+            # for each timepoint!!!
 
-                # 2. Sum csf+gm
-                minc.command(['mincmath', '-add', tmp_gm, tmp_csf, tmp_black],inputs=[tmp_gm, tmp_csf],outputs=[tmp_black])
+            for i in range(len(lngclassif)):
+                minc.calc([gcut2[i],gcut1[i],masks[i]],'if(A[0]>0.5){3}else if(A[1]>0.5){2} else if(A[2]>0.5){1} else{0}',
+                    lngclassif[i])
+        
+        elif lng_cls == 'doEM4D':
 
-                # 3. Do gc csf vs. gm+wm
+            # use EM in 4D with trimmed likelihood
+            # #####################################
+            # taking all images, all modalities
 
-                tmp_tissue = tmpdir + 'tmp_tissue.mnc'
-                minc.command([ 'gcut4D', '-i', ','.join(t1), '-m',masks,
-                    '-t', tmp_bright, '-b', tmp_csf,
-                    '-a', '10', '-s', '10', '-n','2', '-p', '-o', ','.join(gcut1) ],
-                    inputs=t1 + masks + [tmp_bright, tmp_csf],
-                    outputs=gcut1)
-
-        # 4. Do gc gm vs.wm in the target of 3
-        #    We include CSF in the GM proba to avoid errors with the csf
-        #    The masks are the output of the first gc
-
-                binary_wm = tmpdir + 'binary_wm.mnc'
-                minc.command(['gcut4D', '-i', ','.join(t1),
-                    '-m', ','.join(gcut1),'-t', tmp_wm,'-b', tmp_black, 
-                    '-a','10','-s','10', '-n', '2', '-p',
-                    '-o', ','.join(gcut2)],t1 + gcut1 + [tmp_wm, tmp_black],outputs=gcut2)
-
-        # There is no background class so a third gc is not necessary
-        # tmp_nottissue=tmpdir+"tmp_nottissue.mnc"
-        # 5. Do gc csf vs. bkg in mask-target of 3.
-        # binary_csf=tmpdir+"binary_csf.mnc"
-        # comm=["gcut4D","-i",",".join(t1),"-m",tmp_nottissue,"-t",tmp_csf,"-b",tmp_bkg,"-a","10","-s","10","-n","2","-o",binary_csf]
-
-        # 6 Combine results
-        # for each timepoint!!!
-
-                for i in range(len(lngclassif)):
-                    minc.calc([gcut2[i],gcut1[i],masks[i]],'if(A[0]>0.5){3}else if(A[1]>0.5){2} else if(A[2]>0.5){1} else{0}',
-                        lngclassif[i])
-            
-            elif lng_cls == 'doEM4D':
-
-                # use EM in 4D with trimmed likelihood
-                # #####################################
-                # taking all images, all modalities
-
-                t1 = []
-                t2 = []
-                pd = []
-                masks = []
-                tps = []
-
-                for (i, tp) in patient.iteritems():
-                    tps.append(i)  # add for later
-                    if os.path.exists(tp.stx2_mnc['t1']):
-                        t1.append(tp.stx2_mnc['t1'])
-                    if os.path.exists(tp.stx2_mnc['masknoles']):
-                        masks.append(tp.stx2_mnc['masknoles'])
-
-                    if not patient.onlyt1 and 't2' in tp.stx2_mnc \
-                        and os.path.exists(tp.stx2_mnc['t2']):
-                        t2.append(tp.stx2_mnc['t2'])
-
-                    if not patient.onlyt1 and 'pd' in tp.stx2_mnc \
-                        and os.path.exists(tp.stx2_mnc['pd']):
-                        pd.append(tp.stx2_mnc['pd'])
-
-        # Check all images are here
-
-                timepoints = len(t1)
-                modalities = 3
-                uset2 = True
-                usepd = True
-                if patient.onlyt1:
-                    modalities = 1
-                    uset2 = False
-                    usept = False
-                else:
-                    if len(t1) is not len(t2):
-                        print(' -- Not the same number of t1 and t2: not using t2 images')
-                        uset2 = False
-                        modalities = modalities - 1
-                    if len(t1) is not len(pd):
-                        print(' -- Not the same number of t1 and t2: not using t2 images')
-                        usepd = False
-                        modalities = modalities - 1
-
-        # ordering images
-
-                images = []
-                for t in range(timepoints):
-                    images.append(t1[t])
-                    if uset2:
-                        images.append(t2[t])
-                    if usepd:
-                        images.append(pd[t])
-
-        # Create command line
-        # @todo change implementation to accept more than one linear mask
-        # the robust is the number of outliers removed from the segmentation
-        # the more sequences the more likely this will be necessary
-
-                if modalities == 1:
-                    robust = '0.01'
-                elif modalities == 2:
-                    robust = '0.02'
-                else:
-                    robust = '0.05'
-                tmpclassif = tmpdir + 'tmpclassif.mnc'
-                comm = [
-                    'Classification',
-                    '-init',
-                    '200:10:1',
-                    '-iter',
-                    '20:100:80',
-                    '-m',
-                    ','.join(masks),
-                    '-t',
-                    str(timepoints),
-                    '-n',
-                    str(modalities),
-                    '-o',
-                    tmpclassif,
-                    '-r',
-                    robust,
-                    '-a',
-                    tmp_csf,
-                    tmp_gm,
-                    tmp_wm,
-                    ]
-                comm.extend(images)
-                classifN = tmpclassif[:-4] + '1.mnc'
-                
-                minc.command(comm,inputs=images,outputs=[classifN])
-
-        # rename the output from classification
-
-                for t in range(timepoints):
-                    classifN = tmpclassif[:-4] + str(t + 1) + '.mnc'
-                    shutil.move(classifN, patient[tps[t]].stx2_mnc['lng_classification'])
-            else:
-
-        # use bayesian classification
-        # ###################################################
-
-                for (i, tp) in patient.iteritems():
-                    
-                    inputs=[tp.stx2_mnc['t1']]
-                    if not patient.onlyt1 and 't2' in tp.stx2_mnc:
-                        inputs.append(tp.stx2_mnc['t2'])
-                    if not patient.onlyt1 and 'pd' in tp.stx2_mnc:
-                        inputs.append(tp.stx2_mnc['pd'])
-                    
-                    classify_prior(inputs,tp.stx2_mnc['lng_classification'],
-                                mask=tp.stx2_mnc['masknoles'],
-                                model_dir=patient.modeldir,
-                                model_name=patient.modelname,
-                                xfm=tp.nl_xfm,
-                                priors=[tmp_csf,tmp_gm,tmp_wm])
-
-            # create QC images for all timepoints
+            t1 = []
+            t2 = []
+            pd = []
+            masks = []
+            tps = []
 
             for (i, tp) in patient.iteritems():
-                minc.qc()
-                comm = [
-                    'minc_qc.pl',
-                    tp.stx2_mnc['t1'],
-                    tp.qc_jpg['lngclassification'],
-                    '--title',
-                    tp.qc_title,
-                    '--image-range',
-                    '0',
-                    '120',
-                    '--mask',
-                    tp.stx2_mnc['lng_classification'],
-                    '--labels-mask',
-                    '--big',
-                    '--clamp',
-                    ]
+                tps.append(i)  # add for later
+                if os.path.exists(tp.stx2_mnc['t1']):
+                    t1.append(tp.stx2_mnc['t1'])
+                if os.path.exists(tp.stx2_mnc['masknoles']):
+                    masks.append(tp.stx2_mnc['masknoles'])
 
-                if command(comm, [tp.stx2_mnc['t1'],
-                        tp.stx2_mnc['lng_classification']],
-                        [tp.qc_jpg['lngclassification']],
-                        patient.cmdfile, patient.logfile):
-                    raise IplError(' -- ERROR : QC :: ' + comm[0])
-        finally:
+                if not patient.onlyt1 and 't2' in tp.stx2_mnc \
+                    and os.path.exists(tp.stx2_mnc['t2']):
+                    t2.append(tp.stx2_mnc['t2'])
 
-        # finally used to clean tmpfiles
+                if not patient.onlyt1 and 'pd' in tp.stx2_mnc \
+                    and os.path.exists(tp.stx2_mnc['pd']):
+                    pd.append(tp.stx2_mnc['pd'])
 
-            rmtree(tmpdir, True)
-            pass
-    return 0
+            # Check all images are here
+
+            timepoints = len(t1)
+            modalities = 3
+            uset2 = True
+            usepd = True
+            if patient.onlyt1:
+                modalities = 1
+                uset2 = False
+                usept = False
+            else:
+                if len(t1) is not len(t2):
+                    print(' -- Not the same number of t1 and t2: not using t2 images')
+                    uset2 = False
+                    modalities = modalities - 1
+                if len(t1) is not len(pd):
+                    print(' -- Not the same number of t1 and t2: not using t2 images')
+                    usepd = False
+                    modalities = modalities - 1
+
+            # ordering images
+
+            images = []
+            for t in range(timepoints):
+                images.append(t1[t])
+                if uset2:
+                    images.append(t2[t])
+                if usepd:
+                    images.append(pd[t])
+
+            # Create command line
+            # @todo change implementation to accept more than one linear mask
+            # the robust is the number of outliers removed from the segmentation
+            # the more sequences the more likely this will be necessary
+
+            if modalities == 1:
+                robust = '0.01'
+            elif modalities == 2:
+                robust = '0.02'
+            else:
+                robust = '0.05'
+            tmpclassif = tmpdir + 'tmpclassif.mnc'
+            comm = [
+                'Classification',
+                '-init',
+                '200:10:1',
+                '-iter',
+                '20:100:80',
+                '-m',
+                ','.join(masks),
+                '-t',
+                str(timepoints),
+                '-n',
+                str(modalities),
+                '-o',
+                tmpclassif,
+                '-r',
+                robust,
+                '-a',
+                tmp_csf,
+                tmp_gm,
+                tmp_wm,
+                ]
+            comm.extend(images)
+            classifN = tmpclassif[:-4] + '1.mnc'
+            
+            minc.command(comm,inputs=images,outputs=[classifN])
+
+    # rename the output from classification
+
+            for t in range(timepoints):
+                classifN = tmpclassif[:-4] + str(t + 1) + '.mnc'
+                shutil.move(classifN, patient[tps[t]].stx2_mnc['lng_classification'])
+        else:
+            # use bayesian classification
+            # ###################################################
+            for (i, tp) in patient.iteritems():
+                
+                inputs=[tp.stx2_mnc['t1']]
+                if not patient.onlyt1 and 't2' in tp.stx2_mnc:
+                    inputs.append(tp.stx2_mnc['t2'])
+                if not patient.onlyt1 and 'pd' in tp.stx2_mnc:
+                    inputs.append(tp.stx2_mnc['pd'])
+                
+                classify_prior(inputs,tp.stx2_mnc['lng_classification'],
+                            mask=tp.stx2_mnc['masknoles'],
+                            model_dir=patient.modeldir,
+                            model_name=patient.modelname,
+                            xfm=tp.nl_xfm,
+                            priors=[tmp_csf,tmp_gm,tmp_wm])
+
+        # create QC images for all timepoints
+
+        for (i, tp) in patient.iteritems():
+            comm = [
+                'minc_qc.pl',
+                tp.stx2_mnc['t1'],
+                tp.qc_jpg['lngclassification'],
+                '--title',
+                tp.qc_title,
+                '--image-range',
+                '0',
+                '120',
+                '--mask',
+                tp.stx2_mnc['lng_classification'],
+                '--labels-mask',
+                '--big',
+                '--clamp',
+                ]
+
+            if command(comm, [tp.stx2_mnc['t1'],
+                    tp.stx2_mnc['lng_classification']],
+                    [tp.qc_jpg['lngclassification']],
+                    patient.cmdfile, patient.logfile):
+                raise IplError(' -- ERROR : QC :: ' + comm[0])
 
 
 if __name__ == '__main__':
