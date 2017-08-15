@@ -10,7 +10,6 @@
 from iplGeneral import *
 from ipl.minc_tools import mincTools,mincError
 
-version = '1.0'
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -22,29 +21,14 @@ def pipeline_lobe_segmentation(patient, tp):
         and os.path.exists(patient[tp].qc_jpg['lobes']):
         print ' -- Lobe Segmentation - Processing already done!'
     else:
-
         lobe_segmentation_v10(patient, tp)  # beast by simon fristed
 
-  # lobes qc
-
-    comm = [
-        'minc_qc.pl',
-        patient[tp].stx2_mnc['t1'],
-        patient[tp].qc_jpg['lobes'],
-        '--title',
-        patient[tp].qc_title,
-        '--image-range',
-        '0',
-        '120',
-        '--mask',
-        patient[tp].stx2_mnc['lobes'],
-        '--labels-mask',
-        '--big',
-        '--clamp',
-        ]
-    command(comm, [patient[tp].stx2_mnc['t1'],
-            patient[tp].stx2_mnc['lobes']], [patient[tp].qc_jpg['lobes'
-            ]])
+    # lobes qc
+    with mincTools() as minc:
+        minc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['lobes'],
+                title=patient[tp].qc_title, image_range=[0,120],
+                mask=patient[tp].stx2_mnc['lobes'],labels_mask=True,
+                big=True,clamp=True   )
 
     return True
 

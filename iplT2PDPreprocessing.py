@@ -111,10 +111,8 @@ def t2pdpreprocessing_v10(patient, tp):
             for s in ['xspace', 'yspace', 'zspace']:
                 spacing = minc.query_attribute(tmpt2, s + ':spacing')
 
-                if spacing.count('irregular'):
-                    command(['minc_modify_header', '-sinsert', s
-                            + ':spacing=regular__', tmpt2], [], [],
-                            patient.cmdfile, patient.logfile)
+                if spacing.count( 'irregular' ):
+                    minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
             
             # 1. Do nlm
             if patient.denoise:
@@ -288,11 +286,9 @@ def t2pdpreprocessing_v10(patient, tp):
 
             for s in ['xspace', 'yspace', 'zspace']:
                 spacing = minc.query_attribute(tmppd, s + ':spacing')
-
-                if spacing.count('irregular'):
-                    command(['minc_modify_header', '-sinsert', s
-                            + ':spacing=regular__', tmppd], [], [],
-                            patient.cmdfile, patient.logfile)
+                
+                if spacing.count( 'irregular' ):
+                    minc.set_attribute( tmppd, s + ':spacing', 'regular__' )
                         
             # 1. Do nlm
             
@@ -498,17 +494,12 @@ def t2pdpreprocessing_v10(patient, tp):
                     like=patient[tp].stx_mnc['t1'])
 
             # 7. Dilate lesions
-            comm = ['mincmorph', '-clobber', '-dilation',
-                    patient[tp].stx_mnc['t2les'], tmpdilated]
-            if command(comm, [patient[tp].stx_mnc['t2les']],
-                       [tmpdilated], patient.cmdfile, patient.logfile):
-                raise IplError(' -- ERROR : preprocessing:: ' + comm[0])
-
+            minc.binary_morphology(patient[tp].stx_mnc['t2les'], 'D[1]' ,tmpdilated)
+            
             # 8. Remove lesions from mask
-
             minc.calc([patient[tp].stx_mnc['mask'],tmpdilated],
                       'A[0]>0.5&&A[1]<0.5?1:0',
-                      patient[tp].stx_mnc['masknoles'])
+                      patient[tp].stx_mnc['masknoles'], labels=True)
 
             # 9. Invert of stx_t1
             ixfm = minc.tmp( 'stx_invert.xfm')

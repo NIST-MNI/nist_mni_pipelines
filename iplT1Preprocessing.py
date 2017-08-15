@@ -21,6 +21,7 @@ from iplGeneral import *
 from iplMincTools import *
 from iplPatient import *
 
+import shutil
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -83,13 +84,8 @@ def t1preprocessing_v10(patient, tp):
         # Manual clp t1
         if 'clp_t1' in patient[tp].manual \
             and os.path.exists(patient[tp].manual['clp_t1']):
-            comm = ['cp', '-f', patient[tp].manual['clp_t1'],
-                    patient[tp].clp['t1']]
-
-            command(comm, [patient[tp].manual['clp_t1']],
-                    [patient[tp].clp['t1']], patient.cmdfile,
-                    patient.logfile)
-
+                
+            shutil.copyfile(patient[tp].manual['clp_t1'],  patient[tp].clp['t1'])
             tmpt1 = patient[tp].clp['t1']  # In order to make the registration if needed
 
         if not os.path.exists( patient[tp].clp['t1'] ):
