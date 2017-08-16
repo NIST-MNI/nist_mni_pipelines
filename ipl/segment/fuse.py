@@ -207,6 +207,9 @@ def fusion_segment( input_scan,
         # special case for training error correction, assume input scan is already pre-processed
         run_in_bbox         = parameters.get('run_in_bbox', False)
         
+        # mask output
+        mask_output         = parameters.get('mask_output', True)
+        
         classes_number      = library_description['classes_number']
         seg_datatype        = library_description['seg_datatype']
         gco_energy          = library_description['gco_energy']
@@ -831,12 +834,12 @@ def fusion_segment( input_scan,
         if qc_options:
             # generate QC images
             output_info['qc'] = generate_qc_image(sample_seg,
-                                                bbox_sample, 
-                                                sample_qc, 
-                                                options=qc_options,
-                                                model=local_model,
-                                                symmetric=segment_symmetric,
-                                                labels=library_description['classes_number'])
+                                    bbox_sample, 
+                                    sample_qc, 
+                                    options=qc_options,
+                                    model=local_model,
+                                    symmetric=segment_symmetric,
+                                    labels=library_description['classes_number'])
         # cleanup if need
         if cleanup:
             shutil.rmtree(work_lib_dir)
@@ -858,7 +861,8 @@ def fusion_segment( input_scan,
         if not run_in_bbox:
             # TODO: apply error correction here
             # rename labels to final results
-            sample_seg_native=MriDataset(name='seg_' + sample.name+out_variant, prefix=work_dir )
+            sample_seg_native = MriDataset(name='seg_' + sample.name+out_variant, prefix=work_dir )
+            sample_seg_native2 = MriDataset(name='seg2_' + sample.name+out_variant, prefix=work_dir )
             
             warp_rename_seg(sample_seg, input_sample, sample_seg_native, 
                             transform=bbox_linear_xfm, invert_transform=True, 
@@ -871,25 +875,34 @@ def fusion_segment( input_scan,
                             resample_order=resample_order,
                             datatype=seg_datatype )
             
-            output_info['sample_seg_native']=sample_seg_native
-            output_info['used_labels']=make_segmented_label_list(library_description,symmetric=segment_symmetric)
+            output_info['sample_seg_native'] = sample_seg_native
+            output_info['used_labels']       = make_segmented_label_list(library_description,symmetric=segment_symmetric)
+            
+            _output_segment=output_segment+'_seg.mnc'
             
             if segment_symmetric:
-                join_left_right(sample_seg_native, output_segment+'_seg.mnc', datatype=seg_datatype)
+                join_left_right(sample_seg_native, sample_seg_native2.seg, datatype=seg_datatype)
             else:
-                shutil.copyfile(sample_seg_native.seg, output_segment+'_seg.mnc')
+                sample_seg_native2=sample_seg_native
+                #shutil.copyfile(sample_seg_native.seg, output_segment+'_seg.mnc')
             
-            output_info['output_segment']=output_segment+'_seg.mnc'
-            
-            output_info['output_volumes']=seg_to_volumes(output_segment+'_seg.mnc', 
-                                                        output_segment+'_vol.json', 
-                                                        label_map=library_description.get('label_map',None))
+            if mask_output and input_mask is not None:
+                #
+                with mincTools() as minc:
+                    minc.calc([sample_seg_native2.seg,input_mask],'A[1]>0.5?A[0]:0',_output_segment,labels=True)
+            else:
+                shutil.copyfile(sample_seg_native2.seg, _output_segment)
+                
+            output_info['output_segment']=_output_segment
+            output_info['output_volumes']=seg_to_volumes(_output_segment, 
+                                            output_segment+'_vol.json', 
+                                            label_map=library_description.get('label_map',None))
             
             output_info['output_volumes_json']=output_segment+'_vol.json'
 
             # TODO: cleanup more here (?)
             
-            return (output_segment+'_seg.mnc',output_info)
+            return (_output_segment,output_info)
         else: # special case, needed to train error correction
             return (sample_seg.seg,output_info)
         
