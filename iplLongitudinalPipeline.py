@@ -123,11 +123,13 @@ def launchPipeline(options):
             
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
-            
+        
+        
         if 'vbm_options' in _opts:
             options.vbm_blur = _opts['vbm_options'].get('vbm_blur',4.0)
             options.vbm_res  = _opts['vbm_options'].get('vbm_res',4 )
             options.vbm_nl   = _opts['vbm_options'].get('vbm_nl',4)
+            options.dovbm    = True
         
         if 'linreg' in _opts:
             options.linreg = _opts['linreg']
@@ -238,21 +240,22 @@ def launchPipeline(options):
 
                 # patients[id].beastresolution=options.beastres
 
-                patients[id].mask_n3 = options.mask_n3
-                patients[id].n4 = options.n4
-                patients[id].donl = options.donl
+                patients[id].mask_n3  = options.mask_n3
+                patients[id].n4       = options.n4
+                patients[id].donl     = options.donl
                 patients[id].dolngcls = options.dolngcls
-                patients[id].dodbm = options.dodbm
-                patients[id].deface = options.deface
-                patients[id].mri3T = options.mri3T
-                patients[id].resample = 'itk'
-                patients[id].fast = options.fast
+                patients[id].dodbm    = options.dodbm
+                patients[id].dovbm    = options.dovbm
+                patients[id].deface   = options.deface
+                
+                patients[id].mri3T    = options.mri3T
+                patients[id].fast     = options.fast
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
-                patients[id].linreg = options.linreg
-                patients[id].add    = options.add
+                patients[id].linreg   = options.linreg
+                patients[id].add      = options.add
                 
                 patients[id].vbm_options = {'vbm_fwhm':options.vbm_blur, 'vbm_resolution':options.vbm_res, 'vbm_nl_level':options.vbm_nl}
                 
@@ -765,6 +768,14 @@ if __name__ == '__main__':
         
     group.add_option(
         '',
+        '--VBM',
+        dest='dovbm',
+        help='Run VBM',
+        default=False,
+        )
+    
+    group.add_option(
+        '',
         '--vbm_blur',
         dest='vbm_blur',
         help='VBM blurring',
@@ -786,6 +797,7 @@ if __name__ == '__main__':
         help='VBM nl level',
         default=4,
         )
+    
 
     # group.add_option("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
 

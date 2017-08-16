@@ -33,12 +33,7 @@ def atlasregistration_v10(patient):
     if patient.fast:  # fast mode
         nl_level = 4
 
-  # nl_method='nlfit_s'
-
-    tmpdir = tempfile.mkdtemp(os.path.basename(sys.argv[0])) + os.sep
-    minc = mincTools(tempdir=tmpdir, resample=patient.resample)
-
-    try:
+    with mincTools() as minc:
         model_t1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
         model_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
 
@@ -50,10 +45,6 @@ def atlasregistration_v10(patient):
             target_mask=model_mask,
             level=nl_level,
             )
-    finally:
-
-        rmtree(tmpdir, True)
-        pass
 
 
 if __name__ == '__main__':

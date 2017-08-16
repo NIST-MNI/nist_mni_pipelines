@@ -68,7 +68,6 @@ class LngPatient(dict):
         self.deface = False  # Do defacing (not implemented yet)
         self.mri3T  = True  # Using 3T
         self.beastresolution = '2'  # Beast resolution
-        self.resample = 'sinc'  # default resampling method: sinc interpolation
         self.fast = False  # default - do everything thoroughly
         self.temporalregu = False  # default no temporal regularization for template creations
         self.run_face = False  # default - do not attempt to run FACE
@@ -76,7 +75,8 @@ class LngPatient(dict):
         self.run_skullreg = False  # default - do not attempt to run skull registration
         self.large_atrophy = False  # default - do not use the ventricle mask for the linear template creation
         self.geo_corr = False  # default - do not perform distortion correction
-        self.dodbm = False  #  default - do not perform ventricle segmentation
+        self.dodbm = False  #  default - do not create dbm files
+        self.dovbm = False  #  default - do not create vbm files
         self.vbm_options = {} # VBM options
 
         # model used in the processing
@@ -170,6 +170,7 @@ class LngPatient(dict):
         print("        - dolngcls     = " + str(self.dolngcls))
         print("        - onlyt1       = " + str(self.onlyt1))
         print('        - dodbm        = ' + str(self.dodbm))
+        print('        - dovbm        = ' + str(self.dovbm))
         print('        - deface       = ' + str(self.deface))
         print('        - mri3T        = ' + str(self.mri3T))
         print('        - modeldir     = ' + self.modeldir)

@@ -37,7 +37,7 @@ def linearatlasregistration_v10(patient, tp):
     # just copy the original image as the patient linear template
 
     
-    with mincTools(resample=patient.resample) as minc:
+    with mincTools() as minc:
 
         # assigning the templates, to the original image.
 

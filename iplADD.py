@@ -76,7 +76,7 @@ def pipeline_run_add_tp(patient, tp):
                 template_seg=template_prefix+'_seg.mnc'
                 output_seg=output_prefix+'_seg.mnc'
                 
-                with mincTools(resample=patient.resample) as minc: 
+                with mincTools() as minc: 
                     minc.resample_labels(template_seg, output_seg,
                             transform=nl_xfm,
                             invert_transform=True,

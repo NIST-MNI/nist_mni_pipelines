@@ -51,7 +51,7 @@ def pipeline_lngtemplate(patient):
 
 def lngtemplate_v11(patient):
 
-    with mincTools(resample=patient.resample) as minc: 
+    with mincTools() as minc: 
         biascorr = False
         atlas = patient.modeldir + os.sep + patient.modelname + '.mnc'
         atlas_mask = patient.modeldir + os.sep + patient.modelname \

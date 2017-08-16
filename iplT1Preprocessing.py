@@ -49,7 +49,7 @@ def pipeline_t1preprocessing(patient, tp):
 
     modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
-    with mincTools( resample=patient.resample ) as minc:
+    with mincTools(  ) as minc:
         minc.qc(
             patient[tp].stx_mnc['t1'],
             patient[tp].qc_jpg['stx_t1'],
@@ -66,7 +66,7 @@ def t1preprocessing_v10(patient, tp):
 
     # # processing data
     # ##################
-    with mincTools(resample=patient.resample) as minc:
+    with mincTools() as minc:
         tmpt1 =    minc.tmp('float_t1.mnc')
         tmpmask =  minc.tmp('mask_t1.mnc')
         tmpn3 =    minc.tmp('n3_t1.mnc')

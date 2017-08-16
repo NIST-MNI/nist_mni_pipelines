@@ -30,7 +30,7 @@ def pipeline_concat(patient, tp):
 
 def concat_v10(patient, tp):
     
-    with mincTools(resample=patient.resample)  as minc:
+    with mincTools()  as minc:
         tmp_xfm = minc.tmp('tmp_concat.xfm')
         minc.xfmconcat([patient[tp].lng_xfm['t1'], patient.nl_xfm] , tmp_xfm)
         

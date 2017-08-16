@@ -60,7 +60,7 @@ def pipeline_t2pdpreprocessing(patient, tp):
     if os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_mnc['t2']):
 
-        with mincTools( resample=patient.resample ) as minc:
+        with mincTools( ) as minc:
             minc.qc(
                 patient[tp].stx_mnc['t1'],
                 patient[tp].qc_jpg['t1t2'],
@@ -76,7 +76,7 @@ def pipeline_t2pdpreprocessing(patient, tp):
 
 def t2pdpreprocessing_v10(patient, tp):
 
-    with  mincTools(resample=patient.resample) as minc:
+    with  mincTools() as minc:
 
         model = patient.modeldir + os.sep + patient.modelname + '.mnc'
         

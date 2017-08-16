@@ -37,7 +37,7 @@ def lobe_segmentation_v10(patient, tp):
 
     # # doing the processing
     # ######################
-    with mincTools(resample=patient.resample)  as minc:
+    with mincTools()  as minc:
 
         identity = minc.tmp('identity.xfm')
         if not os.path.exists(patient[tp].stx2_mnc['lobes']):

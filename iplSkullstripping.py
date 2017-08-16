@@ -128,7 +128,7 @@ def pipeline_stx2_skullstripping(patient, tp):
     if 't2les' in patient[tp].native:
         if not os.path.exists(patient[tp].stx2_mnc['masknoles']):
             # dilate lesions
-            with mincTools(resample=patient.resample) as minc:
+            with mincTools() as minc:
                 minc.binary_morphology(patient[tp].stx2_mnc['t2les'], 'D[1]', minc.tmp('dilated.mnc'))
                 
                 # . Remove lesions from mask

@@ -55,7 +55,7 @@ def pipeline_linearlngtemplate(patient):
         # # Writing QC images
         # ###################
 
-        with mincTools(resample=patient.resample) as minc:
+        with mincTools() as minc:
             atlas_outline = patient.modeldir + os.sep + patient.modelname \
                 + '_outline.mnc'
 
@@ -103,7 +103,7 @@ def post_process(patient,i,tp,transform,biascorr):
     modelt1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
     modelmask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
     
-    with mincTools(resample=patient.resample) as minc:
+    with mincTools() as minc:
         xfmfile = transform.xfm
         
         clp_tp = tp.clp['t1']
@@ -222,7 +222,7 @@ def post_process(patient,i,tp,transform,biascorr):
 
 
 def linearlngtemplate_v11(patient):
-    with mincTools(resample=patient.resample) as minc:
+    with mincTools() as minc:
 
         atlas = patient.modeldir + os.sep + patient.modelname + '.mnc'
         atlas_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
