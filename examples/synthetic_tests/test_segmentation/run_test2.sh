@@ -1,7 +1,11 @@
 #! /bin/sh
 set -e 
 
-PREFIX=$(pwd)/../../python
+PREFIX=$(pwd)/../../../
+
+if [ -z $PARALLEL ];then
+PARALLEL=1
+fi
 
 export PYTHONPATH=$PREFIX:$PYTHONPATH
 
@@ -33,7 +37,7 @@ END
 
 if [ ! -e test_lib/library.json ];then
 # create the library
-python -m scoop -n 4 $PREFIX/iplScoopFusionSegmentation.py  \
+python -m scoop -n $PARALLEL $PREFIX/iplScoopFusionSegmentation.py  \
   --create library_description.json --output test_lib --debug \
   --cleanup
 fi
@@ -96,7 +100,7 @@ cat - > ec_train.json <<END
 END
 
 mkdir -p test_cv
-python -m scoop -n 4 -vvv \
+python -m scoop -n $PARALLEL -vvv \
   $PREFIX/iplScoopFusionSegmentation.py \
    --output test_cv \
    --debug  \
