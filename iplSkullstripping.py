@@ -14,7 +14,9 @@ version = '1.0'
 from iplGeneral import *
 from optparse import OptionParser  # to change when python updates in the machines for argparse
 from optparse import OptionGroup  # to change when python updates in the machines for argparse
-from iplMincTools import *
+
+from ipl.minc_tools import mincTools,mincError
+
 
 
 # Run preprocessing using patient info
@@ -80,7 +82,6 @@ def pipeline_stx2_skullstripping(patient, tp):
   # creation of a structure to pass data to the function
 
     class params:
-
         pass
 
     params.pipeline_version = patient.pipeline_version
@@ -123,45 +124,16 @@ def pipeline_stx2_skullstripping(patient, tp):
     else:
         print ' -- pipeline_stx2_skullstripping is done'
 
-    # copy output files into the structure!
-    # # CHECK IF IT WORKS!
-    # print " -- Copying to patient!"
-    # patient[tp].stx2_mnc["mask"]=params.stx_mask
-    # #patient[tp].stx_ns_mnc["mask"]=None
-    # patient[tp].clp["mask2"]=params.clp_mask
-    # patient[tp].qc_jpg['stx2_mask']=params.qc_stx_mask
 
     if 't2les' in patient[tp].native:
         if not os.path.exists(patient[tp].stx2_mnc['masknoles']):
-
-      # dilate lesions
-
-            tmpdir = tempfile.mkdtemp(os.path.basename(sys.argv[0])) \
-                + os.sep
-            mkdir(tmpdir)
-            tmpdilated = tmpdir + 'dilated.mnc'
-            comm = ['mincmorph', '-clobber', '-dilation',
-                    patient[tp].stx2_mnc['t2les'], tmpdilated]
-            if command(comm, [patient[tp].stx2_mnc['t2les']],
-                       [tmpdilated], patient.cmdfile, patient.logfile):
-                raise IplError(' -- ERROR : preprocessing:: ' + comm[0])
-
-      # . Remove lesions from mask
-
-            comm = [
-                'minccalc',
-                '-clobber',
-                '-expression',
-                'if(A[0]>0.5 && A[1]<0.5){1}else{0}',
-                patient[tp].stx2_mnc['mask'],
-                tmpdilated,
-                patient[tp].stx2_mnc['masknoles'],
-                ]
-            if command(comm, [patient[tp].stx2_mnc['mask'],
-                       tmpdilated], [patient[tp].stx2_mnc['masknoles'
-                       ]], patient.cmdfile, patient.logfile):
-                raise IplError(' -- ERROR : preprocessing:: ' + comm[0])
-            rmtree(tmpdir, True)
+            # dilate lesions
+            with mincTools(resample=patient.resample) as minc:
+                minc.binary_morphology(patient[tp].stx2_mnc['t2les'], 'D[1]', minc.tmp('dilated.mnc'))
+                
+                # . Remove lesions from mask
+                minc.calc( [patient[tp].stx2_mnc['mask'], minc.tmp('dilated.mnc')],
+                        'if(A[0]>0.5 && A[1]<0.5){1}else{0}', patient[tp].stx2_mnc['masknoles'], labels=True)
 
 
 # Last preprocessing (or more common one)
@@ -178,15 +150,12 @@ def runSkullstripping(params):
 
 def skullstripping_v10(params):
 
-    tmpdir = tempfile.mkdtemp(os.path.basename(sys.argv[0])) + os.sep
-    minc = mincTools(tempdir=tmpdir, resample=params.resample)
-
-    try:
+    with mincTools()  as minc:
 
     # temporary images in the dimensions of beast database
 
-        tmpstxt1 = tmpdir + 'beast_stx_t1w.mnc'
-        tmpmask = tmpdir + 'beast_stx_mask.mnc'
+        tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
+        tmpmask = minc.tmp('beast_stx_mask.mnc')
 
         beast_v10_template = params.beastdir + os.sep \
             + 'intersection_mask.mnc'
@@ -219,10 +188,7 @@ def skullstripping_v10(params):
                 beast_v10_conffile[params.final],
                 '-same_resolution',
                 ]
-            if command(comm, [tmpstxt1], [tmpmask], params.cmdfile,
-                       params.logfile):
-                raise IplError(' -- ERROR : skullstripping:: '
-                               + comm[0])
+            minc.command(comm, [tmpstxt1], [tmpmask])
 
             # reformat into the orginial stx size
             minc.resample_labels(tmpmask, params.stx_mask,
@@ -255,13 +221,6 @@ def skullstripping_v10(params):
                 big=True,
                 clamp=True,
                 )
-    finally:
-
-      # finally used to clean tmpfiles
-
-        rmtree(tmpdir, True)
-        pass
-
 
 if __name__ == '__main__':
 

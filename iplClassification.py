@@ -12,7 +12,7 @@ version = '1.0'
 #
 
 from iplGeneral import *
-from iplMincTools import *
+from ipl.minc_tools import mincTools,mincError
 
 
 # Run preprocessing using patient info

@@ -15,7 +15,8 @@ version = '1.0'
 # - vol pol
 
 from iplGeneral import *
-from iplMincTools import *
+from ipl.minc_tools import mincTools,mincError
+
 import shutil
 
 # Run preprocessing using patient info

@@ -17,8 +17,9 @@ version = '1.0'
 from optparse import OptionParser  # to change when python updates in the machines for argparse
 from optparse import OptionGroup  # to change when python updates in the machines for argparse
 
+from ipl.minc_tools import mincTools,mincError
+
 from iplGeneral import *
-from iplMincTools import *
 from iplPatient import *
 
 import shutil

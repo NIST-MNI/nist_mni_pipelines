@@ -42,10 +42,7 @@ def lobe_segmentation_v10(patient, tp):
         identity = minc.tmp('identity.xfm')
         if not os.path.exists(patient[tp].stx2_mnc['lobes']):
             comm = ['param2xfm', identity]
-            if command(comm, [], [identity], patient.cmdfile,
-                       patient.logfile):
-                raise IplError(' -- ERROR : classification :: '
-                               + comm[0])
+            minc.command(comm, [], [identity])
         cls = ''
 
         # Do lobe segment
@@ -64,10 +61,8 @@ def lobe_segmentation_v10(patient, tp):
             '-template', patient.modeldir + os.sep + patient.modelname + '.mnc',
             ]
 
-        if minc.command(comm, [patient[tp].nl_xfm, cls],
-                   [patient[tp].stx2_mnc['lobes']], patient.cmdfile,
-                   patient.logfile):
-            raise IplError( ' -- ERROR : lobe_segmentation :: ' + comm[0] )
+        minc.command(comm, [patient[tp].nl_xfm, cls],
+                     [patient[tp].stx2_mnc['lobes']])
 
         # Compute volumes
         # Classify brain into 3 classes
@@ -91,15 +86,12 @@ def lobe_segmentation_v10(patient, tp):
         if 'pd' in patient[tp].native:
             comm.extend(['--pd', patient[tp].native['pd']])
         
-        if minc.command(comm, [ patient[tp].stx2_mnc['masknoles'],
+        minc.command(comm, [ patient[tp].stx2_mnc['masknoles'],
                    patient[tp].stx2_mnc['classification'],
                    patient[tp].stx2_mnc['lobes'],
                    patient[tp].stx2_xfm['t1']],
-                   [patient[tp].vol['lobes']],
-                   patient.cmdfile, patient.logfile):
-            raise IplError(' -- ERROR : classification :: ' + comm[0])
+                   [patient[tp].vol['lobes']])
     return 0
-
 
 if __name__ == '__main__':
     pass

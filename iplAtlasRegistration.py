@@ -10,9 +10,10 @@ version = '1.0'
 #
 # Atlas registration
 #
+from ipl.minc_tools import mincTools,mincError
 
 from iplGeneral import *
-from iplMincTools import *
+
 
 
 # Run preprocessing using patient info

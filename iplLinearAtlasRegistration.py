@@ -10,7 +10,8 @@
 #
 
 from iplGeneral import *
-from iplMincTools import *
+from ipl.minc_tools import mincTools,mincError
+
 
 version = '1.0'
 
