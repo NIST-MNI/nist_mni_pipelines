@@ -35,7 +35,6 @@ def pipeline_stx_skullstripping(patient, tp):
     params.cmdfile = patient.cmdfile
     params.logfile = patient.logfile
     params.qc_title = patient[tp].qc_title
-    params.resample = patient.resample
 
     params.novolpol = True
 
@@ -89,7 +88,6 @@ def pipeline_stx2_skullstripping(patient, tp):
     params.cmdfile = patient.cmdfile
     params.logfile = patient.logfile
     params.qc_title = patient[tp].qc_title
-    params.resample = patient.resample
 
     params.novolpol = True
     params.final = patient.beastresolution
@@ -264,9 +262,6 @@ if __name__ == '__main__':
                      help='Output mask in stx space')
     group.add_option('-m', '--mask', dest='clp_mask',
                      help='Output mask in native space')
-    group.add_option('-r', '--resample', dest='resample',
-                     help='Resample algorithm: itk,sinc,linear,cubic [%default]'
-                     , default='itk')
 
     parser.add_option_group(group)
 
@@ -295,65 +290,34 @@ if __name__ == '__main__':
     opts.logfile = None
     opts.ns_stx_mask = None
     opts.qc_stx_mask = None
-    tmpdir = tempfile.mkdtemp(os.path.basename(sys.argv[0])) + os.sep
 
-  # mkdir(tmpdir)
-
-    try:
+    with mincTools() as minc:
 
         if opts.stxt1 is None:
-            opts.stxt1 = tmpdir + 'stx_t1.mnc'
+            opts.stxt1 = minc.tmp('stx_t1.mnc')
         if opts.xfmt1 is None:
-            opts.xfmt1 = tmpdir + 'xfm_t1.mnc'
+            opts.xfmt1 = minc.tmp('xfm_t1.mnc')
         if opts.stx_mask is None:
-            opts.stx_mask = tmpdir + 'stx_mask.mnc'
+            opts.stx_mask = minc.tmp('stx_mask.mnc')
 
         xfmparam = []
         if not os.path.exists(opts.stxt1):
 
-       # apply transformation to native image
+            # apply transformation to native image
+            # compute the linear resgistration to atlas
+            minc.linear_register( opts.clpt1,
+                    beast_v10.template, opts.xfmt1,parameters='-lsq9')
 
-            if os.path.exists(opts.xfmt1):
-
-        # apply the given transformation
-
-                pass
-            else:
-
-        # compute the linear resgistration to atlas
-
-                comm = ['bestlinreg.pl', opts.clpt1,
-                        beast_v10.template, opts.xfmt1, '-lsq9']
-                if command(comm, [opts.clpt1, beast_v10.template],
-                           [opts.xfmt1], opts.cmdfile, opts.logfile):
-                    print ' -- ERROR : skullstripping:: ' + comm[0]
-                    sys.exit(1)
-
-      # register to stx space
-
-            comm = [
-                'itk_resample',
-                opts.clpt1,
-                opts.stxt1,
-                '--clobber',
-                '--transform',
-                opts.xfmt1,
-                '--order',
-                '3',
-                '--like',
-                beast_v10.template,
-                ]
-            if command(comm, [opts.clpt1, beast_v10.template,
-                       opts.xfmt1], [opts.stxt1], opts.cmdfile,
-                       opts.logfile):
-                print ' -- ERROR : skullstripping:: ' + comm[0]
-                sys.exit(1)
+            # register to stx space
+            
+            minc.resample_smooth(opts.clpt1,
+                opts.stxt1,transform=opts.xfmt1,like=beast_v10.template)
 
     # beast needs intensity normalization, if not done before, done here
-
+            
         if not opts.novolpol and opts.beast_template:
-            tmpvolpol = tmpdir + 'beast_volpol_t1w.mnc'
-            tmpstats = tmpdir + 'beast_stats.exp'
+            tmpvolpol = minc.tmp('beast_volpol_t1w.mnc')
+            tmpstats = minc.tmp('beast_stats.exp')
 
             comm = [
                 'volume_pol',
@@ -370,11 +334,8 @@ if __name__ == '__main__':
                 '--expfile',
                 tmpstats,
                 ]
-            if command(comm, [opts.stxt1, opts.beast_template],
-                       [tmpstats], opts.cmdfile, opts.logfile):
-                print ' -- ERROR : skullstripping:: ' + comm[0]
-                sys.exit(1)
-
+            minc.command(comm,[opts.stxt1, opts.beast_template],
+                       [tmpstats])
             comm = [
                 'minccalc',
                 '-clobber',
@@ -384,12 +345,9 @@ if __name__ == '__main__':
                 '-short',
                 tmpvolpol,
                 ]
-            if command(comm, [opts.stxt1, tmpstats], [tmpvolpol],
-                       opts.cmdfile, opts.logfile):
-                print ' -- ERROR : skullstripping:: ' + comm[0]
-                sys.exit(1)
+            minc.command(comm, [opts.stxt1, tmpstats], [tmpvolpol])
 
-      # replace the stxt1 image
+            # replace the stxt1 image
 
             opts.stxt1 = tmpvolpol
 
@@ -397,11 +355,5 @@ if __name__ == '__main__':
 
         if opts.savestx is not None:
             comm = ['mv', '-f', opts.stxt1, opts.savestx]
-            command(comm, [opts.stxt1], [opts.savestx])
-    finally:
-
-      # finally used to clean tmpfiles
-
-        rmtree(tmpdir, True)
-        pass
+            minc.command(comm, [opts.stxt1], [opts.savestx])
 
