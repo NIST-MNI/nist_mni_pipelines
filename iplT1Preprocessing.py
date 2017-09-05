@@ -294,7 +294,6 @@ if __name__ == '__main__':
     patient.denoise = opts.denoise
     patient.n4 = opts.n4
     patient.mri3T = opts.mri3T
-    patient.resample = opts.resample
     patient.fast = opts.fast
     patient.modeldir = opts.modeldir
     patient.modelname = opts.modelname
