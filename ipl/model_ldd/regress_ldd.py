@@ -6,7 +6,7 @@ import traceback
 import json
 
 # MINC stuff
-from iplMincTools          import mincTools,mincError
+from ipl.minc_tools import mincTools,mincError
 
 from .structures_ldd       import MriDataset, LDDMriTransform, LDDMRIEncoder,MriDatasetRegress
 from .filter_ldd           import generate_flip_sample, normalize_sample
