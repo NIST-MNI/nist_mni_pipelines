@@ -222,10 +222,7 @@ linear_registration_config={
             'tolerance'   : 0.0005,
             'simplex'     : 4 }
         ]
-            
-    
     }
-    
 
 def linear_register(
     source,
