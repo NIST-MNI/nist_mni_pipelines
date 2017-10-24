@@ -1565,6 +1565,7 @@ class mincTools(temp_files):
         patch=3,
         search=1,
         sigma=None,
+        datatype=None,
         ):
         
         if sigma is None:
@@ -1578,6 +1579,7 @@ class mincTools(temp_files):
           ]
         
         cmd.extend(['--sigma',str(sigma*beta)])
+        if datatype   is not None: cmd.append('--' + datatype)
 
         self.command(cmd,
             inputs=[input], outputs=[output], verbose=self.verbose)
@@ -1589,6 +1591,7 @@ class mincTools(temp_files):
         patch=None,
         search=None,
         regularize=None,
+        datatype=None,
         ):
         cmd=['itk_minc_nonlocal_filter', '--clobber', '--anlm',
             input, output,'--beta', str(beta),]
@@ -1596,6 +1599,7 @@ class mincTools(temp_files):
         if patch      is not None: cmd.extend(['--patch',     str(patch)]     )
         if search     is not None: cmd.extend(['--search',    str(search)]    )
         if regularize is not None: cmd.extend(['--regularize',str(regularize)])
+        if datatype   is not None: cmd.append('--' + datatype)
         
         self.command(cmd,  inputs=[input], outputs=[output], verbose=self.verbose)
 
@@ -1614,8 +1618,8 @@ class mincTools(temp_files):
         big=False,
         clamp=False,
         bbox=False,
-        dicrete=False,
-        dicrete_mask=False,
+        discrete=False,
+        discrete_mask=False,
         red=False,
         green_mask=False,
         cyanred=False,
@@ -1654,9 +1658,9 @@ class mincTools(temp_files):
             cmd.append('--labels')
         if labels_mask:
             cmd.append('--labels-mask')
-        if dicrete:
+        if discrete:
             cmd.append('--discrete')
-        if dicrete_mask:
+        if discrete_mask:
             cmd.append('--discrete-mask')
         if red:
             cmd.append('--red')
