@@ -147,7 +147,7 @@ def qc(
     omax=1
     
     if mask is not None:
-        _ovl=minc2_file(input)
+        _ovl=minc2_file(mask)
         _ovl.setup_standard_order()
         _ovl_data=_ovl.load_complete_volume(minc2_file.MINC2_FLOAT)
         if _ovl_data.shape != data_shape:
