@@ -498,35 +498,34 @@ def register_elastix(
 
             outcome=None
             
-            if measure_mode:
-                # going to read the output of iterations
-                out_=minc.execute_w_output(cmd).split("\n")
-                for l,j in enumerate(out_):
-                    if re.match("^1\:ItNr\s2\:Metric\s.*",j):
-                        outcome=float(out_[l+1].split("\t")[1])
-                        #print(out_[l])
-                        #print(out_[l+1])
-                        break
+            try:
+                if measure_mode:
+                    # going to read the output of iterations
+                    out_=minc.execute_w_output(cmd).split("\n")
+                    for l,j in enumerate(out_):
+                        if re.match("^1\:ItNr\s2\:Metric\s.*",j):
+                            outcome=float(out_[l+1].split("\t")[1])
+                            break
+                    else:
+                        #
+                        print("Elastix output:\n{}".format("\n".join(out_)))
+                        raise minc_tools.mincError("Elastix didn't report measure")
                 else:
-                    #
-                    print("Elastix output:\n{}".format("\n".join(out_)))
-                    raise minc_tools.mincError("Elastix didn't report measure")
-            else:
-                minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
+                    minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
 
-            if  output_par is not None:
-                shutil.copyfile( tmp.tempdir+os.sep+'TransformParameters.0.txt' , output_par )
+                if  output_par is not None:
+                    shutil.copyfile( tmp.tempdir+os.sep+'TransformParameters.0.txt' , output_par )
 
-            if output_xfm is not None:
-                nl_elastix_to_xfm( tmp.tempdir+os.sep+'TransformParameters.0.txt', 
-                                   output_xfm, 
-                                   downsample_grid=downsample_grid, 
-                                   nl=nl)
+                if output_xfm is not None:
+                    nl_elastix_to_xfm( tmp.tempdir+os.sep+'TransformParameters.0.txt', 
+                                    output_xfm, 
+                                    downsample_grid=downsample_grid, 
+                                    nl=nl)
+            finally:
+                if output_log is not None:
+                    shutil.copyfile(tmp.tempdir+os.sep+'elastix.log',output_log)
 
-            if output_log is not None:
-                shutil.copyfile(tmp.tempdir+os.sep+'elastix.log',output_log)
-                
-            return outcome    
+        return outcome
 
 
 def parse_options():

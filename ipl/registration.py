@@ -280,7 +280,7 @@ def linear_register(
     Raises:
         mincError when tool fails
     """
-    print("linear_register source_mask:{} target_mask:{}".format(source_mask,target_mask))
+    print("linear_register s:{} s_m:{} t:{} t_m:{} i:{} ".format(source,source_mask,target,target_mask,init_xfm))
     
     with minc_tools.mincTools(verbose=verbose) as minc:
       if not minc.checkfiles(inputs=[source,target], outputs=[output_xfm]):
@@ -313,7 +313,7 @@ def linear_register(
               if objective is not None:
                   cmd.append(objective)
               if init_xfm is not None:
-                  cmd.extend(['-init_xfm',init_xfm])
+                  cmd.extend(['-init_xfm', init_xfm])
               m.command(cmd, inputs=[source,target], outputs=[output_xfm],verbose=2)
           return output_xfm
       else:
@@ -334,8 +334,8 @@ def linear_register(
                 source_lr=tmp.cache(s_base+'_'+str(downsample)+'.mnc')
                 target_lr=tmp.cache(t_base+'_'+str(downsample)+'.mnc')
                 
-                minc.resample_smooth(source,source_lr, unistep=downsample)
-                minc.resample_smooth(target,target_lr, unistep=downsample)
+                minc.resample_smooth(source, source_lr, unistep=downsample)
+                minc.resample_smooth(target, target_lr, unistep=downsample)
                 
                 if source_mask is not None:
                     source_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
@@ -343,7 +343,6 @@ def linear_register(
                 if target_mask is not None:
                     target_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
                     minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
-                
                 
             # a fitting we shall go...
             for (i,c) in enumerate(conf):
@@ -367,7 +366,6 @@ def linear_register(
                     tmp_source = tmp.cache(s_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'.mnc')
                     if not os.path.exists(tmp_source):
                         minc.blur(source_lr,tmp_source,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
-
                     tmp_target = tmp.cache(t_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'.mnc')
                     if not os.path.exists(tmp_target):
                         minc.blur(target_lr,tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
@@ -387,7 +385,7 @@ def linear_register(
                 if prev_xfm is not None:
                     args.extend(['-transformation', prev_xfm])
                 elif init_xfm is not None:
-                    args.extend(['-transformation',init_xfm,'-est_center'])
+                    args.extend(['-transformation', init_xfm, '-est_center'])
                 elif close:
                     args.append('-identity')
                 else:
@@ -403,13 +401,13 @@ def linear_register(
                         xfm=tmp.cache(s_base+'_init.xfm')
                         minc.param2xfm(xfm,translation=diff)
                         args.extend(['-transformation',xfm])
-                        
+                
                 # masks (even if the blurred image is masked, it's still preferable
                 # to use the mask in minctracc)
                 if source_mask is not None:
-                    args.extend(['-source_mask',source_mask_lr])
+                    args.extend(['-source_mask', source_mask_lr])
                 if target_mask is not None:
-                    args.extend(['-model_mask',target_mask_lr])
+                    args.extend(['-model_mask',  target_mask_lr])
 
                 if noshear:
                     args.extend( ['-w_shear',0,0,0] )
