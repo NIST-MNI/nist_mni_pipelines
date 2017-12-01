@@ -56,11 +56,9 @@ def pipeline_linearlngtemplate(patient):
         # ###################
 
         with mincTools() as minc:
-            atlas_outline = patient.modeldir + os.sep + patient.modelname \
-                + '_outline.mnc'
+            atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
             # qc linear template
-
             minc.qc(
                 patient.template['linear_template'],
                 patient.qc_jpg['linear_template'],
@@ -68,6 +66,7 @@ def pipeline_linearlngtemplate(patient):
                 image_range=[0, 120],
                 big=True,
                 clamp=True,
+                mask=atlas_outline
                 )
 
             # qc stx2

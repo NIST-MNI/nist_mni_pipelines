@@ -45,6 +45,21 @@ def atlasregistration_v10(patient):
             target_mask=model_mask,
             level=nl_level,
             )
+        
+        # make QC image, similar to linear ones
+        if not os.path.exists(patient.qc_jpg['nl_template_nl']):
+            atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+            minc.resample_smooth(patient.template['nl_template'],minc.tmp('nl_atlas.mnc'),transform=patient.nl_xfm)
+            minc.qc(
+                minc.tmp('nl_atlas.mnc'),
+                patient.qc_jpg['nl_template_nl'],
+                title=patient.id,
+                image_range=[0, 120],
+                big=True,
+                clamp=True,
+                mask=atlas_outline
+                )
+        
 
 
 if __name__ == '__main__':
