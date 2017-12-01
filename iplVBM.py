@@ -46,8 +46,8 @@ def resample_modulate( inp, label, xfm, jacobian, out, ref_hires, resolution, fw
     
 def VBM_v10(patient, tp, options):
     vbm_fwhm       = options.get('vbm_fwhm'      ,8)
-    vbm_resolution = options.get('vbm_resolution',4)
-    vbm_nl_level   = options.get('vbm_nl_level'  ,4)
+    vbm_resolution = options.get('vbm_resolution',2)
+    vbm_nl_level   = options.get('vbm_nl_level'  ,None)
     vbm_nl_method  = options.get('vbm_nl_method','minctracc')
     
     
@@ -60,22 +60,31 @@ def VBM_v10(patient, tp, options):
         # create deformation field at required step size
         
         # TODO: create (regularize?) dbm-specific XFM to calculate jacobians only 
-        if vbm_nl_method=='minctracc':
-            minc.non_linear_register_full(
-                patient[tp].stx2_mnc['t1'], modelt1,
-                patient[tp].vbm['xfm'],
-                source_mask=patient[tp].stx2_mnc['mask'], target_mask=modelmask,
-                level=vbm_nl_level )
-        elif vbm_nl_method=='ANTS':
-            minc.non_linear_register_ants(
-                patient[tp].stx2_mnc['t1'], modelt1,
-                patient[tp].vbm['xfm'],
-                source_mask=patient[tp].stx2_mnc['mask'], target_mask=modelmask )
-        else:
-            minc.register_elastix(
-                patient[tp].stx2_mnc['t1'], modelt1,
-                patient[tp].vbm['xfm'],
-                source_mask=patient[tp].stx2_mnc['mask'], target_mask=modelmask )
+        if vbm_nl_method is not None and vbm_nl_level is not None:
+            if vbm_nl_method=='minctracc':
+                minc.non_linear_register_full(
+                    patient[tp].stx2_mnc['t1'], modelt1,
+                    patient[tp].vbm['xfm'],
+                    source_mask=patient[tp].stx2_mnc['mask'], 
+                    target_mask=modelmask,
+                    level=vbm_nl_level )
+            elif vbm_nl_method=='ANTS':
+                minc.non_linear_register_ants(
+                    patient[tp].stx2_mnc['t1'], modelt1,
+                    patient[tp].vbm['xfm'],
+                    source_mask=patient[tp].stx2_mnc['mask'],
+                    target_mask=modelmask )
+            else:
+                minc.register_elastix(
+                    patient[tp].stx2_mnc['t1'], modelt1,
+                    patient[tp].vbm['xfm'],
+                    source_mask=patient[tp].stx2_mnc['mask'], 
+                    target_mask=modelmask )
+        else : # reuse existing xfm files
+            minc.xfm_normalize(patient[tp].nl_xfm, 
+                               modelmask, 
+                               patient[tp].vbm['xfm'], 
+                               step=vbm_resolution)
         
         xfm=patient[tp].vbm['xfm']
         cls=patient[tp].stx2_mnc['classification']
@@ -85,7 +94,7 @@ def VBM_v10(patient, tp, options):
         det=minc.tmp('det.mnc')
         minc.grid_determinant(minc.tmp('nl')+'_grid_0.mnc',det)
 
-        resample_modulate(cls, 1, xfm, det, patient[tp].vbm['csf'], modelmask, vbm_resolution, vbm_fwhm)
+        resample_modulate(cls, 1, xfm, det, patient[tp].vbm['csf'],modelmask, vbm_resolution, vbm_fwhm)
         resample_modulate(cls, 2, xfm, det, patient[tp].vbm['gm'], modelmask,  vbm_resolution, vbm_fwhm)
         resample_modulate(cls, 3, xfm, det, patient[tp].vbm['wm'], modelmask,  vbm_resolution, vbm_fwhm)
         

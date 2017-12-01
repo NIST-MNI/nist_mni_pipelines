@@ -46,19 +46,19 @@ def generate_linear_average(
     corr_samples=[]
     sd=[]
 
-    iterations=options.get('iterations',4)
-    cleanup=options.get('cleanup',False)
-    symmetric=options.get('symmetric',False)
-    reg_type=options.get('reg_type','-lsq12')
-    objective=options.get('objective','-xcorr')
-    linreg=options.get('linreg',None)
-    refine=options.get('refine',False)
-    biascorr=options.get('biascorr',False)
-    biasdist=options.get('biasdist',100)# default for 1.5T
-    qc=options.get('qc',False)
-    downsample=options.get('downsample',None)
-    use_n4=options.get('N4',False)
-    use_median=options.get('median',False)
+    iterations = options.get('iterations',4)
+    cleanup    = options.get('cleanup',False)
+    symmetric  = options.get('symmetric',False)
+    reg_type   = options.get('reg_type','-lsq12')
+    objective  = options.get('objective','-xcorr')
+    linreg     = options.get('linreg',None)
+    refine     = options.get('refine',False)
+    biascorr   = options.get('biascorr',False)
+    biasdist   = options.get('biasdist',100)# default for 1.5T
+    qc         = options.get('qc',False)
+    downsample = options.get('downsample',None)
+    use_n4     = options.get('N4',False)
+    use_median = options.get('median',False)
 
     models=[]
     models_sd=[]

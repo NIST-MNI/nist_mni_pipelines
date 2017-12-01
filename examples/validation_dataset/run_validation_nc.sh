@@ -44,4 +44,5 @@ python -m scoop -vvv -n $PARALLEL $pipeline_dir/iplLongitudinalPipeline.py \
  -o $output_dir \
  --model-dir=$icbm_model_dir \
  --model-name=mni_icbm152_t1_tal_nlin_sym_09c  \
- --beast-dir=$beast_model_dir
+ --beast-dir=$beast_model_dir \
+ --VBM

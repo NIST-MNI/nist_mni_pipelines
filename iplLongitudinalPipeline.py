@@ -127,8 +127,8 @@ def launchPipeline(options):
         
         if 'vbm_options' in _opts:
             options.vbm_blur = _opts['vbm_options'].get('vbm_blur',4.0)
-            options.vbm_res  = _opts['vbm_options'].get('vbm_res',4 )
-            options.vbm_nl   = _opts['vbm_options'].get('vbm_nl',4)
+            options.vbm_res  = _opts['vbm_options'].get('vbm_res',2 )
+            options.vbm_nl   = _opts['vbm_options'].get('vbm_nl',None)
             options.dovbm    = True
         
         if 'linreg' in _opts:
@@ -257,7 +257,10 @@ def launchPipeline(options):
                 patients[id].linreg   = options.linreg
                 patients[id].add      = options.add
                 
-                patients[id].vbm_options = {'vbm_fwhm':options.vbm_blur, 'vbm_resolution':options.vbm_res, 'vbm_nl_level':options.vbm_nl}
+                patients[id].vbm_options = { 'vbm_fwhm':options.vbm_blur, 
+                                             'vbm_resolution':options.vbm_res, 
+                                             'vbm_nl_level':options.vbm_nl,
+                                             'vbm_nl_method':'minctracc' }
                 
                 #if options.sym == True:
                     #patients[id].nl_method = 'bestsym1stepnlreg.pl'
@@ -771,6 +774,7 @@ if __name__ == '__main__':
         '--VBM',
         dest='dovbm',
         help='Run VBM',
+        action='store_true',
         default=False,
         )
     
@@ -787,15 +791,14 @@ if __name__ == '__main__':
         '--vbm_res',
         dest='vbm_res',
         help='VBM resolution',
-        default=4.0,
+        default=2.0,
         )
     
     group.add_option(
         '',
         '--vbm_nl_level',
         dest='vbm_nl',
-        help='VBM nl level',
-        default=4,
+        help='VBM nl level'
         )
     
 
