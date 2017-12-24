@@ -441,7 +441,7 @@ def linear_register(
                     # _reverse should not be first?
                     # Initial transformation will be computed from the from Principal axis 
                     # transformation (PAT).
-                    if c['trans'] is not None and  and c['trans'][0] != '-est_translations':
+                    if c['trans'] is not None  and c['trans'][0] != '-est_translations':
                         args.extend( c['trans'] )
                     else :
                         # will use manual transformation based on shif of CoM, should be identical to '-est_translations' , but it's not
