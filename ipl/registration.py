@@ -432,18 +432,17 @@ def linear_register(
                       args.extend(['-transformation', inv_prev_xfm])
                     else:
                       args.extend(['-transformation', prev_xfm])
-                      
                 elif init_xfm is not None:
                     # _reverse should not be first?
                     args.extend(['-transformation', init_xfm, '-est_center'])
-                elif close:
+                elif close : 
                     args.append('-identity')
                 else:
                     # _reverse should not be first?
                     # Initial transformation will be computed from the from Principal axis 
                     # transformation (PAT).
-                    if c['trans'] != '-est_translations':
-                        args.append( c['trans'] )
+                    if c['trans'] is not None and  and c['trans'][0] != '-est_translations':
+                        args.extend( c['trans'] )
                     else :
                         # will use manual transformation based on shif of CoM, should be identical to '-est_translations' , but it's not
                         com_src=minc.stats(source,['-com','-world_only'],single_value=False)
