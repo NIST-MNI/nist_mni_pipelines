@@ -322,7 +322,7 @@ def linear_register(
 
       # python version
       if conf is None:
-          conf = linear_registration_config['bestlinreg']
+          conf = linear_registration_config['bestlinreg'] # bestlinreg_new ?
       elif not isinstance(conf, list): # assume that it is a string
           if conf in linear_registration_config:
             conf = linear_registration_config[conf]
