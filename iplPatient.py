@@ -447,10 +447,9 @@ def setFilenames(patient):
             #  patient[tp].stx2_xfm[s]  =patient[tp].stx_xfm[s]
             # qc
 
-            patient[tp].qc_jpg['stx_' + s] = patient.qcdir + 'qc_stx_' \
-                + s + '_' + patient.id + '_' + tp + '.jpg'
-            patient[tp].qc_jpg['stx2_' + s] = patient.qcdir \
-                + 'qc_stx2_' + s + '_' + patient.id + '_' + tp + '.jpg'
+            patient[tp].qc_jpg['stx_' + s] = patient.qcdir + 'qc_stx_' + s + '_' + patient.id + '_' + tp + '.jpg'
+            patient[tp].qc_jpg['stx2_' + s] = patient.qcdir + 'qc_stx2_' + s + '_' + patient.id + '_' + tp + '.jpg'
+            patient[tp].qc_jpg['nl_' + s] = patient.qcdir + 'qc_nl_' + s + '_' + patient.id + '_' + tp + '.jpg'
 
             # patient[tp].qc_jpg["stx2v0_"+s]=patient.qcdir+"qc_stx2v0_"+s+"_"+patient.id+"_"+tp+".jpg"
 
@@ -645,7 +644,8 @@ def setFilenames(patient):
     # b) non-linear
 
     patient.qc_jpg['nl_template_prefix'] = patient.qcdir     + 'qc_nl_template_' + patient.id 
-    patient.qc_jpg['nl_template'] = patient.qc_jpg['nl_template_prefix'] + '.jpg'
+    patient.qc_jpg['nl_template']    = patient.qc_jpg['nl_template_prefix'] + '.jpg'
+    patient.qc_jpg['nl_template_nl'] = patient.qc_jpg['nl_template_prefix'] + '_nl.jpg'
     
     patient.qc_jpg['nl_template_rhc']  = patient.qcdir + 'qc_nl_template_rhc' + patient.id + '.jpg'
     patient.qc_jpg['nl_template_lhc']  = patient.qcdir + 'qc_nl_template_lhc' + patient.id + '.jpg'
@@ -683,10 +683,8 @@ def setFilenames(patient):
         # b) non-linear
 
         patient.template['nl_template'] = patient[tp].stx2_mnc['t1']
-        patient.template['nl_template_mask'] = \
-            patient[tp].stx2_mnc['masknoles']
-        patient.nl_xfm = patient[tp].tpdir + 'nl/nl_' + patient.id \
-            + '_' + tp + '.xfm'
+        patient.template['nl_template_mask'] = patient[tp].stx2_mnc['masknoles']
+        patient.nl_xfm = patient[tp].tpdir + 'nl/nl_' + patient.id + '_' + tp + '.xfm'
 
         # setting the patient and the timepoint to be the same nl_xfm
 

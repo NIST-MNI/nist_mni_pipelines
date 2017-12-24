@@ -20,6 +20,7 @@ from iplGeneral import *
 # - Function to read info from the pipeline patient
 # - pipeline_version is employed to select the correct version of the pipeline
 def pipeline_atlasregistration(patient, tp=None):
+    
     if os.path.exists(patient.nl_xfm):
         print(' -- pipeline_atlasregistration exists')
         return True
