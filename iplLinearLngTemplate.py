@@ -226,8 +226,7 @@ def linearlngtemplate_v11(patient):
         atlas = patient.modeldir + os.sep + patient.modelname + '.mnc'
         atlas_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
         atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
-        atlas_mask_novent = patient.modeldir + os.sep \
-            + patient.modelname + '_mask_novent.mnc'
+        atlas_mask_novent = patient.modeldir + os.sep + patient.modelname + '_mask_novent.mnc'
 
         # parameters for the template
         
@@ -241,7 +240,8 @@ def linearlngtemplate_v11(patient):
                     'iterations':4,
                     'cleanup':True,
                     'biascorr':patient.dobiascorr,
-                    'biasdist':biasdist }
+                    'biasdist':biasdist,
+                    'linreg': patient.linreg }
         
         samples= [ [tp.stx_mnc['t1'], tp.stx_mnc['masknoles']]
                         for (i, tp) in patient.iteritems()]

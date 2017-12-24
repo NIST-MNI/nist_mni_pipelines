@@ -221,6 +221,40 @@ linear_registration_config={
             'steps'       : [2, 2, 2],
             'tolerance'   : 0.0005,
             'simplex'     : 4 }
+        ],
+        
+    'bestlinreg_20171223': [      # re-imelementation from Claude's bestlinreg ~ 2016-12-01
+        {   'blur'        : "blur",       # -lsq7 scaling only
+            'parameters'  : "-lsq6",
+            'trans'       : [ '-est_translations' ],
+            'blur_fwhm'   : 8,
+            'steps'       : [4, 4, 4],
+            'tolerance'   : 0.0001,
+            'simplex'     : 16 },
+
+        {   'blur'        : "blur",       # -lsqXX full options
+            'parameters'  : "-lsq7",
+            'trans'       : None,
+            'blur_fwhm'   : 8,
+            'steps'       : [4, 4, 4],
+            'tolerance'   : 0.0001,
+            'simplex'     : 16 },
+
+        {   'blur'        : "blur",
+            'trans'       : None,
+            'blur_fwhm'   : 4,
+            'steps'       : [4, 4, 4],
+            'tolerance'   : 0.0001,
+            'simplex'     : 8 },
+
+        {   'blur'        : "blur",
+            'trans'       : None,
+            'blur_fwhm'   : 2,
+            'steps'       : [2, 2, 2],
+            'tolerance'   : 0.00001,
+            'simplex'     : 4,
+            'reverse'     : True # replace source and target 
+          }
         ]
     }
 
@@ -288,7 +322,7 @@ def linear_register(
 
       # python version
       if conf is None:
-          conf = linear_registration_config['bestlinreg']
+          conf = linear_registration_config['bestlinreg'] # bestlinreg_new ?
       elif not isinstance(conf, list): # assume that it is a string
           if conf in linear_registration_config:
             conf = linear_registration_config[conf]
@@ -351,6 +385,7 @@ def linear_register(
                 if 'parameters' in c and parameters!='-lsq6': # emulate Claude's approach
                     _parameters=c.get('parameters')#'-lsq7'
                 
+                _reverse = c.get('reverse',False) # swap target and source 
                 # set up intermediate files
                 if start is not None and start>c['blur_fwhm']:
                     continue
@@ -370,44 +405,67 @@ def linear_register(
                     if not os.path.exists(tmp_target):
                         minc.blur(target_lr,tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
                 
-                # set up registration
-                args =[  'minctracc', 
-                            tmp_source, tmp_target,'-clobber', 
-                            _parameters , 
-                            objective ,
-                        '-simplex', c['simplex'],
-                        '-tol',     c['tolerance'] ]
+                if _reverse:
+                  args =[  'minctracc', 
+                              tmp_target, tmp_source,'-clobber', 
+                              _parameters , 
+                              objective ,
+                          '-simplex', c['simplex'],
+                          '-tol',     c['tolerance'] ]
+                else:
+                  # set up registration
+                  args =[  'minctracc', 
+                              tmp_source, tmp_target,'-clobber', 
+                              _parameters , 
+                              objective ,
+                          '-simplex', c['simplex'],
+                          '-tol',     c['tolerance'] ]
 
                 args.append('-step')
                 args.extend(c['steps'])
 
                 # Current transformation at this step
                 if prev_xfm is not None:
-                    args.extend(['-transformation', prev_xfm])
+                    if _reverse :
+                      inv_prev_xfm =    tmp.tmp(s_base+'_'+t_base+'_'+str(i)+'_init.xfm')
+                      minc.xfminvert(prev_xfm,inv_prev_xfm)
+                      args.extend(['-transformation', inv_prev_xfm])
+                    else:
+                      args.extend(['-transformation', prev_xfm])
                 elif init_xfm is not None:
+                    # _reverse should not be first?
                     args.extend(['-transformation', init_xfm, '-est_center'])
-                elif close:
+                elif close : 
                     args.append('-identity')
                 else:
+                    # _reverse should not be first?
                     # Initial transformation will be computed from the from Principal axis 
                     # transformation (PAT).
-                    if c['trans']=='-est_translations':
-                        args.extend(c['trans'])
+                    if c['trans'] is not None  and c['trans'][0] != '-est_translations':
+                        args.extend( c['trans'] )
                     else :
                         # will use manual transformation based on shif of CoM, should be identical to '-est_translations' , but it's not
                         com_src=minc.stats(source,['-com','-world_only'],single_value=False)
                         com_trg=minc.stats(target,['-com','-world_only'],single_value=False)
                         diff=[com_trg[k]-com_src[k] for k in range(3)]
                         xfm=tmp.cache(s_base+'_init.xfm')
-                        minc.param2xfm(xfm,translation=diff)
-                        args.extend(['-transformation',xfm])
+                        minc.param2xfm(xfm, translation=diff)
+                        args.extend( ['-transformation',xfm] )
                 
                 # masks (even if the blurred image is masked, it's still preferable
                 # to use the mask in minctracc)
-                if source_mask is not None:
-                    args.extend(['-source_mask', source_mask_lr])
-                if target_mask is not None:
-                    args.extend(['-model_mask',  target_mask_lr])
+                if _reverse :
+                  if source_mask is not None:
+                      args.extend(['-source_mask', source_mask_lr])
+                  if target_mask is not None:
+                      args.extend(['-model_mask',  target_mask_lr])
+                else:
+                  if source_mask is not None:
+                      args.extend(['-model_mask', source_mask_lr])
+                  #disable one mask in this mode
+#                  if target_mask is not None:
+#                      args.extend(['-source_mask',  target_mask_lr])
+                  
 
                 if noshear:
                     args.extend( ['-w_shear',0,0,0] )
@@ -421,8 +479,13 @@ def linear_register(
                 # add files and run registration
                 args.append(tmp_xfm)
                 minc.command([str(ii) for ii in args],inputs=[tmp_source,tmp_target],outputs=[tmp_xfm])
-
-                prev_xfm = tmp_xfm
+                
+                if _reverse:
+                      inv_tmp_xfm =    tmp.tmp(s_base+'_'+t_base+'_'+str(i)+'_sol.xfm')
+                      minc.xfminvert(tmp_xfm,inv_tmp_xfm)
+                      prev_xfm=inv_tmp_xfm
+                else:
+                  prev_xfm = tmp_xfm
                 
             shutil.copyfile(prev_xfm,output_xfm)
             return output_xfm
