@@ -64,7 +64,7 @@ def concat_v10(patient, tp):
             patient[tp].qc_jpg['nl_t1'],
             title=patient[tp].qc_title,
             image_range=[0, 120],
-            mask=modeloutline,
+            mask=atlas_outline,
             big=True,
             clamp=True,
             )
