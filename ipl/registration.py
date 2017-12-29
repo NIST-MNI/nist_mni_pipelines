@@ -223,7 +223,7 @@ linear_registration_config={
             'simplex'     : 4 }
         ],
         
-    'bestlinreg_20171223': [      # re-imelementation from Claude's bestlinreg ~ 2016-12-01
+    'bestlinreg_20171229': [      # re-imelementation from Claude's bestlinreg ~ 2016-12-01
         {   'blur'        : "blur",       # -lsq7 scaling only
             'parameters'  : "-lsq6",
             'trans'       : [ '-est_translations' ],
@@ -251,7 +251,7 @@ linear_registration_config={
             'trans'       : None,
             'blur_fwhm'   : 2,
             'steps'       : [2, 2, 2],
-            'tolerance'   : 0.00001,
+            'tolerance'   : 0.0000001,
             'simplex'     : 4,
             'reverse'     : True # replace source and target 
           }
