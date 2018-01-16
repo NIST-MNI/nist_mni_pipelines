@@ -28,7 +28,7 @@ from .fuse_grading     import *
 
 import traceback
 
-def seg_to_volumes(seg, output_json, label_map=None,grad=None,median=False):
+def seg_to_volumes_grad(seg, output_json, label_map=None,grad=None,median=False):
     with mincTools( verbose=2 ) as m:
         _out=m.label_stats(seg,label_defs=label_map,volume=grad,median=median)
         # convert to a dictionary
@@ -807,7 +807,7 @@ def fusion_grading( input_scan,
         output_info['output_segment']=output_segment+'_seg.mnc'
         output_info['output_grading']=output_segment+'_grad.mnc'
         
-        volumes=seg_to_volumes( output_segment+'_seg.mnc',
+        volumes=seg_to_volumes_grad( output_segment+'_seg.mnc',
                                 output_segment+'_vol.json',
                                 label_map=library_description.get('label_map',None),
                                 grad=output_segment+'_grad.mnc',
@@ -820,7 +820,7 @@ def fusion_grading( input_scan,
         
         return (output_segment+'_seg.mnc', output_segment+'_grad.mnc', volumes, output_info)
     else: # special case, needed to train error correction TODO: remove?
-        volumes=seg_to_volumes(sample_seg.seg, 
+        volumes=seg_to_volumes_grad(sample_seg.seg, 
                                output_segment+'_vol.json', 
                                grad=sample_seg.scan,
                                median=use_median)

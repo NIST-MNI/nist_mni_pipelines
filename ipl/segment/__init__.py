@@ -34,11 +34,15 @@ from .cross_validation import full_cv_fusion_segment
 from .cross_validation import cv_fusion_segment
 from .cross_validation import run_segmentation_experiment
 from .analysis         import calc_similarity_stats
+from .analysis         import volume_measure
+from .analysis         import seg_to_volumes
 
 __all__= ['generate_library', 
           'load_library_info', 
           'cv_fusion_segment', 
           'fusion_segment',
-          'train_ec_loo' ]
+          'train_ec_loo',
+          'volume_measure',
+          'seg_to_volumes']
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

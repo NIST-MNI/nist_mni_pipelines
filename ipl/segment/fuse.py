@@ -11,6 +11,7 @@ import csv
 import copy
 import re
 import json
+import traceback
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
@@ -27,19 +28,8 @@ from .preselect        import *
 from .qc               import *
 from .fuse_segmentations import *
 from .library          import *
-import traceback
+from .analysis         import *
 
-def  seg_to_volumes(seg, output_json, label_map=None):
-    with mincTools( verbose=2 ) as m:
-        out=m.label_stats(seg,label_defs=label_map)
-        with open(output_json,'w') as f:
-            json.dump(out,f,indent=1)
-        return out
-
-def invert_lut(inp):
-    if inp is None:
-        return None
-    return { str(j):str(i) for i,j in inp.iteritems()}
 
 
 def fusion_segment( input_scan,
@@ -893,8 +883,8 @@ def fusion_segment( input_scan,
             else:
                 shutil.copyfile(sample_seg_native2.seg, _output_segment)
                 
-            output_info['output_segment']=_output_segment
-            output_info['output_volumes']=seg_to_volumes(_output_segment, 
+            output_info['output_segment'] = _output_segment
+            output_info['output_volumes'] = seg_to_volumes(_output_segment, 
                                             output_segment+'_vol.json', 
                                             label_map=library_description.get('label_map',None))
             

@@ -146,5 +146,25 @@ def max_error_maps(maps, out_max):
         traceback.print_exc( file=sys.stdout)
         raise
 
+def seg_to_volumes(seg, output_json, label_map=None,volume=None):
+    with mincTools( verbose=2 ) as m:
+        _out=m.label_stats(seg,label_defs=label_map,volume=volume)
+        if volume:
+            out={i[0]: { 'volume':i[1], 'x':i[2], 'y':i[3], 'z': i[4], 'mean_v':i[5], 'integral_v':i[5]*i[1] } for i in _out }
+        else:
+            out={i[0]: { 'volume':i[1], 'x':i[2], 'y':i[3], 'z': i[4] } for i in _out }
+        
+        with open(output_json,'w') as f:
+            json.dump(out,f,indent=1)
+        return out
+
+def invert_lut(inp):
+    if inp is None:
+        return None
+    return { str(j):str(i) for i,j in inp.iteritems()}
+
+
+def volume_measure(seg,library,output_json):
+    return seg_to_volumes(seg,output_json,label_map=library.get('label_map',None))
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

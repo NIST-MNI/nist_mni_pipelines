@@ -61,7 +61,7 @@ def generate_qc_image(sample_seg,
     options -- options as dictionary with following keys:
              lut_file -- LUT file for minclookup, default None
              spectral_mask -- boolean , if spectral mask should be used, default False
-             dicrete_mask -- boolean , if discrete mask should be used, default False
+             discrete_mask -- boolean , if discrete mask should be used, default False
              image_range -- list of two real values
              clamp -- boolean, if range clamp should be used
              big
@@ -79,7 +79,7 @@ def generate_qc_image(sample_seg,
     #TODO: implement advanced features
     qc_lut=options.get('lut_file',None)
     spectral_mask=options.get('spectral_mask',False)
-    dicrete_mask=options.get('dicrete_mask',False)
+    discrete_mask=options.get('discrete_mask',False)
     image_range=options.get('image_range',None)
     clamp=options.get('clamp',False)
     big=options.get('big',False)
@@ -89,7 +89,7 @@ def generate_qc_image(sample_seg,
     
     if qc_lut is not None:
         spectral_mask=False
-        dicrete_mask=True
+        discrete_mask=True
     
     with mincTools() as m:
       seg=sample_seg.seg
@@ -127,7 +127,7 @@ def generate_qc_image(sample_seg,
             clamp=clamp,
             image_range=image_range,
             spectral_mask=spectral_mask,
-            dicrete_mask=dicrete_mask,
+            discrete_mask=discrete_mask,
             mask_lut=qc_lut)
         
         m.qc( scan_f,
@@ -138,7 +138,7 @@ def generate_qc_image(sample_seg,
             big=False,
             clamp=clamp,
             spectral_mask=spectral_mask,
-            dicrete_mask=dicrete_mask,
+            discrete_mask=discrete_mask,
             title=title,
             mask_lut=qc_lut)
         
@@ -155,7 +155,7 @@ def generate_qc_image(sample_seg,
             big=True, 
             mask_lut=qc_lut,
             spectral_mask=spectral_mask,
-            dicrete_mask=dicrete_mask,
+            discrete_mask=discrete_mask,
             clamp=clamp,
             title=title)
         

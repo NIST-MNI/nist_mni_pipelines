@@ -654,15 +654,17 @@ def setFilenames(patient):
     patient.qc_jpg['nl_template_vent'] = patient.qcdir + 'qc_nl_template_vent' + patient.id + '.jpg'
     
     patient.template['nl_template_prefix'] = lngtmpldir + 'nl_template_' + patient.id 
-    patient.template['nl_template'] = patient.template['nl_template_prefix'] + '_t1.mnc'
+    patient.template['nl_template']     = patient.template['nl_template_prefix'] + '_t1.mnc'
     
     patient.template['nl_template_rhc'] = patient.template['nl_template_prefix'] + '_rhc.mnc'
     patient.template['nl_template_lhc'] = patient.template['nl_template_prefix'] + '_lhc.mnc'
     patient.template['nl_template_ram'] = patient.template['nl_template_prefix'] + '_ram.mnc'
     patient.template['nl_template_lam'] = patient.template['nl_template_prefix'] + '_lam.mnc'
-    patient.template['nl_template_vent'] = lngtmpldir + 'nl_template_' + patient.id + '_vent.mnc'
-    patient.template['nl_template_sd'] = lngtmpldir + 'nl_template_'   + patient.id + '_t1_sd.mnc'
-    patient.template['nl_template_mask'] = lngtmpldir + 'nl_template_' + patient.id + '_mask.mnc'
+    patient.template['nl_template_vent']= lngtmpldir + 'nl_template_' + patient.id + '_vent.mnc'
+    
+    patient.template['nl_template_sd']  = patient.template['nl_template_prefix'] + '_t1_sd.mnc'
+    patient.template['nl_template_mask']= patient.template['nl_template_prefix'] + '_mask.mnc'
+    
     patient.template['regu_0'] = patient.template['nl_template_prefix'] + '_t1_regu_param_0_grid.mnc'
     patient.template['regu_1'] = patient.template['nl_template_prefix'] + '_t1_regu_param_1_grid.mnc'
     

@@ -35,81 +35,110 @@ def pipeline_run_add(patient):
     for i,j in enumerate( patient.add ):
         # apply to the template if 'apply_on_template' is on
         output_name=j.get('name','seg_{}'.format(i))
-        if j.get('apply_on_template',False) and 'segment_options' in j and 'segment_library' in j:
-            
-            # let's run segmentation
-            library=j['segment_library']
-            options=j['segment_options']
-            
-            output_prefix=patient.template['nl_template_prefix']+'_'+output_name
-            
-            if isinstance(options, six.string_types):
-                with open(options,'r') as f:
-                    options=json.load(f)
-            
-            library=ipl.segment.load_library_info( library )
-            
-            print(json.dumps(library,indent=2))
-            
-            ipl.segment.fusion_segment(patient.template['nl_template'], 
-                            library,
-                            output_prefix,
-                            input_mask=patient.template['nl_template_mask'],
-                            parameters=options,
-                            work_dir=None,
-                            fuse_variant='seg',
-                            regularize_variant='',
-                            cleanup=True)
-    
-
-# this part runs timepoint-specific part
-def pipeline_run_add_tp(patient, tp):
-    for i,j in enumerate( patient.add ):
-        if 'segment_options' in j and 'segment_library' in j:
-            output_name=j.get('name','seg_{}'.format(i))
-            
-            if j.get('apply_on_template',False):
-                template_prefix=patient.template['nl_template_prefix']+'_'+output_name
-                output_prefix=patient[tp].stx2_mnc['add_prefix']+'_'+output_name
-                
-                nl_xfm=patient[tp].lng_xfm['t1']
-                template_seg=template_prefix+'_seg.mnc'
-                output_seg=output_prefix+'_seg.mnc'
-                
-                with mincTools() as minc: 
-                    minc.resample_labels(template_seg, output_seg,
-                            transform=nl_xfm,
-                            invert_transform=True,
-                            like=patient[tp].stx2_mnc['t1'], 
-                            baa=True,
-                            order=1) # TODO: make it a parameter?
-                
-                # TODO: produce volume measurements
-                # TODO: add option to use jacobian integration
-                patient[tp].add[output_name]={'seg':output_seg,'vol':None} 
-            else:
-                # TODO: use partial volume mode here?
+        
+        if j.get('apply_on_template',False):
+            if 'segment_options' in j and j.get('ANIMAL',False):
+                # use ANIMAL style
+                # TODO:
+                pass
+            elif 'segment_options' in j and j.get('WARP',False):
+                # use just nonlinear warping
+                # TODO:
+                pass
+            elif 'segment_options' in j and 'segment_library' in j:
+                # use label fusion 
                 # let's run segmentation
                 library=j['segment_library']
                 options=j['segment_options']
-                modality=j.get('modality','t1')
+                
+                output_prefix=patient.template['nl_template_prefix']+'_'+output_name
                 
                 if isinstance(options, six.string_types):
                     with open(options,'r') as f:
                         options=json.load(f)
                 
                 library=ipl.segment.load_library_info( library )
-                output_prefix=patient[tp].stx2_mnc['add_prefix']+'_'+output_name
-                
-                ipl.segment.fusion_segment(patient[tp].stx2_mnc[modality], 
+                ipl.segment.fusion_segment(patient.template['nl_template'], 
                                 library,
                                 output_prefix,
-                                input_mask=patient[tp].stx2_mnc["mask"],
+                                input_mask=patient.template['nl_template_mask'],
                                 parameters=options,
                                 work_dir=None,
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
+            
+
+# this part runs timepoint-specific part
+def pipeline_run_add_tp(patient, tp):
+    for i,j in enumerate( patient.add ):
+        if 'segment_options' in j:
+            output_name=j.get('name','seg_{}'.format(i))
+            library=None
+            if 'segment_library' in j:
+                library=ipl.segment.load_library_info( j['segment_library'] )
+                
+            options=j['segment_options']
+            
+            if isinstance(options, six.string_types):
+                with open(options,'r') as f:
+                    options=json.load(f)
+            
+            if j.get('apply_on_template',False):
+                template_prefix=patient.template['nl_template_prefix']+'_'+output_name
+                output_prefix=patient[tp].stx2_mnc['add_prefix']+'_'+output_name
+                
+                nl_xfm=patient[tp].lng_xfm['t1']
+                nl_igrid=patient[tp].lng_igrid['t1']
+                nl_idet=patient[tp].lng_det['t1']
+                
+                template_seg=template_prefix+'_seg.mnc'
+                output_seg=output_prefix+'_seg.mnc'
+                output_vol=output_prefix+'_vol.json'
+                label_map=options.get('label_map',None)
+                
+                if label_map is None and library is not None:
+                    label_map=library.get('label_map',None)
+                
+                with mincTools() as minc: 
+                    if options.get('warp',True):
+                        minc.resample_labels(template_seg, output_seg,
+                                transform=nl_xfm,
+                                invert_transform=True,
+                                like=patient[tp].stx2_mnc['t1'], 
+                                baa=options.get("resample_baa",True),
+                                order=options.get("resample_order",1)) # TODO: make it a parameter?
+                        ipl.segment.seg_to_volumes(output_seg,output_vol,label_defs=label_map)
+
+                    if options.get('jacobian',False):
+                        # perform jacobian integration within each ROI
+                        minc.grid_determinant(nl_igrid,minc.tmp("det.mnc"))
+                        minc.resample_smooth(minc.tmp("det.mnc"), nl_idet, like=template_seg)
+                        ipl.segment.seg_to_volumes(output_seg, output_vol, label_defs=label_map, volume=nl_idet)
+
+                patient[tp].add[output_name]={'seg':output_seg, 'vol':output_vol} 
+            else:
+                # TODO: use partial volume mode here?
+                # let's run segmentation
+                modality=j.get('modality','t1')
+                
+                output_prefix=patient[tp].stx2_mnc['add_prefix']+'_'+output_name
+                if library is not None:
+                    ipl.segment.fusion_segment(patient[tp].stx2_mnc[modality], 
+                                    library,
+                                    output_prefix,
+                                    input_mask=patient[tp].stx2_mnc["mask"],
+                                    parameters=options,
+                                    work_dir=None,
+                                    fuse_variant='seg',
+                                    regularize_variant='',
+                                    cleanup=True)
+                elif j.get('ANIMAL',False):
+                    # TODO: implement ANIMAL
+                    pass
+                elif j.get('WARP', False):
+                    # TODO: implement atlas warping
+                    pass
                 
                 output_seg=output_prefix+'_seg.mnc'
                 output_vol=output_prefix+'_vol.json'

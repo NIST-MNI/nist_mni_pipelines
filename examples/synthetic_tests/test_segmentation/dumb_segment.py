@@ -9,11 +9,32 @@ import cPickle
 import sys
 import json
 import csv
+
 # minc
-import minc
+from minc2_simple import minc2_xfm,minc2_file
+
 
 # numpy
 import numpy as np
+
+
+def load_labels( infile ):
+    #with minc2_file(infile) as m:
+    m=minc2_file(infile)
+    m.setup_standard_order()
+    data=m.load_complete_volume(minc2_file.MINC2_INT)
+    return data
+
+
+def save_labels( outfile, ref, data, history=None ):
+    # TODO: add history
+    out=minc2_file()
+    out.define(ref.store_dims(), minc2_file.MINC2_BYTE, minc2_file.MINC2_INT)
+    out.create(outfile)
+    out.copy_metadata(ref)
+    out.setup_standard_order()
+    out.save_complete_volume(data)
+
 
 def coords(string):
     c=[float(i) for i in string.split(',')]
@@ -60,12 +81,15 @@ def dumb_segment(img, center):
 if __name__ == "__main__":
     options = parse_options()
     print(repr(options))
-    input = minc.Image(options.input)
-    #seg=np.zeros_like( input.data, dtype=np.int32 )
-    center_vox=[(options.center[i]-input.start()[i])/input.spacing()[i] for i in xrange(3)]
-    print(repr(center_vox))
-    seg=dumb_segment(input.data, center_vox)
+    input=minc2_file(options.input)
+    input.setup_standard_order()
+    data=input.load_complete_volume(minc2_file.MINC2_FLOAT)
 
-    minc.Label( data=seg ).save(name=options.output, imitate=options.input)
+    #seg=np.zeros_like( input.data, dtype=np.int32 )
+    center_vox=[(options.center[i]-input.representation_dims()[i].start)/input.representation_dims()[i].step for i in xrange(3)]
+    print(repr(center_vox))
+    seg=dumb_segment(data, center_vox)
+
+    save_labels(options.output, input, seg )
     
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
