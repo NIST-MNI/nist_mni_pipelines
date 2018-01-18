@@ -223,7 +223,7 @@ linear_registration_config={
             'simplex'     : 4 }
         ],
         
-    'bestlinreg_20171229': [      # re-imelementation from Claude's bestlinreg ~ 2016-12-01
+    'bestlinreg_20180117': [      # re-imelementation from Claude's bestlinreg ~ 2016-12-01
         {   'blur'        : "blur",       # -lsq7 scaling only
             'parameters'  : "-lsq6",
             'trans'       : [ '-est_translations' ],
@@ -456,15 +456,15 @@ def linear_register(
                 # to use the mask in minctracc)
                 if _reverse :
                   if source_mask is not None:
+                      args.extend(['-model_mask', source_mask_lr])
+                  #disable one mask in this mode
+                  #if target_mask is not None:
+                      #args.extend(['-source_mask',  target_mask_lr])
+                else:
+                  if source_mask is not None:
                       args.extend(['-source_mask', source_mask_lr])
                   if target_mask is not None:
                       args.extend(['-model_mask',  target_mask_lr])
-                else:
-                  if source_mask is not None:
-                      args.extend(['-model_mask', source_mask_lr])
-                  #disable one mask in this mode
-#                  if target_mask is not None:
-#                      args.extend(['-source_mask',  target_mask_lr])
                   
 
                 if noshear:
