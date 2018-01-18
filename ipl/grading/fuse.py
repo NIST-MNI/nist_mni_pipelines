@@ -273,15 +273,17 @@ def fusion_grading( input_scan,
     
     if pre_filters is not None:
         apply_filter( sample.scan, 
-                      sample_filtered.scan,
-                      pre_filters,
-                      model=model.scan,
-                      model_mask=model.mask)
+                    sample_filtered.scan,
+                    pre_filters,
+                    model=model.scan,
+                    model_mask=model.mask)
         
-        if sample.mask is None:
-            sample_filtered.mask=None
-        # hack 
-        sample_filtered.add=sample.add
+        if sample.mask is not None:
+            shutil.copyfile(sample.mask,sample_filtered.mask)
+        
+        for i,j in enumerate(sample.add):
+            shutil.copyfile(sample.add[i],sample_filtered.add[i])
+            
         sample=sample_filtered
     else:
         sample_filtered=None

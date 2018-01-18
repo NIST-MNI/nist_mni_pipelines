@@ -268,10 +268,12 @@ def fusion_segment( input_scan,
                         model=model.scan,
                         model_mask=model.mask)
             
-            #if sample.mask is None:
-            sample_filtered.mask=sample.mask
-            # hack 
-            sample_filtered.add=sample.add
+            if sample.mask is not None:
+                shutil.copyfile(sample.mask,sample_filtered.mask)
+            
+            for i,j in enumerate(sample.add):
+                shutil.copyfile(sample.add[i],sample_filtered.add[i])
+                
             sample=sample_filtered
         else:
             sample_filtered=None
