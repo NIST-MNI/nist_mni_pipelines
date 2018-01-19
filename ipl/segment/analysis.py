@@ -10,6 +10,7 @@ import os
 import sys
 import csv
 import traceback
+import json
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError

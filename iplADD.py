@@ -101,20 +101,20 @@ def pipeline_run_add_tp(patient, tp):
                     label_map=library.get('label_map',None)
                 
                 with mincTools() as minc: 
-                    if options.get('warp',True):
+                    if options.get('warp',False):
                         minc.resample_labels(template_seg, output_seg,
                                 transform=nl_xfm,
                                 invert_transform=True,
                                 like=patient[tp].stx2_mnc['t1'], 
                                 baa=options.get("resample_baa",True),
                                 order=options.get("resample_order",1)) # TODO: make it a parameter?
-                        ipl.segment.seg_to_volumes(output_seg,output_vol,label_defs=label_map)
+                        ipl.segment.seg_to_volumes(output_seg,output_vol,label_map=label_map)
 
                     if options.get('jacobian',False):
                         # perform jacobian integration within each ROI
                         minc.grid_determinant(nl_igrid,minc.tmp("det.mnc"))
                         minc.resample_smooth(minc.tmp("det.mnc"), nl_idet, like=template_seg)
-                        ipl.segment.seg_to_volumes(output_seg, output_vol, label_defs=label_map, volume=nl_idet)
+                        ipl.segment.seg_to_volumes(output_seg, output_vol, label_map=label_map, volume=nl_idet)
 
                 patient[tp].add[output_name]={'seg':output_seg, 'vol':output_vol} 
             else:
