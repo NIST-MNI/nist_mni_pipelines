@@ -27,7 +27,7 @@ def filter_sample(input,output,filters,model=None):
                      model_mask=model.mask)
     
 
-def apply_filter(input, output, filters, model=None, input_mask=None, model_mask=None, input_labels=None,model_labels=None):
+def apply_filter(input, output, filters, model=None, input_mask=None, model_mask=None, input_labels=None, model_labels=None):
     output_scan=input
     try:
         if filters is not None :
@@ -43,6 +43,14 @@ def apply_filter(input, output, filters, model=None, input_mask=None, model_mask
                         
                     output_scan  =m.tmp('denoised.mnc')
                     
+                if filters.get('nuc',False) : # RUN N4
+                    m.n4(output_scan,output_corr=m.tmp('n4.mnc'),
+                        weight_mask=input_mask,
+                        shrink=parameters.get('nuc_shrink',4),
+                        iter=parameters.get('nuc_iter','200x200x200'),
+                        distance=parameters.get('nuc_distance',200))
+                    output_scan  =m.tmp('n4.mnc')
+                
                 if filters.get('normalize',False) and model is not None:
                     
                     if filters.get('nuyl',False):

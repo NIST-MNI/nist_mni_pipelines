@@ -798,10 +798,7 @@ def fusion_grading( input_scan,
         output_info['sample_seg_native']=sample_seg_native
         
         if segment_symmetric:
-            # TODO: join left and right if needed
-            #raise "Not implemented yet!"
-            # join sample_seg_native.seg and sample_seg_native.seg_f into a single file
-            join_left_right(sample_seg_native, output_segment+'_seg.mnc',output_segment+'_grad.mnc', datatype=seg_datatype)
+            join_left_right(sample_seg_native, output_segment+'_seg.mnc', output_segment+'_grad.mnc', datatype=seg_datatype)
         else:
             shutil.copyfile(sample_seg_native.seg, output_segment+'_seg.mnc')
             shutil.copyfile(sample_seg_native.scan, output_segment+'_grad.mnc')
