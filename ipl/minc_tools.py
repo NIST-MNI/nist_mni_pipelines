@@ -1626,6 +1626,9 @@ class mincTools(temp_files):
         cyanred_mask=False,
         mask_lut=None
         ):
+        """
+        Generate QC image
+        """
 
         cmd = ['minc_qc.pl', input, output, '--verbose']
 
@@ -1689,6 +1692,9 @@ class mincTools(temp_files):
         output,
         datatype=None
         ):
+        """
+        Calculate jacobina determinant using grid file
+        """
         cmd=['grid_proc','--det',input,output]
         if datatype is not None:
             cmd.append('--'+datatype)

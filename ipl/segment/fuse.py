@@ -157,16 +157,16 @@ def fusion_segment( input_scan,
         local_reg_objective       =  initial_local_register.get('objective','-xcorr')
         
         # if non-linear registraiton should be performed for library creation
-        do_nonlinear_register     = parameters.get('non_linear_register', False )
+        do_nonlinear_register     =  parameters.get('non_linear_register', False )
         
         # generate segmentation library (needed for label fusion, not needed for single atlas based or external tool)
-        generate_library          = parameters.get('generate_library', True )
+        generate_library          =  parameters.get('generate_library', True )
         
         # if non-linear registraiton should be performed pairwise
-        do_pairwise          =parameters.get('non_linear_pairwise', False )
+        do_pairwise               =  parameters.get('non_linear_pairwise', False )
         # if pairwise registration should be performed using ANTS
-        do_pairwise_ants     =    parameters.get('non_linear_pairwise_ants', True )
-        pairwise_register_type   = parameters.get( 'non_linear_pairwise_type',None)
+        do_pairwise_ants          =  parameters.get('non_linear_pairwise_ants', True )
+        pairwise_register_type    =  parameters.get( 'non_linear_pairwise_type',None)
         if pairwise_register_type is None:
             if do_pairwise_ants: 
                 pairwise_register_type='ants'

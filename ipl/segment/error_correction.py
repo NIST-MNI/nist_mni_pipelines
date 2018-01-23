@@ -20,7 +20,9 @@ import sys
 import json
 import csv
 # minc
-import minc
+#import minc
+from minc2_simple import minc2_xfm,minc2_file
+ 
 
 # numpy
 import numpy as np
