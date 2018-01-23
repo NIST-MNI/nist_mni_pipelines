@@ -222,7 +222,7 @@ class cache_files(temp_files):
 class mincTools(temp_files):
     """minc toolkit interface , mostly basic tools """
 
-    def __init__(self, tempdir=None, resample=None, verbose=2, prefix=None):
+    def __init__(self, tempdir=None, resample=None, verbose=0, prefix=None):
         super(mincTools,self).__init__(tempdir=tempdir,prefix=prefix)
         # TODO: add some options?
         self.resample = resample
@@ -1065,15 +1065,19 @@ class mincTools(temp_files):
         r=self.execute_w_output(args,verbose=self.verbose)
         return float(r)
         
-    def noise_estimate(self, input):
+    def noise_estimate(self, input, mask=None):
         '''Estimate file noise (absolute)'''
         args=['noise_estimate',input]
+        if mask is not None:
+            args.extend(['--mask',mask])
         r=self.execute_w_output(args,verbose=self.verbose)
         return float(r)
     
-    def snr_estimate(self, input):
+    def snr_estimate(self, input, mask=None):
         '''Estimate file SNR'''
         args=['noise_estimate',input,'--snr']
+        if mask is not None:
+            args.extend(['--mask',mask])
         r=self.execute_w_output(args,verbose=self.verbose)
         return float(r)
 
@@ -2115,6 +2119,13 @@ class mincTools(temp_files):
         _threshold_2=self.stats(input,['-pctT',str(pct2)])
         self.calc([input],"clamp(A[0],{},{})".format(_threshold_1,_threshold_2),output)
         
+    def relx_fit(self,inputs,output,mask=None,t2_max=1.0):
+        cmd = ['t2_fit']
+        cmd.extend(inputs)
+        cmd.append(output)
+        if mask is not None:
+            cmd.extend(['--mask',mask])
+        self.command(cmd, inputs=inputs,outputs=[output], verbose=self.verbose)
         
 if __name__ == '__main__':
     pass
