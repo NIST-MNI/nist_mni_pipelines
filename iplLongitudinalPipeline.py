@@ -510,7 +510,6 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
     try:
         #pipeline_classification(patient, tp)
         #patient.write(patient.pickle)  # copy new images in the pickle
-            
         if patient.dodbm:
             pipeline_lngDBM(patient, tp)
 
@@ -524,6 +523,7 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         pipeline_vbm(patient, tp, vbm_options)
         
         if len(patient.add)>0:
+            print("Running add step:{}".format(patient.add))
             pipeline_run_add_tp(patient,tp)
         
         
@@ -591,7 +591,6 @@ def runPipeline(pickle):
 
             # using the stx2 space, we do the non-linear template
             # ################################################
-
             pipeline_lngtemplate(patient)
 
             if len(patient.add)>0:
