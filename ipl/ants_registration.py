@@ -24,7 +24,7 @@ import math
 import argparse
 
 # local stuff
-import minc_tools
+from . import minc_tools
 
 
 # hack to make it work on Python 3

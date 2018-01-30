@@ -22,10 +22,10 @@ import math
 import inspect
 
 # local stuff
-import registration
-import ants_registration
-import dd_registration
-import elastix_registration
+from . import registration
+from . import ants_registration
+from . import dd_registration
+from . import elastix_registration
 
 # hack to make it work on Python 3
 try:
