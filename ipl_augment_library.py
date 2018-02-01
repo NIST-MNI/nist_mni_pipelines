@@ -152,7 +152,7 @@ def gen_sample(library, options, sample, i, r):
 if __name__ == '__main__':
     options = parse_options()
     
-    if library is not None and output os not None:
+    if library is not None and output is not None:
         library=load_library_info( options.library )
         #
         if not os.path.exists(options.output):
