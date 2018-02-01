@@ -56,13 +56,82 @@ def parse_options():
     return options
 
 
+def gen_sample(library,options,sample,i,r):
+    # TODO: generate random non-linear transformations
+    # generate sample name (?) 
+    # TODO: there should be a way to specify sample IDs and keep the associated with original data
+                #my_execute(string.format('param2xfm -clob -translation %f %f %f -rotations %f %f %f -scales %f %f %f %s',
+                                        #torch.uniform(-opt.shift,opt.shift),torch.uniform(-opt.shift,opt.shift),torch.uniform(-opt.shift,opt.shift),
+                                        #torch.uniform(-opt.rot,opt.rot),torch.uniform(-opt.rot,opt.rot),torch.uniform(-opt.rot,opt.rot),
+                                        #1.0+torch.uniform(-opt.scale,opt.scale),1.0+torch.uniform(-opt.scale,opt.scale),1.0+torch.uniform(-opt.scale,opt.scale),
+                                        #xfm))
+
+                #-- apply transformation
+                #local j
+
+                #local baa=""
+                #if opt.order[features+1]>0 then baa="--baa" end
+                
+                #if opt.classes then
+                  #local infile_seg =s[features+1]
+                  #local outfile_seg=o[features+1]
+                  #my_execute(string.format('itk_resample --byte --labels --order %d  %s %s --transform %s --clob %s', opt.order[features+1], infile_seg, outfile_seg, xfm, baa))
+                #end
+
+                #for j=1,features do
+                    #local _infile  = s[j]
+                    #local _outfile = o[j]
+                    
+                    #if not opt.discrete[j] then
+                        #if not opt.randomize or opt.randomize[j] then
+                         #if opt.gain==nil or opt.gain==0.0 or model_opts.mean_sd==nil then
+                            #my_execute(string.format('itk_resample --order %d %s %s --transform %s  --clob',opt.order[j], _infile, _outfile, xfm))
+                         #else
+                            #local tmp_res=paths.tmpname()..'.mnc'
+                            #local tmp_random=paths.tmpname()..'.mnc'
+                            
+                            #local rval=torch.uniform(-opt.intensity, opt.intensity)*model_opts.mean_sd.sd[j]
+                            
+                            #my_execute(string.format('itk_resample --order %d %s %s --transform %s  --clob', opt.order[j], _infile, tmp_res, xfm ))
+                            #my_execute(string.format('random_volume --float --gauss %f %s %s --clob',opt.gain*model_opts.mean_sd.sd[j], tmp_res, tmp_random ))
+                            #my_execute(string.format("minccalc -q -clob -express 'A[0]*(1+%f)+A[1]' %s %s %s",rval, tmp_res, tmp_random, _outfile ))
+                            
+                            #os.remove(tmp_res)
+                            #os.remove(tmp_random)
+                         #end
+                        #else
+                         #-- no need to resample this feature
+                        #end
+                    #else
+                        #my_execute(string.format('itk_resample --labels --order %d %s %s --transform %s --clob %s',opt.order[j], _infile, _outfile, xfm,baa))    
+    
+    
+
+
 if __name__ == '__main__':
     options = parse_options()
     
     if library is not None and output os not None:
         library=load_library_info( options.library )
 
-
+        outputs=[]
+        for i,j in enumerate(library['library']):
+            # submit jobs to produce augmented dataset
+            for r in range(options.n):
+                outputs.append( futures.submit( 
+                    gen_sample,library,options,j,i,r) )
+        #
+        futures.wait(outputs, return_when=futures.ALL_COMPLETED)
+        # generate a new library for augmented samples
+        augmented_library=copy.deepcopy(library)
+        # wipe all the samples
+        augmented_library['library']=[]
+        
+        
+        augmented_library['library']=[j.result() for j in outputs]
+        
+        # save new library description
+        save_library_info(augmented_library,options.output)
     else:
         print("Run with --help")
         
