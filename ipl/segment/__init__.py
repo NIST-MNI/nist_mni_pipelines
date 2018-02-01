@@ -43,6 +43,7 @@ __all__= ['generate_library',
           'fusion_segment',
           'train_ec_loo',
           'volume_measure',
-          'seg_to_volumes']
+          'seg_to_volumes',
+          'save_library_info']
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

@@ -65,6 +65,11 @@ def parse_options():
                         default=2,
                         help="Resample order")
     
+    parser.add_argument('--debug',
+                        action="store_true",
+                        default=False,
+                        help="Debug")
+    
     options = parser.parse_args()
     
     if options.debug:
@@ -84,7 +89,7 @@ def gen_sample(library, options, sample, i, r):
         out_xfm=options.output+os.sep+vol_name+out_suffix+'_rnd.xfm'
         
         m.param2xfm(out_xfm,
-                    scales=((np.random.rand(3)-0.5)*2*options.scale).tolist(),
+                    scales=((np.random.rand(3)-0.5)*2*options.scale/100.0+1.0).tolist(),
                     translation=((np.random.rand(3)-0.5)*2*options.shift).tolist(),
                     rotations=((np.random.rand(3)-0.5)*2*options.rot).tolist())
         
@@ -150,7 +155,7 @@ def gen_sample(library, options, sample, i, r):
 if __name__ == '__main__':
     options = parse_options()
     
-    if library is not None and output is not None:
+    if options.library is not None and options.output is not None:
         library=load_library_info( options.library )
         #
         if not os.path.exists(options.output):
