@@ -30,6 +30,9 @@ from ipl.segment import *
 # scoop parallel execution
 from scoop import futures, shared
 
+# 
+import numpy as np
+
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Build fusion segmentation library')
@@ -48,6 +51,22 @@ def parse_options():
                         help="Aplification factor (i.e number of augmented samples per each input",
                         dest='n')
     
+    parser.add_argument('--shift',type=float,
+                        default=1.0,
+                        help="Shift magnitude (mm)")
+    
+    parser.add_argument('--rot',type=float,
+                        default=4.0,
+                        help="rotation magnitude (degree)")
+    
+    parser.add_argument('--scale',type=float,
+                        default=2.0,
+                        help="Scale magnitude (percent)")
+    
+    parser.add_argument('--order',type=int,
+                        default=2,
+                        help="Resample order")
+    
     options = parser.parse_args()
     
     if options.debug:
@@ -56,7 +75,29 @@ def parse_options():
     return options
 
 
-def gen_sample(library,options,sample,i,r):
+def gen_sample(library, options, sample, i, r):
+    with mincTools() as m:
+        vol_name=os.path.basename(sample[0]).split('.mnc',1)[0]
+        seg_name=os.path.basename(sample[1]).split('.mnc',1)[0]
+        
+        out_suffix="_{:03d}".format(r)
+        out_vol=options.output+os.sep+vol_name+out_suffix+'.mnc'
+        out_seg=options.output+os.sep+seg_name+out_suffix+'.mnc'
+        out_xfm=options.output+os.sep+vol_name+out_suffix+'_rnd.xfm'
+        
+        m.param2xfm(out_xfm,
+                    scales=((np.random.rand(3)-0.5)*2*options.scale).tolist(),
+                    translation=((np.random.rand(3)-0.5)*2*options.shift).tolist(),
+                    rotations=((np.random.rand(3)-0.5)*2*options.rot).tolist())
+        
+        m.resample_labels(sample[1],out_seg,order=options.order,transform=out_xfm)
+        m.resample_smooth(sample[0],out_vol,order=options.order,transform=out_xfm)
+        
+        return [out_vol, out_seg, out_xfm ]
+        
+        
+        
+    
     # TODO: generate random non-linear transformations
     # generate sample name (?) 
     # TODO: there should be a way to specify sample IDs and keep the associated with original data
@@ -113,20 +154,23 @@ if __name__ == '__main__':
     
     if library is not None and output os not None:
         library=load_library_info( options.library )
-
+        #
+        if not os.path.exists(options.output):
+            os.makedirs(options.output)
+        #
+        
         outputs=[]
         for i,j in enumerate(library['library']):
             # submit jobs to produce augmented dataset
             for r in range(options.n):
                 outputs.append( futures.submit( 
-                    gen_sample,library,options,j,i,r) )
+                    gen_sample,library,options,j,i,r ) )
         #
         futures.wait(outputs, return_when=futures.ALL_COMPLETED)
         # generate a new library for augmented samples
         augmented_library=copy.deepcopy(library)
         # wipe all the samples
         augmented_library['library']=[]
-        
         
         augmented_library['library']=[j.result() for j in outputs]
         
