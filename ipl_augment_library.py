@@ -39,12 +39,10 @@ def parse_options():
     
     
     parser.add_argument('library',
-                    help="Specify input library for error correction",
-                    dest='library')
+                    help="Specify input library for error correction"                  )
     
     parser.add_argument('output',
-                    help="Output directory",
-                    dest='output')
+                    help="Output directory")
     
     parser.add_argument('-n',type=int,
                         default=10,
