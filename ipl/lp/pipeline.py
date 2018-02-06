@@ -154,7 +154,7 @@ def standard_pipeline(info,
                 work_dir=output_dir+os.sep+'work_'+dataset_id
 
             run_qc    = options.get('qc',{})
-            run_aqc   = options.get('aqc',{})
+            run_aqc   = options.get('aqc',None)
             run_nl    = options.get('nl',True)
             run_cls   = options.get('cls',True)
             run_lobes = options.get('lobes',True)
