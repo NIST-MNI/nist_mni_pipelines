@@ -83,7 +83,7 @@ def pipeline_run_add(patient):
                                 output_prefix,
                                 input_mask=patient.template['nl_template_mask'],
                                 parameters=options,
-                                work_dir=None,
+                                work_dir=options.workdir+'template_'+output_name,
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
@@ -190,7 +190,7 @@ def pipeline_run_add_tp(patient, tp):
                                 output_prefix,
                                 input_mask=patient[tp].stx2_mnc["mask"],
                                 parameters=options,
-                                work_dir=None,
+                                work_dir=options.workdir+output_name,
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
