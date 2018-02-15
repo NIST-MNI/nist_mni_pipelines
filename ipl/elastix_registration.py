@@ -27,6 +27,114 @@ import argparse
 from . import minc_tools
 
 
+__lin_template="""
+(FixedInternalImagePixelType "float")
+(MovingInternalImagePixelType "float")
+(FixedImageDimension 3)
+(MovingImageDimension 3)
+(UseDirectionCosines "true")
+
+(AutomaticTransformInitialization "{automatic_transform_init}")
+(AutomaticTransformInitializationMethod "{automatic_transform_init_method}")
+(AutomaticScalesEstimation "true")
+(AutomaticParameterEstimation "true")
+(MaximumStepLength {max_step})
+
+(Registration         "MultiResolutionRegistration")
+(Interpolator         "BSplineInterpolator" )
+(ResampleInterpolator "FinalBSplineInterpolator" )
+(Resampler            "DefaultResampler" )
+(ShowExactMetricValue {exact_metric})
+
+(FixedImagePyramid  "FixedSmoothingImagePyramid")
+(MovingImagePyramid "MovingSmoothingImagePyramid")
+
+(Optimizer "{optimizer}")
+(Transform "{transform}")
+(Metric    "{metric}")
+
+(HowToCombineTransforms "Compose")
+
+(ErodeMask "false")
+
+(NumberOfResolutions {resolutions})
+
+(ImagePyramidSchedule {pyramid} )
+
+(MaximumNumberOfIterations {iterations} )
+(RequiredRatioOfValidSamples 0.01)
+(MaximumNumberOfSamplingAttempts 10)
+
+(NumberOfSpatialSamples  {samples} )
+
+(NewSamplesEveryIteration "{new_samples}")
+(ImageSampler             "{sampler}" )
+
+(BSplineInterpolationOrder 1)
+
+(FinalBSplineInterpolationOrder 1)
+
+(DefaultPixelValue    0)
+
+(WriteResultImage     "false")
+
+// The pixel type and format of the resulting deformed moving image
+(ResultImagePixelType  "float")
+(ResultImageFormat     "mnc")
+"""
+
+__nl_template='''
+(FixedInternalImagePixelType "float")
+(MovingInternalImagePixelType "float")
+(FixedImageDimension 3)
+(MovingImageDimension 3)
+(UseDirectionCosines "true")
+
+(Registration "MultiResolutionRegistration")
+(Interpolator "BSplineInterpolator" )
+(ResampleInterpolator "FinalBSplineInterpolator" )
+(Resampler "DefaultResampler" )
+(ShowExactMetricValue {exact_metric})
+
+(FixedImagePyramid  "FixedSmoothingImagePyramid")
+(MovingImagePyramid "MovingSmoothingImagePyramid")
+
+(Optimizer "{optimizer}")
+(Transform "{transform}")
+(Metric "{metric}")
+(MaximumStepLength {max_step})
+
+(FinalGridSpacingInPhysicalUnits {grid_spacing})
+
+(HowToCombineTransforms "Compose")
+
+(ErodeMask "false")
+
+(NumberOfResolutions {resolutions})
+
+(ImagePyramidSchedule {pyramid} )
+
+(MaximumNumberOfIterations {iterations} )
+(MaximumNumberOfSamplingAttempts 10)
+
+(NumberOfSpatialSamples {samples} )
+
+(NewSamplesEveryIteration "{new_samples}")
+(ImageSampler "{sampler}" )
+
+(BSplineInterpolationOrder 1)
+
+(FinalBSplineInterpolationOrder 1)
+
+(DefaultPixelValue 0)
+
+(WriteResultImage "false")
+
+// The pixel type and format of the resulting deformed moving image
+(ResultImagePixelType "float")
+(ResultImageFormat "mnc")
+'''
+
 # hack to make it work on Python 3
 try:
     unicode = unicode
@@ -156,6 +264,45 @@ def nl_elastix_to_xfm(elastix_par, xfm, downsample_grid=None, nl=True ):
         return xfm
 
 
+def gen_config_nl(parameters, output_txt, template=__nl_template, def_iterations=4000):
+    with open(output_txt,'w') as p:
+        p.write(template.format(
+                            optimizer= parameters.get('optimizer','AdaptiveStochasticGradientDescent'),
+                            transform= parameters.get('transform','BSplineTransform'),
+                            metric=    parameters.get('metric','AdvancedNormalizedCorrelation'),
+                            resolutions=parameters.get('resolutions',3),
+                            pyramid=   parameters.get('pyramid','8 8 8 4 4 4 2 2 2'),
+                            iterations=parameters.get('iterations',def_iterations),
+                            samples=   parameters.get('samples',4096),
+                            sampler=   parameters.get('sampler',"Random"),
+                            grid_spacing=parameters.get('grid_spacing',10),
+                            max_step  =parameters.get('max_step',"1.0"),
+                            exact_metric=str(parameters.get("exact_metric",False)).lower(),
+                            new_samples=str(parameters.get("new_samples",True)).lower(),
+                            ))    
+    
+def gen_config_lin(parameters,output_txt,template=__lin_template,def_iterations=4000):
+    with open(output_txt,'w') as p:
+        p.write(template.format(
+                            optimizer=parameters.get('optimizer','CMAEvolutionStrategy'),
+                            transform=parameters.get('transform','SimilarityTransform'),
+                            metric=parameters.get('metric','AdvancedNormalizedCorrelation'),
+                            resolutions=parameters.get('resolutions', 3 ),
+                            pyramid=parameters.get('pyramid','8 8 8  4 4 4  2 2 2'),
+                            iterations=parameters.get('iterations',def_iterations),
+                            samples=parameters.get('samples',4096),
+                            sampler=parameters.get('sampler',"Random"),
+                            max_step=parameters.get('max_step',"1.0"),
+                            automatic_transform_init=str(parameters.get("automatic_transform_init",True)).lower(), # to convert True to true
+                            automatic_transform_init_method=parameters.get("automatic_transform_init_method","CenterOfGravity"),
+                            exact_metric=str(parameters.get("exact_metric",False)).lower(),
+                            new_samples=str(parameters.get("new_samples",True)).lower(),
+                            ))
+        if 'grid_spacing' in parameters: p.write("(SampleGridSpacing {})\n".format(parameters['grid_spacing']))
+        #if 'exact_metric' in parameters: p.write("(ShowExactMetricValue {})\n".format(parameters['exact_metric']))
+        if 'exact_metric_spacing' in parameters: p.write("(ExactMetricSampleGridSpacing {})\n".format(parameters['exact_metric_spacing']))
+
+
 def register_elastix( 
                     source, target, 
                     output_par = None,
@@ -171,7 +318,8 @@ def register_elastix(
                     nl         = True,
                     output_log = None,
                     tags       = None,
-                    verbose    = 0):
+                    verbose    = 0,
+                    iterations = None):
     """Run elastix with given parameters
     Arguments:
     source -- source image (fixed image in Elastix notation)
@@ -245,8 +393,12 @@ def register_elastix(
     downsample_grid -- Downsample output nl-deformation
     nl          -- flag to show that non-linear version is running
     output_log  -- output log
+    iterations  -- run several iterations (restarting elastix), will be done automatically if parameters is a list
     """
-    with minc_tools.mincTools(verbose=2) as minc:
+    with minc_tools.mincTools() as minc:
+        
+        def_iterations=4000
+        
         s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
         t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
 
@@ -299,231 +451,117 @@ def register_elastix(
                     target_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
                     minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
             
-            par_file=tmp.cache('parameters.txt')
-            measure_mode=False
-            # paramters could be stored in a file
-            if isinstance(parameters, dict):
-                use_mask=parameters.get('use_mask',True)
-                measure_mode=parameters.get('measure',False)
-                def_iterations=4000
-                
-                if measure_mode:
-                    def_iterations=1
-                    parameters['iterations']=1
-                
-                with open(par_file,'w') as p:
-                    if nl:
-                        p.write('''
-(FixedInternalImagePixelType "float")
-(MovingInternalImagePixelType "float")
-(FixedImageDimension 3)
-(MovingImageDimension 3)
-(UseDirectionCosines "true")
-
-(Registration "MultiResolutionRegistration")
-(Interpolator "BSplineInterpolator" )
-(ResampleInterpolator "FinalBSplineInterpolator" )
-(Resampler "DefaultResampler" )
-(ShowExactMetricValue {exact_metric})
-
-(FixedImagePyramid  "FixedSmoothingImagePyramid")
-(MovingImagePyramid "MovingSmoothingImagePyramid")
-
-(Optimizer "{optimizer}")
-(Transform "{transform}")
-(Metric "{metric}")
-(MaximumStepLength {max_step})
-
-(FinalGridSpacingInPhysicalUnits {grid_spacing})
-
-(HowToCombineTransforms "Compose")
-
-(ErodeMask "false")
-
-(NumberOfResolutions {resolutions})
-
-(ImagePyramidSchedule {pyramid} )
-
-(MaximumNumberOfIterations {iterations} )
-(MaximumNumberOfSamplingAttempts 10)
-
-(NumberOfSpatialSamples {samples} )
-
-(NewSamplesEveryIteration "{new_samples}")
-(ImageSampler "{sampler}" )
-
-(BSplineInterpolationOrder 1)
-
-(FinalBSplineInterpolationOrder 1)
-
-(DefaultPixelValue 0)
-
-(WriteResultImage "false")
-
-// The pixel type and format of the resulting deformed moving image
-(ResultImagePixelType "float")
-(ResultImageFormat "mnc")
-'''.format(                 optimizer= parameters.get('optimizer','AdaptiveStochasticGradientDescent'),
-                            transform= parameters.get('transform','BSplineTransform'),
-                            metric=    parameters.get('metric','AdvancedNormalizedCorrelation'),
-                            resolutions=parameters.get('resolutions',3),
-                            pyramid=   parameters.get('pyramid','8 8 8 4 4 4 2 2 2'),
-                            iterations=parameters.get('iterations',def_iterations),
-                            samples=   parameters.get('samples',4096),
-                            sampler=   parameters.get('sampler',"Random"),
-                            grid_spacing=parameters.get('grid_spacing',10),
-                            max_step  =parameters.get('max_step',"1.0"),
-                            exact_metric=str(parameters.get("exact_metric",False)).lower(),
-                            new_samples=str(parameters.get("new_samples",True)).lower(),
-                            ))
-                    else:
-                        p.write('''
-(FixedInternalImagePixelType "float")
-(MovingInternalImagePixelType "float")
-(FixedImageDimension 3)
-(MovingImageDimension 3)
-(UseDirectionCosines "true")
-
-(AutomaticTransformInitialization "{automatic_transform_init}")
-(AutomaticTransformInitializationMethod "{automatic_transform_init_method}")
-(AutomaticScalesEstimation "true")
-(AutomaticParameterEstimation "true")
-(MaximumStepLength {max_step})
-
-(Registration         "MultiResolutionRegistration")
-(Interpolator         "BSplineInterpolator" )
-(ResampleInterpolator "FinalBSplineInterpolator" )
-(Resampler            "DefaultResampler" )
-(ShowExactMetricValue {exact_metric})
-
-(FixedImagePyramid  "FixedSmoothingImagePyramid")
-(MovingImagePyramid "MovingSmoothingImagePyramid")
-
-(Optimizer "{optimizer}")
-(Transform "{transform}")
-(Metric    "{metric}")
-
-(HowToCombineTransforms "Compose")
-
-(ErodeMask "false")
-
-(NumberOfResolutions {resolutions})
-
-(ImagePyramidSchedule {pyramid} )
-
-(MaximumNumberOfIterations {iterations} )
-(RequiredRatioOfValidSamples 0.01)
-(MaximumNumberOfSamplingAttempts 10)
-
-(NumberOfSpatialSamples  {samples} )
-
-(NewSamplesEveryIteration "{new_samples}")
-(ImageSampler             "{sampler}" )
-
-(BSplineInterpolationOrder 1)
-
-(FinalBSplineInterpolationOrder 1)
-
-(DefaultPixelValue    0)
-
-(WriteResultImage     "false")
-
-// The pixel type and format of the resulting deformed moving image
-(ResultImagePixelType  "float")
-(ResultImageFormat     "mnc")
-                        '''.format(
-                            optimizer=parameters.get('optimizer','CMAEvolutionStrategy'),
-                            transform=parameters.get('transform','SimilarityTransform'),
-                            metric=parameters.get('metric','AdvancedNormalizedCorrelation'),
-                            resolutions=parameters.get('resolutions', 3 ),
-                            pyramid=parameters.get('pyramid','8 8 8  4 4 4  2 2 2'),
-                            iterations=parameters.get('iterations',def_iterations),
-                            samples=parameters.get('samples',4096),
-                            sampler=parameters.get('sampler',"Random"),
-                            max_step=parameters.get('max_step',"1.0"),
-                            automatic_transform_init=str(parameters.get("automatic_transform_init",True)).lower(), # to convert True to true
-                            automatic_transform_init_method=parameters.get("automatic_transform_init_method","CenterOfGravity"),
-                            exact_metric=str(parameters.get("exact_metric",False)).lower(),
-                            new_samples=str(parameters.get("new_samples",True)).lower(),
-                            ))
-                    # 
-                    if 'grid_spacing' in parameters: p.write("(SampleGridSpacing {})\n".format(parameters['grid_spacing']))
-                    #if 'exact_metric' in parameters: p.write("(ShowExactMetricValue {})\n".format(parameters['exact_metric']))
-                    if 'exact_metric_spacing' in parameters: p.write("(ExactMetricSampleGridSpacing {})\n".format(parameters['exact_metric_spacing']))
-            else:
-                if parameters[0]=="@":
-                    par_file=parameters.split("@",1)[1]
-                    #print("Using:{}".format(par_file))
-                else:
-                    with open(par_file,'w') as p:
-                        p.write(parameters)
-                    
-            cmd=['elastix', 
-                 '-f',  source_lr , '-m', target_lr, 
-                 '-out',  tmp.tempdir+os.sep , '-p',  par_file,
-                 '-threads', str(threads)] # , '-q'
+            _iterations=1
             
-            if measure_mode:
-                cmd.append('-M')
-                
-            if verbose<1:
-                cmd.append('-q')
-            
-            inputs=[source_lr , target_lr]
-
-            if init_par is not None:
-                cmd.extend(['-t0',init_par])
-                inputs.append(init_par)
-
-            if source_mask is not None and use_mask:
-                cmd.extend( ['-fMask',source_mask_lr] )
-                inputs.append(source_mask_lr)
-
-            if target_mask is not None and use_mask:
-                cmd.extend( ['-mMask',target_mask_lr] )
-                inputs.append(target_mask_lr)
-
-            if tags is not None:
-                vols=tag2elx(tags,tmp.cache(s_base+'_tags.txt'),tmp.cache(t_base+'_tags.txt'))
-                inputs.append(tmp.cache(s_base+'_tags.txt') )
-                cmd.extend(['-fp',tmp.cache(s_base+'_tags.txt')] )
-                shutil.copyfile(tmp.cache(s_base+'_tags.txt'),"source.tag")
-                
-                if vols>1:
-                    inputs.append(tmp.cache(t_base+'_tags.txt') )
-                    cmd.extend(['-mp',tmp.cache(t_base+'_tags.txt')] )
-                    shutil.copyfile(tmp.cache(t_base+'_tags.txt'),"target.tag")
-                
-            outputs=[ tmp.tempdir+os.sep+'TransformParameters.0.txt' ]
-
-            outcome=None
+            if isinstance(parameters,list):
+                _iterations=len(parameters)
             
             try:
-                if measure_mode:
-                    # going to read the output of iterations
-                    out_=minc.execute_w_output(cmd).split("\n")
-                    for l,j in enumerate(out_):
-                        if re.match("^1\:ItNr\s2\:Metric\s.*",j):
-                            outcome=float(out_[l+1].split("\t")[1])
-                            break
-                    else:
-                        #
-                        print("Elastix output:\n{}".format("\n".join(out_)))
-                        raise minc_tools.mincError("Elastix didn't report measure")
-                else:
-                    minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
+                for it in range(_iterations):
 
+                    if isinstance(parameters,list):
+                        _par=parameters[it]
+                    else:
+                        _par=parameters
+                    
+                    par_file=tmp.cache('parameters_{}.txt'.format(it))
+                    measure_mode=False
+                    # paramters could be stored in a file
+                    
+                    if isinstance(_par, dict):
+                        use_mask=_par.get('use_mask',True)
+                        measure_mode=_par.get('measure',False)
+                        
+                        if measure_mode:
+                            def_iterations=1
+                            _par['iterations']=1
+                        
+                        if nl:
+                            gen_config_nl(_par,par_file,def_iterations=def_iterations)
+                        else:
+                            gen_config_lin(_par,par_file,def_iterations=def_iterations)
+                    else:
+                        if _par[0]=="@":
+                            par_file=_par.split("@",1)[1]
+                        else:
+                            with open(par_file,'w') as p:
+                                p.write(_par)
+                    it_output_dir=tmp.tempdir+os.sep+str(it)
+                    if not os.path.exists(it_output_dir):
+                        os.makedirs(it_output_dir)
+                            
+                    cmd=['elastix', 
+                        '-f',       source_lr , 
+                        '-m',       target_lr, 
+                        '-out',     it_output_dir+os.sep , 
+                        '-p',       par_file,
+                        '-threads', str(threads)] # , '-q'
+                    
+                    if measure_mode:
+                        cmd.append('-M')
+                        
+                    if verbose<1:
+                        cmd.append('-q')
+                    
+                    inputs=[source_lr , target_lr]
+
+                    if init_par is not None:
+                        cmd.extend(['-t0',init_par])
+                        inputs.append(init_par)
+
+                    if source_mask is not None and use_mask:
+                        cmd.extend( ['-fMask',source_mask_lr] )
+                        inputs.append(source_mask_lr)
+
+                    if target_mask is not None and use_mask:
+                        cmd.extend( ['-mMask',target_mask_lr] )
+                        inputs.append(target_mask_lr)
+
+                    if tags is not None:
+                        vols=tag2elx(tags,tmp.cache(s_base+'_tags.txt'),tmp.cache(t_base+'_tags.txt'))
+                        inputs.append(tmp.cache(s_base+'_tags.txt') )
+                        cmd.extend(['-fp',tmp.cache(s_base+'_tags.txt')] )
+                        shutil.copyfile(tmp.cache(s_base+'_tags.txt'),"source.tag")
+                        
+                        if vols>1:
+                            inputs.append(tmp.cache(t_base+'_tags.txt') )
+                            cmd.extend(['-mp',tmp.cache(t_base+'_tags.txt')] )
+                            shutil.copyfile(tmp.cache(t_base+'_tags.txt'),"target.tag")
+                    
+                    
+                    outputs=[ it_output_dir+os.sep+'TransformParameters.0.txt' ]
+
+                    outcome=None
+                    
+                    if measure_mode:
+                        # going to read the output of iterations
+                        out_=minc.execute_w_output(cmd).split("\n")
+                        for l,j in enumerate(out_):
+                            if re.match("^1\:ItNr\s2\:Metric\s.*",j):
+                                outcome=float(out_[l+1].split("\t")[1])
+                                break
+                        else:
+                            #
+                            print("Elastix output:\n{}".format("\n".join(out_)))
+                            raise minc_tools.mincError("Elastix didn't report measure")
+                    else:
+                        minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
+                    
+                    init_par = it_output_dir +os.sep+'TransformParameters.0.txt'
+                    # end of iterations
+                    
                 if  output_par is not None:
-                    shutil.copyfile( tmp.tempdir+os.sep+'TransformParameters.0.txt' , output_par )
+                    shutil.copyfile( it_output_dir +os.sep+'TransformParameters.0.txt' , output_par )
 
                 if output_xfm is not None:
-                    nl_elastix_to_xfm( tmp.tempdir+os.sep+'TransformParameters.0.txt', 
+                    nl_elastix_to_xfm( it_output_dir +os.sep+'TransformParameters.0.txt', 
                                     output_xfm, 
                                     downsample_grid=downsample_grid, 
                                     nl=nl)
+                    
             finally:
                 if output_log is not None:
-                    shutil.copyfile(tmp.tempdir+os.sep+'elastix.log',output_log)
+                    shutil.copyfile(it_output_dir+os.sep+'elastix.log',output_log)
 
         return outcome
 
@@ -613,6 +651,10 @@ def parse_options():
     parser.add_argument("--iterations",
                         default=4000,
                         help="Number of iterations per level")
+    
+    parser.add_argument("--elx_iterations",
+                        default=1,
+                        help="Number of times elastix will run")
     
     parser.add_argument("--samples",
                         default=4096,
@@ -721,7 +763,8 @@ if __name__ == "__main__":
                     nl         = options.nl,
                     output_log = options.output_log,
                     tags       = options.tags,
-                    verbose    = 2)
+                    verbose    = 2,
+                    iterations = elx_iterations)
         if options.measure:
             print(out)
 

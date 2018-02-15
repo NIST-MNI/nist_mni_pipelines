@@ -83,7 +83,7 @@ def pipeline_run_add(patient):
                                 output_prefix,
                                 input_mask=patient.template['nl_template_mask'],
                                 parameters=options,
-                                work_dir=None,
+                                work_dir=patient.workdir+os.sep+'template_'+output_name,
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
@@ -180,7 +180,7 @@ def pipeline_run_add_tp(patient, tp):
         elif 'segment_options' in j: #HACK: figure out how to distinguish between grading and segmentation
             # TODO: use partial volume mode here?
             # let's run segmentation
-            options=j.get('segment_options',{})
+            # options=j.get('segment_options',{})
             modality=j.get('modality','t1')
             
             output_prefix=patient[tp].stx2_mnc['add_prefix']+'_'+output_name
@@ -190,10 +190,11 @@ def pipeline_run_add_tp(patient, tp):
                                 output_prefix,
                                 input_mask=patient[tp].stx2_mnc["mask"],
                                 parameters=options,
-                                work_dir=None,
+                                work_dir=patient.workdir+os.sep+tp+'_'+output_name,
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
+
             elif j.get('ANIMAL',False):
                 # TODO: implement ANIMAL
                 pass
