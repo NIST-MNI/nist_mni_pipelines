@@ -47,10 +47,6 @@ def parse_options():
                     type=int,
                     dest='cv_iter')
     
-    parser.add_argument('--segment',
-                    help="Apply segmentation using provided library",
-                    dest='segment')
-    
     parser.add_argument('--train-ec',
                     help="Train error correction using specified parametrs",
                     dest='train_ec')
@@ -192,31 +188,6 @@ if __name__ == '__main__':
                           ext=options.ext,
                           extlib=options.extlib,
                           cv_iter=options.cv_iter)
-
-    elif options.segment is not None and options.input is not None:
-        library=load_library_info(options.segment)
-        segmentation_parameters={}
-
-        if options.options is not None:
-            try:
-                with open(options.options,'r') as f:
-                    segmentation_parameters=json.load(f)
-            except :
-                print("Error loading configuration:{}\n{}".format(options.options,sys.exc_info()[0]),file=sys.stderr)
-                traceback.print_exc(file=sys.stderr)
-                exit(1)
-        # 
-        fusion_segment(options.input, library,
-                       options.output,
-                       input_mask=options.mask,
-                       parameters=segmentation_parameters,
-                       debug=options.debug,
-                       fuse_variant=options.variant_fuse,
-                       ec_variant=options.variant_ec,
-                       regularize_variant=options.variant_reg,
-                       work_dir=options.work,
-                       cleanup=options.cleanup,
-                       presegment=options.presegment)
 
     elif options.train_ec is not None:
         library=load_library_info(options.segment)

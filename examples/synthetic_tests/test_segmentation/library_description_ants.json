@@ -13,8 +13,13 @@
   "symmetric_lut": null,
   "denoise": false,
   "denoise_beta": null,
+  
   "initial_register": null,
-  "initial_local_register": null,
+  "initial_local_register": {
+    "type": "ants",
+    "bbox": true
+   },
+  
   "non_linear_register": true,
   "resample_order": 2,
   "resample_baa": true,

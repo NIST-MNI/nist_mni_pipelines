@@ -244,7 +244,9 @@ def fuse_segmentations( sample, output, library,
                             
                         if sample.mask is not None:
                             segs.extend(['--mask', sample.mask])
-
+                        print("*****")
+                        print(repr(segs))
+                        print("*****")
                         m.command(segs, inputs=[sample.scan], outputs=outputs)
                         print(' '.join(segs))
                     

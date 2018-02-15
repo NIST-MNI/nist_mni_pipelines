@@ -26,9 +26,11 @@ cat - > library_description.json <<END
   "symmetric_lut": null,
   "denoise": false,
   "denoise_beta": null,
+  
   "linear_register": false,
   "local_linear_register": true,
   "non_linear_register": false,
+  
   "resample_order": 2,
   "resample_baa": true
 }

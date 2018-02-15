@@ -113,10 +113,10 @@ def make_segmented_label_list(library_description,symmetric=False):
     used_labels=set()
 
     if isinstance(library_description['map'], dict):
-        for i in library_description['map'].iteritems():
+        for i in library_description['map'].items():
             used_labels.add(int(i[1]))
         if symmetric:
-            for i in library_description['flip_map'].iteritems():
+            for i in library_description['flip_map'].items():
                 used_labels.add(int(i[1]))
     else:
         for i in library_description['map']:

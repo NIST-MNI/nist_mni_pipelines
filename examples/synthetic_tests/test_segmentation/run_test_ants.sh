@@ -1,11 +1,16 @@
 #! /bin/sh
 
+PREFIX=$(pwd)/../../..
 
-PREFIX=$(pwd)/../../python
+if [ -z $PARALLEL ];then
 PARALLEL=4
+fi
 
 export PYTHONPATH=$PREFIX:$PYTHONPATH
+xport OMP_NUM_THREADS=1
+export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
 
+PYTHON=python3
 
 cat - > library_description_ants.json <<END
 {
@@ -23,9 +28,12 @@ cat - > library_description_ants.json <<END
   "symmetric_lut": null,
   "denoise": false,
   "denoise_beta": null,
-  "initial_register": false,
-  "initial_local_register": true,
-  "local_register_type": "ants",
+  
+  "initial_register": null,
+  "initial_local_register": {
+    "type": "ants",
+    "bbox": true
+   },
   
   "non_linear_register": true,
   "resample_order": 2,
@@ -37,7 +45,7 @@ END
 
 if [ ! -e test_lib_ants/library.json ];then
 # create the library
-python -m scoop -n $PARALLEL $PREFIX/iplScoopFusionSegmentation.py  \
+${PYTHON} -m scoop -n $PARALLEL $PREFIX/iplScoopFusionSegmentation.py  \
   --create library_description_ants.json --output test_lib_ants --debug
 fi
 
@@ -54,12 +62,16 @@ END
 
 cat - > segment_ants.json <<END
 {
-  "initial_register": false,
-  "initial_local_register": true,
-  "local_register_type":"ants",
+
+  "initial_register": null,
+  "initial_local_register": {
+    "type": "ants",
+    "bbox": true
+   },
   
   "non_linear_pairwise": true,
   "non_linear_register": false,
+  
   "non_linear_register_ants": true,
   "non_linear_pairwise_ants": true,
 
@@ -93,7 +105,7 @@ cat - > segment_ants.json <<END
 }
 END
 
-python -m scoop -n $PARALLEL \
+${PYTHON} -m scoop -n ${PARALLEL} \
   $PREFIX/iplScoopFusionSegmentation.py \
    --output test_cv_ants_no_ec \
    --debug  \

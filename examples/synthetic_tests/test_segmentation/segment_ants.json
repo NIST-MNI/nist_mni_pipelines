@@ -1,10 +1,14 @@
 {
-  "initial_register": false,
-  "initial_local_register": true,
-  "local_register_type":"ants",
+
+  "initial_register": null,
+  "initial_local_register": {
+    "type": "ants",
+    "bbox": true
+   },
   
   "non_linear_pairwise": true,
   "non_linear_register": false,
+  
   "non_linear_register_ants": true,
   "non_linear_pairwise_ants": true,
 
