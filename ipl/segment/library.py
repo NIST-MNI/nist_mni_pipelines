@@ -45,7 +45,8 @@ def save_library_info(library_description, output,name='library.json'):
         for (j, i) in enumerate(tmp_library_description['model_add']):
             if os.path.dirname(i)==output:
                 tmp_library_description['model_add'][j]=os.path.relpath(i, output)
-
+        
+        # convert samples paths to relative
         for (j, i) in enumerate(tmp_library_description['library']):
             for (k,t) in enumerate(i):
                 tmp_library_description['library'][j][k]=os.path.relpath(t, output)
@@ -85,6 +86,7 @@ def load_library_info(prefix, name='library.json'):
         except KeyError:
             pass
 
+        # convert samples paths to absolute
         for (j, i) in enumerate(library_description['library']):
             for (k,t) in enumerate(i):
                 library_description['library'][j][k]=prefix+os.sep+t

@@ -604,6 +604,7 @@ def fusion_segment( input_scan,
                     
             output_info['selected_library_warped2']=selected_library_warped2
             output_info['selected_library_xfm2']=selected_library_xfm2
+            
             if library_nl_samples_avail:
                 output_info['selected_library_xfm']=selected_library_xfm
 
@@ -732,7 +733,7 @@ def fusion_segment( input_scan,
                                 ) )
                 # TODO: do we really need to wait for result here?
                 futures.wait(results, return_when=futures.ALL_COMPLETED)
-            else:
+            else: # use precomputer transformations
                 
                 results=[]
                 

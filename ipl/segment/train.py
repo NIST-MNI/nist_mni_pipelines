@@ -31,7 +31,7 @@ def inv_dict(d):
     return { v:k for (k,v) in d.items() }
 
 
-def generate_library(parameters, output, debug=False,cleanup=False):
+def generate_library(parameters, output, debug=False, cleanup=False, work_dir=None):
     '''Actual generation of the segmentation library'''
     try:
         if debug: print(repr(parameters))
@@ -49,7 +49,8 @@ def generate_library(parameters, output, debug=False,cleanup=False):
         
         library                   = parameters[ 'library' ]
         
-        work_dir                  = parameters.get( 'workdir',output+os.sep+'work')
+        if work_dir is None:
+            work_dir              = parameters.get( 'workdir',output+os.sep+'work')
         
         # should we build symmetric model
         build_symmetric           = parameters.get( 'build_symmetric',False)
@@ -223,12 +224,13 @@ def generate_library(parameters, output, debug=False,cleanup=False):
                 mask = work_dir + os.sep + 'fake_mask_' + os.path.basename(scan)
                 create_fake_mask(seg, mask, op=op_mask)
 
-            sample=                 MriDataset(scan=scan, seg=seg, mask=mask, protect=True,add=add)
-            input_samples.append(   sample )
+            sample=                  MriDataset(scan=scan, seg=seg, mask=mask, protect=True,add=add)
+            input_samples.append(    sample )
             filtered_samples.append( MriDataset(  prefix=work_dir, name='flt_'+sample.name,      add_n=modalities ) )
-            
             lin_xfm.append(          MriTransform(prefix=work_dir, name='lin_'+sample.name      ) )
-            bbox_lin_xfm.append(     MriTransform(prefix=work_dir, name='lin_bbox_'+sample.name ) )
+            
+            bbox_lin_xfm.append(     MriTransform(prefix=output, name='lin_'+sample.name ) )
+            
             lin_samples.append(      MriDataset(  prefix=work_dir, name='lin_'+sample.name,      add_n=modalities ) )
             tmp_lin_samples.append(  MriDataset(  prefix=work_dir, name='tmp_lin_'+ sample.name, add_n=modalities ) )
             tmp_log_samples.append(  MriDataset(  prefix=work_dir, name='tmp_log_'+ sample.name  ) )
@@ -244,9 +246,10 @@ def generate_library(parameters, output, debug=False,cleanup=False):
             filter_all=[]
             
             for (j,i) in enumerate(input_samples):
-                # a HACK?
-                filtered_samples[j].seg =input_samples[j].seg
-                filtered_samples[j].mask=input_samples[j].mask
+                
+                if input_samples[j].mask is not None:
+                    shutil.copyfile(input_samples[j].mask, filtered_samples[j].mask)
+                shutil.copyfile(input_samples[j].seg, filtered_samples[j].seg)
                 
                 filter_all.append( futures.submit( 
                     filter_sample, input_samples[j], filtered_samples[j], pre_filters, model=model
@@ -605,9 +608,11 @@ def generate_library(parameters, output, debug=False,cleanup=False):
         library_description['modalities']=modalities+1
         
         largest_label=max(library_description['map'].values(), key=lambda p: int(p))
+        
         library_description['seg_datatype']='short'
         
-        if largest_label<=255:library_description['seg_datatype']='byte'
+        if largest_label<=255: 
+            library_description['seg_datatype']='byte'
 
         library_description['gco_energy']=output+os.sep+'gco_energy.csv'
         estimate_gco_energy(final_samples, library_description['gco_energy'], classes=classes_number)
@@ -632,7 +637,9 @@ def generate_library(parameters, output, debug=False,cleanup=False):
             ss.extend(i.add)
             
             if do_nonlinear_register:
-                ss.extend( [ final_transforms[j].xfm, final_transforms[j].xfm_inv, warped_samples[j].scan, warped_samples[j].seg  ])
+                ss.extend( [ final_transforms[j].xfm, final_transforms[j].xfm_inv, warped_samples[j].scan, warped_samples[j].seg, bbox_lin_xfm[j].xfm  ])
+            else:
+                ss.extend( [ bbox_lin_xfm[j].xfm ])
                 
             library_description['library'].append(ss)
             
@@ -641,7 +648,9 @@ def generate_library(parameters, output, debug=False,cleanup=False):
                 ss.extend(i.add_f)
                 
                 if do_nonlinear_register:
-                    ss.extend( [ final_transforms[j].xfm_f, final_transforms[j].xfm_f_inv, warped_samples[j].scan_f, warped_samples[j].seg_f ])
+                    ss.extend( [ final_transforms[j].xfm_f, final_transforms[j].xfm_f_inv, warped_samples[j].scan_f, warped_samples[j].seg_f, bbox_lin_xfm[j].xfm_f ])
+                else:
+                    ss.extend( [ bbox_lin_xfm[j].xfm_f ])
 
                 library_description['library'].append(ss)
 

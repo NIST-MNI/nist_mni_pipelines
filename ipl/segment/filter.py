@@ -15,7 +15,7 @@ from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
 
 
-def filter_sample(input,output,filters,model=None):
+def filter_sample(input, output, filters, model=None):
     
     apply_filter(input.scan, output.scan, filters,
                  model=model.scan, input_mask=input.mask, 
