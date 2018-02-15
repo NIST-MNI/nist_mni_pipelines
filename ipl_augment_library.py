@@ -35,15 +35,18 @@ import numpy as np
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                 description='Build fusion segmentation library')
+                                 description='Create augmented dataset for training deep nets')
     
+    
+    parser.add_argument('source',
+                    help="Library source")
     
     parser.add_argument('library',
-                    help="Specify input library for error correction"                  )
+                    help="Library directory")
     
     parser.add_argument('output',
                     help="Output directory")
-    
+
     parser.add_argument('-n',type=int,
                         default=10,
                         help="Aplification factor (i.e number of augmented samples per each input",
@@ -89,74 +92,40 @@ def gen_sample(library, options, sample, i, r):
         out_xfm=options.output+os.sep+vol_name+out_suffix+'_rnd.xfm'
         
         m.param2xfm(out_xfm,
-                    scales=((np.random.rand(3)-0.5)*2*options.scale/100.0+1.0).tolist(),
+                    scales=     ((np.random.rand(3)-0.5)*2*options.scale/100.0+1.0).tolist(),
                     translation=((np.random.rand(3)-0.5)*2*options.shift).tolist(),
-                    rotations=((np.random.rand(3)-0.5)*2*options.rot).tolist())
+                    rotations=  ((np.random.rand(3)-0.5)*2*options.rot).tolist())
         
-        m.resample_labels(sample[1],out_seg,order=options.order,transform=out_xfm)
-        m.resample_smooth(sample[0],out_vol,order=options.order,transform=out_xfm)
+        m.resample_labels(sample[1], out_seg, order=options.order, transform=out_xfm)
+        m.resample_smooth(sample[0], out_vol, order=options.order, transform=out_xfm)
         
         return [out_vol, out_seg, out_xfm ]
         
         
-        
+      
     
-    # TODO: generate random non-linear transformations
-    # generate sample name (?) 
-    # TODO: there should be a way to specify sample IDs and keep the associated with original data
-                #my_execute(string.format('param2xfm -clob -translation %f %f %f -rotations %f %f %f -scales %f %f %f %s',
-                                        #torch.uniform(-opt.shift,opt.shift),torch.uniform(-opt.shift,opt.shift),torch.uniform(-opt.shift,opt.shift),
-                                        #torch.uniform(-opt.rot,opt.rot),torch.uniform(-opt.rot,opt.rot),torch.uniform(-opt.rot,opt.rot),
-                                        #1.0+torch.uniform(-opt.scale,opt.scale),1.0+torch.uniform(-opt.scale,opt.scale),1.0+torch.uniform(-opt.scale,opt.scale),
-                                        #xfm))
-
-                #-- apply transformation
-                #local j
-
-                #local baa=""
-                #if opt.order[features+1]>0 then baa="--baa" end
-                
-                #if opt.classes then
-                  #local infile_seg =s[features+1]
-                  #local outfile_seg=o[features+1]
-                  #my_execute(string.format('itk_resample --byte --labels --order %d  %s %s --transform %s --clob %s', opt.order[features+1], infile_seg, outfile_seg, xfm, baa))
-                #end
-
-                #for j=1,features do
-                    #local _infile  = s[j]
-                    #local _outfile = o[j]
-                    
-                    #if not opt.discrete[j] then
-                        #if not opt.randomize or opt.randomize[j] then
-                         #if opt.gain==nil or opt.gain==0.0 or model_opts.mean_sd==nil then
-                            #my_execute(string.format('itk_resample --order %d %s %s --transform %s  --clob',opt.order[j], _infile, _outfile, xfm))
-                         #else
-                            #local tmp_res=paths.tmpname()..'.mnc'
-                            #local tmp_random=paths.tmpname()..'.mnc'
-                            
-                            #local rval=torch.uniform(-opt.intensity, opt.intensity)*model_opts.mean_sd.sd[j]
-                            
-                            #my_execute(string.format('itk_resample --order %d %s %s --transform %s  --clob', opt.order[j], _infile, tmp_res, xfm ))
-                            #my_execute(string.format('random_volume --float --gauss %f %s %s --clob',opt.gain*model_opts.mean_sd.sd[j], tmp_res, tmp_random ))
-                            #my_execute(string.format("minccalc -q -clob -express 'A[0]*(1+%f)+A[1]' %s %s %s",rval, tmp_res, tmp_random, _outfile ))
-                            
-                            #os.remove(tmp_res)
-                            #os.remove(tmp_random)
-                         #end
-                        #else
-                         #-- no need to resample this feature
-                        #end
-                    #else
-                        #my_execute(string.format('itk_resample --labels --order %d %s %s --transform %s --clob %s',opt.order[j], _infile, _outfile, xfm,baa))    
-    
-    
-
-
 if __name__ == '__main__':
     options = parse_options()
     
-    if options.library is not None and options.output is not None:
+    if options.source  is not None and \
+       options.library is not None and \
+       options.output  is not None:
+           
+        source_parameters={}
+        try:
+            with open(options.source,'r') as f:
+                source_parameters=json.load(f)
+        except :
+            print("Error loading configuration:{} {}\n".format(options.source, sys.exc_info()[0]),file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            exit( 1)
+        
         library=load_library_info( options.library )
+        
+        pre_filters=          source_parameters.get('pre_filters', None )
+        post_filters=         source_parameters.get('post_filters', parameters.get( 'filters', None ))
+        
+        
         #
         if not os.path.exists(options.output):
             os.makedirs(options.output)
@@ -178,7 +147,7 @@ if __name__ == '__main__':
         augmented_library['library']=[j.result() for j in outputs]
         
         # save new library description
-        save_library_info(augmented_library,options.output)
+        save_library_info(augmented_library, options.output)
     else:
         print("Run with --help")
         
