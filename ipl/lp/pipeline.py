@@ -170,7 +170,7 @@ def standard_pipeline(info,
             stx_parameters     = options.get('t1w_stx',{})
             
             create_unscaled    = stx_parameters.get('noscale',False)
-            stx_nuc            = stx_parameters.get('nuc',None)
+            #stx_nuc            = stx_parameters.get('nuc',None)
             stx_disable        = stx_parameters.get('disable',False)
 
             clp_dir = work_dir+os.sep+'clp'
@@ -380,9 +380,9 @@ def standard_pipeline(info,
                     iter_summary["add_field"].append(field)
                     iter_summary["add_nuc"].append(nuc)
                     
-                    if clp_parameters is not None:
+                    if add_clp_parameters is not None:
                         normalize_intensity(nuc, clp,
-                                    parameters=clp_parameters,
+                                    parameters=add_clp_parameters,
                                     model=add_model)
                         clp.mask=nuc.mask
                     else:
@@ -414,6 +414,9 @@ def standard_pipeline(info,
                                 log=t1w_tal_log,
                                 init_xfm=init_t1w_lin_xfm)
                 
+                stx_nuc = stx_parameters.get('nuc',None)
+                stx_clp = stx_parameters.get('clp',None)
+                
                 if stx_nuc is not None:
                     tmp_t1w=MriScan(prefix=tmp.tempdir,    name='tal_'+dataset_id, modality='t1w')
                     tmp_t1w_n4=MriScan(prefix=tmp.tempdir, name='tal_n4_'+dataset_id, modality='t1w')
@@ -433,7 +436,7 @@ def standard_pipeline(info,
                     
                     #TODO: maybe apply region-based intensity normalization here?
                     normalize_intensity(tmp_t1w_n4, t1w_tal,
-                                    parameters=options.get('t1w_clp',{}),
+                                    parameters=stx_clp,
                                     model=model_t1w)
                     
                     iter_summary['t1w_tal_fld']=t1w_tal_fld
@@ -452,12 +455,10 @@ def standard_pipeline(info,
                     
                     for i,c in enumerate(add_scans):
                         add_stx_parameters     = add_options.get('stx'    ,stx_parameters)
-                        add_clp_parameters     = add_options.get('clp'    ,clp_parameters)
                         add_model_dir          = add_options.get('model_dir',model_dir)
                         add_model_name         = add_options.get('model'  ,model_name)
                         
                         add_stx_parameters     = add_options.get('{}_stx'    .format(c.modality),add_stx_parameters)
-                        add_clp_parameters     = add_options.get('{}_clp'    .format(c.modality),add_clp_parameters)
                         add_model_dir      = add_options.get('{}_model_dir'.format(c.modality),add_model_dir)
                         add_model_name     = add_options.get('{}_model'  .format(c.modality),add_model_name)
                         
@@ -465,6 +466,7 @@ def standard_pipeline(info,
                                         mask=model_t1w.mask)
                         
                         add_stx_nuc = add_stx_parameters.get('nuc',None)
+                        add_stx_clp = add_stx_parameters.get('clp',None)
                         
                         
                         stx_xfm=MriTransform(prefix=tal_dir, name='xfm_'+c.modality+'_'+dataset_id)
@@ -494,13 +496,13 @@ def standard_pipeline(info,
                             tmp_n4.mask=None
                             
                             estimate_nu(tmp_, tal_fld,
-                                        parameters=stx_nuc)
+                                        parameters=add_stx_nuc)
                             
-                            apply_nu(tmp_, tal_fld, tmp_n4, parameters=stx_nuc)
+                            apply_nu(tmp_, tal_fld, tmp_n4, parameters=add_nuc_parameters)
                             
                             #TODO: maybe apply region-based intensity normalization here?
                             normalize_intensity(tmp_n4, tal,
-                                            parameters=add_clp_parameters,
+                                            parameters=add_stx_clp,
                                             model=add_model)
                             
                             iter_summary["add_tal_fld"].append(tal_fld)

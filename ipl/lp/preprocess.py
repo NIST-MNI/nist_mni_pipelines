@@ -134,42 +134,45 @@ def normalize_intensity(in_scan, out_scan,
         if not minc.checkfiles(inputs=[in_scan.scan],outputs=[out_scan.scan]):
             return
         
-        order = parameters.get('order',1)
-        _model=None
-        
-        # 
-        if model is None:
-            _model = parameters.get('model',None)
-        else:
-            _model = model.scan
-        
-        if _model is None:
-            raise mincError('Need model ')
-        
-        scan_mask  = None
-        model_mask = None
-        
-        if in_scan.mask is not None and model is not None:
-            scan_mask  = in_scan.mask
-            model_mask = model.mask
-        
-        if parameters.get('disable',False):
-            # just bypass
-            shutil.copyfile(in_scan.scan,out_scan.scan)
-        elif parameters.get('nuyl',False):
-            minc.nuyl_normalize(in_scan.scan,_model,out_scan.scan,
-                                source_mask=scan_mask,
+        if parameters is not None:
+            order = parameters.get('order',1)
+            _model=None
+            
+            # 
+            if model is None:
+                _model = parameters.get('model',None)
+            else:
+                _model = model.scan
+            
+            if _model is None:
+                raise mincError('Need model ')
+            
+            scan_mask  = None
+            model_mask = None
+            
+            if in_scan.mask is not None and model is not None:
+                scan_mask  = in_scan.mask
+                model_mask = model.mask
+            
+            if parameters.get('disable',False):
+                # just bypass
+                shutil.copyfile(in_scan.scan,out_scan.scan)
+            elif parameters.get('nuyl',False):
+                minc.nuyl_normalize(in_scan.scan,_model,out_scan.scan,
+                                    source_mask=scan_mask,
+                                    target_mask=model_mask)
+            elif parameters.get('nuyl2',False):
+                hl.nuyl_normalize2( in_scan.scan,_model,out_scan.scan,
+                                    #source_mask=input_mask,target_mask=model_mask,
+                                    fwhm=parameters.get('nuyl2_fwhm',2.0),
+                                    iterations=parameters.get('nuyl2_iter',4),
+                                    )
+            else:
+                minc.volume_pol(in_scan.scan, _model, out_scan.scan,
+                                order=order, 
+                                source_mask=scan_mask, 
                                 target_mask=model_mask)
-        elif parameters.get('nuyl2',False):
-            hl.nuyl_normalize2( in_scan.scan,_model,out_scan.scan,
-                                #source_mask=input_mask,target_mask=model_mask,
-                                fwhm=parameters.get('nuyl2_fwhm',2.0),
-                                iterations=parameters.get('nuyl2_iter',4),
-                                )
-        else:
-            minc.volume_pol(in_scan.scan, _model, out_scan.scan,
-                            order=order, 
-                            source_mask=scan_mask, 
-                            target_mask=model_mask)
+        else: # HACK just by-pass processing if parameters are empty
+            
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
