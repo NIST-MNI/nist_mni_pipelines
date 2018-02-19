@@ -391,7 +391,7 @@ def standard_pipeline(info,
                     iter_summary["add_clp"].append(clp)
                     
                     # co-registering to T1w
-                    if add_stx_parameters.get('independent',False) or (prev_co_xfm is None):
+                    if add_stx_parameters.get('independent',True) or (prev_co_xfm is None):
                         # run co-registration unless another one can be used
                         intermodality_co_registration(clp, t1w_clp, co_xfm, 
                                         parameters=add_stx_parameters,
