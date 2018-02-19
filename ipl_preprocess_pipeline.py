@@ -217,7 +217,7 @@ if __name__ == '__main__':
                             
                             for l,ll in enumerate(modalities):
                                 if len(row)>(3+l) and row[3+l]!='':
-                                    add.append(MriScan(name=data_name, scan=row[3], modality=ll, mask=None))
+                                    add.append(MriScan(name=data_name, scan=row[3+l], modality=ll, mask=None))
                                     
                             if len(row)>(4+len(modalities)) and row[(4+len(modalities))]!='':
                                 age=float(row[(4+len(modalities))])
