@@ -50,7 +50,7 @@ def parse_options():
                     help="Output directory")
 
     parser.add_argument('-n',type=int,
-                        default=10,
+                        default=3,
                         help="Aplification factor (i.e number of augmented samples per each input",
                         dest='n')
     
@@ -68,7 +68,11 @@ def parse_options():
     
     parser.add_argument('--order',type=int,
                         default=2,
-                        help="Resample order")
+                        help="Intensity resample order")
+    
+    parser.add_argument('--label_order',type=int,
+                        default=2,
+                        help="Labels resample order")
     
     parser.add_argument('--debug',
                         action="store_true",
@@ -89,7 +93,7 @@ def parse_options():
     return options
 
 
-def gen_sample(library, options, source_parameters, sample, i, flip=False):
+def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
   try:
     with mincTools() as m:
         
@@ -102,14 +106,14 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
         
         use_fake_masks      = source_parameters.get( 'fake_mask', False )
         op_mask             = source_parameters.get( 'op_mask','E[2] D[4]')
-        lib_sample          = library['library'][i]
+        lib_sample          = library['library'][idx]
         
         lut                 = library['map']
         if flip:
             lut               = library['flip_map']
         
         # inverse lut
-        lut=[ [ i[1],i[0] ] for i in lut.items() ]
+        lut=[ [ _i[1], _i[0] ] for _i in lut.items() ]
         
         
         model      = library['local_model']
@@ -120,6 +124,9 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
         mask = None
         
         sample_name=os.path.basename(sample[0]).rsplit('.mnc',1)[0]
+        
+        if flip:
+            sample_name+='_f'
         
         if use_fake_masks:
             mask  = m.tmp('mask.mnc')
@@ -164,18 +171,21 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
             
 
             if mask is not None:
-                m.resample_labels(mask, out_mask, order=options.order, transform=out_xfm)
+                m.resample_labels(mask, out_mask, 
+                                  transform=out_xfm, like=model)
             else:
                 out_mask=None
                 
-            m.resample_labels(filtered_dataset.seg, out_seg, transform=out_xfm, order=options.order, remap=lut, like=model, baa=True)
+            m.resample_labels(filtered_dataset.seg, out_seg, 
+                              transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
 
             if post_filters is not None:
                 output_scan=m.tmp('scan_{}.mnc'.format(r))
             else:
                 output_scan=out_vol
             # create a file in temp dir first
-            m.resample_smooth(filtered_dataset.scan, output_scan, order=options.order, transform=out_xfm)
+            m.resample_smooth(filtered_dataset.scan, output_scan, 
+                              order=options.order, transform=out_xfm,like=model)
 
             if post_filters is not None:
                 apply_filter(output_scan, out_vol, post_filters, model=model, 
@@ -225,11 +235,11 @@ if __name__ == '__main__':
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
-                gen_sample, library, options, source_parameters, j , i  ) )
+                gen_sample, library, options, source_parameters, j , idx=i  ) )
             # flipped (?)
             if build_symmetric:
                 outputs.append( futures.submit( 
-                    gen_sample, library, options, source_parameters, j , i+n_samples , flip=True ) )
+                    gen_sample, library, options, source_parameters, j , idx=i , flip=True ) )
                     
         #
         futures.wait(outputs, return_when=futures.ALL_COMPLETED)
