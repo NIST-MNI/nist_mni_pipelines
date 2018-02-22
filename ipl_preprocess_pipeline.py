@@ -192,8 +192,6 @@ if __name__ == '__main__':
                 print("Error reading:{}".format(options.options))
                 raise
         
-        if manual is not None:
-            options['manual']=manual
         
         if (options.csv is not None) or (options.load is not None):
             inputs=[]
@@ -257,16 +255,23 @@ if __name__ == '__main__':
             pipeline_parameters['debug']=options.debug
             if options.debug:
                 print(repr(inputs))
+            
             run_pipeline=[]
             for (i, s) in enumerate(inputs):
                 output_dir=options.output+os.sep+s['subject']+os.sep+s['visit']
+                manual_dir=None
+                
+                if options.manual is not None:
+                    manual_dir=options.manual+os.sep+s['subject']+os.sep+s['visit']
+                
                 
                 run_pipeline.append( futures.submit( 
                     standard_pipeline,
                         s,
                         output_dir, 
                         options=pipeline_parameters ,
-                        work_dir=output_dir
+                        work_dir=output_dir,
+                        manual_dir=manual_dir
                     ))
             #
             # wait for all to finish
@@ -285,6 +290,10 @@ if __name__ == '__main__':
             data_name='{}_{}'.format(options.subject,options.visit)
             pipeline_parameters['debug']=options.debug
             output_dir=options.output+os.sep+options.subject+os.sep+options.visit
+            manual_dir=None
+            
+            if options.manual is not None:
+                manual_dir=options.manual+os.sep+options.subject+os.sep+options.visit
             
             add=[]
             
@@ -317,7 +326,8 @@ if __name__ == '__main__':
             ret=standard_pipeline( info,
                                output_dir, 
                                options=pipeline_parameters, 
-                               work_dir=output_dir
+                               work_dir=output_dir,
+                               manual_dir=manual_dir
                              )
             # TODO: make a check if there is a summary file there already?
             #save_pipeline_output([info],options.output+os.sep+'summary.json')
