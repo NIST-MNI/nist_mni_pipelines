@@ -135,6 +135,9 @@ def parse_options():
                     help="Output directory, required for application of method",
                     dest="output",
                     default=".")
+    
+    parser.add_argument("--manual",
+                    help="Directory with manually created files")
 
     parser.add_argument("--csv",
                          help="Input data, in standard form:id,visit,t1w[,t2w,pdw,sex,age,geot1,geot2,lesions]",
@@ -188,6 +191,9 @@ if __name__ == '__main__':
             except :
                 print("Error reading:{}".format(options.options))
                 raise
+        
+        if manual is not None:
+            options['manual']=manual
         
         if (options.csv is not None) or (options.load is not None):
             inputs=[]
