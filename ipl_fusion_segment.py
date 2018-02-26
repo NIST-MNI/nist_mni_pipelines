@@ -89,12 +89,10 @@ def parse_options():
                         dest='variant_reg')
     
     parser.add_argument('input',
-                    help="input file, required for application of method",
-                    dest='input')
+                    help="input file, required for application of method" )
     
     parser.add_argument('output',
-                    help="Output directory/file, required for application of method",
-                    dest='output')
+                    help="Output directory/file, required for application of method")
     
    
     options = parser.parse_args()
