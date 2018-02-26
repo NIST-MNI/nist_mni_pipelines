@@ -168,7 +168,8 @@ def intermodality_co_registration(scan, ref, out_xfm,
                                   parameters={}, 
                                   corr_xfm=None, 
                                   corr_ref=None,
-                                  par=None, log=None):
+                                  par=None, 
+                                  log=None):
     with mincTools() as m:
         
         if not m.checkfiles(inputs=[scan.scan,ref.scan],outputs=[out_xfm.xfm]):

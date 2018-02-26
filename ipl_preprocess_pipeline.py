@@ -135,6 +135,9 @@ def parse_options():
                     help="Output directory, required for application of method",
                     dest="output",
                     default=".")
+    
+    parser.add_argument("--manual",
+                    help="Directory with manually created files")
 
     parser.add_argument("--csv",
                          help="Input data, in standard form:id,visit,t1w[,t2w,pdw,sex,age,geot1,geot2,lesions]",
@@ -189,6 +192,7 @@ if __name__ == '__main__':
                 print("Error reading:{}".format(options.options))
                 raise
         
+        
         if (options.csv is not None) or (options.load is not None):
             inputs=[]
             
@@ -217,7 +221,7 @@ if __name__ == '__main__':
                             
                             for l,ll in enumerate(modalities):
                                 if len(row)>(3+l) and row[3+l]!='':
-                                    add.append(MriScan(name=data_name, scan=row[3], modality=ll, mask=None))
+                                    add.append(MriScan(name=data_name, scan=row[3+l], modality=ll, mask=None))
                                     
                             if len(row)>(4+len(modalities)) and row[(4+len(modalities))]!='':
                                 age=float(row[(4+len(modalities))])
@@ -251,16 +255,23 @@ if __name__ == '__main__':
             pipeline_parameters['debug']=options.debug
             if options.debug:
                 print(repr(inputs))
+            
             run_pipeline=[]
             for (i, s) in enumerate(inputs):
                 output_dir=options.output+os.sep+s['subject']+os.sep+s['visit']
+                manual_dir=None
+                
+                if options.manual is not None:
+                    manual_dir=options.manual+os.sep+s['subject']+os.sep+s['visit']
+                
                 
                 run_pipeline.append( futures.submit( 
                     standard_pipeline,
                         s,
                         output_dir, 
                         options=pipeline_parameters ,
-                        work_dir=output_dir
+                        work_dir=output_dir,
+                        manual_dir=manual_dir
                     ))
             #
             # wait for all to finish
@@ -279,6 +290,10 @@ if __name__ == '__main__':
             data_name='{}_{}'.format(options.subject,options.visit)
             pipeline_parameters['debug']=options.debug
             output_dir=options.output+os.sep+options.subject+os.sep+options.visit
+            manual_dir=None
+            
+            if options.manual is not None:
+                manual_dir=options.manual+os.sep+options.subject+os.sep+options.visit
             
             add=[]
             
@@ -311,7 +326,8 @@ if __name__ == '__main__':
             ret=standard_pipeline( info,
                                output_dir, 
                                options=pipeline_parameters, 
-                               work_dir=output_dir
+                               work_dir=output_dir,
+                               manual_dir=manual_dir
                              )
             # TODO: make a check if there is a summary file there already?
             #save_pipeline_output([info],options.output+os.sep+'summary.json')
