@@ -52,17 +52,9 @@ def parse_options():
                     help="Specify library for error correction",
                     dest='library')
     
-    parser.add_argument('--input',
-                    help="input file, required for application of method",
-                    dest='input')
-    
     parser.add_argument('--options',
                     help="Segmentation options in json format",
                     dest='options')
-    
-    parser.add_argument('--output',
-                    help="Output directory/file, required for application of method",
-                    dest='output')
     
     parser.add_argument('--work',
                     help="Work directory, place to store temporary files",
