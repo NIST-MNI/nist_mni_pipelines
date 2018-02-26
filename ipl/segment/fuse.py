@@ -208,8 +208,8 @@ def fusion_segment( input_scan,
         output_info         = {}
         
         input_sample        = MriDataset(scan=input_scan,  seg=presegment, 
-                                        mask=input_mask, protect=True,
-                                        add=add)
+                                         mask=input_mask, protect=True,
+                                         add=add)
         
         sample              = input_sample
         
@@ -251,7 +251,6 @@ def fusion_segment( input_scan,
         # TODO: allow for alternative location, extension
         #sample_qc=work_dir+os.sep+'qc_'+sample.name+'_'+out_variant+'.jpg'
         sample_qc=output_segment+'_qc.jpg'
-        
 
         if run_in_bbox:
             segment_symmetric=False # that would depend ?
@@ -262,7 +261,7 @@ def fusion_segment( input_scan,
             post_filters=None
 
         if pre_filters is not None:
-            apply_filter( sample.scan, 
+            apply_filter( sample.scan,
                         sample_filtered.scan,
                         pre_filters,
                         model=model.scan,
@@ -270,6 +269,8 @@ def fusion_segment( input_scan,
             
             if sample.mask is not None:
                 shutil.copyfile(sample.mask,sample_filtered.mask)
+            else:
+                sample_filtered.mask=None
             
             for i,j in enumerate(sample.add):
                 shutil.copyfile(sample.add[i],sample_filtered.add[i])
@@ -287,7 +288,7 @@ def fusion_segment( input_scan,
 
             sample.scan_f=flipdir+os.sep+os.path.basename(sample.scan)
             sample.add_f=['' for (i,j) in enumerate(sample.add)]
-            
+
             for (i,j) in enumerate(sample.add):
                 sample.add_f[i]=flipdir+os.sep+os.path.basename(sample.add[i])
 
@@ -340,15 +341,15 @@ def fusion_segment( input_scan,
             
 
         # local 
-        bbox_sample = MriDataset(prefix=work_dir, name='bbox_init_'+sample.name, 
+        bbox_sample = MriDataset(prefix=work_dir, name='bbox_init_'+sample.name,
                                 add_n=sample_modalities )
         # a hack to have sample mask
         bbox_sample_mask = MriDataset(prefix=work_dir, name='bbox_init_'+sample.name )
-        
-        
+
+
         if do_initial_local_register:
             bbox_linear_xfm=MriTransform(prefix=work_dir, name='bbox_init_'+sample.name )
-            
+
             if local_reg_type=='elx' or local_reg_type=='elastix' :
                 elastix_registration( sample, 
                     local_model, 
@@ -362,8 +363,8 @@ def fusion_segment( input_scan,
                     downsample=local_reg_downsample
                     )
             elif local_reg_type=='ants' or local_reg_ants:
-                linear_registration( sample, 
-                    local_model, 
+                linear_registration( sample,
+                    local_model,
                     bbox_linear_xfm,
                     init_xfm=initial_xfm,
                     symmetric=segment_symmetric,
