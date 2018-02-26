@@ -37,7 +37,6 @@ def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Create augmented dataset for training deep nets')
     
-    
     parser.add_argument('source',
                     help="Library source")
     
@@ -73,7 +72,7 @@ def parse_options():
                         default=False,
                         help="Debug")
     
-    ### TODO
+    ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
                         #default=None,
                         #help="Provide alternative samples (TODO)")
@@ -99,6 +98,10 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
         
         use_fake_masks      = source_parameters.get( 'fake_mask', False )
         op_mask             = source_parameters.get( 'op_mask','E[2] D[4]')
+        
+        
+        # Using linear XFM from the library
+        # TODO: make route to estimate when not available
         lib_sample          = library['library'][i]
         
         lut                 = library['map']
@@ -156,7 +159,6 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
                 m.xfmconcat([lib_sample[-1],flip_xfm, ran_xfm], out_xfm)
             else:
                 m.xfmconcat([lib_sample[-1],m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
-            
             # TODO: add nonlinear XFM
             
 
@@ -164,9 +166,7 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
                 m.resample_labels(mask, out_mask, order=options.order, transform=out_xfm)
             else:
                 out_mask=None
-                
-                
-            
+
             m.resample_labels(sample[1], out_seg,
                             transform=out_xfm,
                             order=resample_order,
@@ -183,11 +183,9 @@ def gen_sample(library, options, source_parameters, sample, i, flip=False):
 
             if filters is not None:
                 apply_filter(output_scan, out_vol, filters, model=model_scan, input_mask=out_mask, input_labels=seg_output, model_labels=model_seg)
-                
+
         return [out_vol, out_seg, out_xfm ]
         
-        
-      
     
 if __name__ == '__main__':
     options = parse_options()
