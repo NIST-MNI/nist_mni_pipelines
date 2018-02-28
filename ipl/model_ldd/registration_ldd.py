@@ -91,11 +91,11 @@ def non_linear_register_step_ldd(
                         #work_dir=work_dir
                         )
     except mincError as e:
-        print "Exception in non_linear_register_step_ldd:{}".format(str(e))
+        print("Exception in non_linear_register_step_ldd:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
     
@@ -127,11 +127,11 @@ def average_transforms_ldd(
                     m.calc([out],'-A[0]',output.vel)
                 
     except mincError as e:
-        print "Exception in average_transforms_ldd:{}".format(str(e))
+        print("Exception in average_transforms_ldd:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_transforms_ldd:{}".format(sys.exc_info()[0])
+        print("Exception in average_transforms_ldd:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -157,7 +157,7 @@ def non_linear_register_step_regress_ldd(
     try:
 
         with mincTools() as m:
-            #print repr(sample)
+            #print(repr(sample))
             
             if m.checkfiles(inputs=[sample.scan],
                             outputs=[output_velocity.vel]):
@@ -300,11 +300,11 @@ def non_linear_register_step_regress_ldd(
         # done
         
     except mincError as e:
-        print "Exception in non_linear_register_step_ldd:{}".format(str(e))
+        print("Exception in non_linear_register_step_ldd:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
         

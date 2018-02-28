@@ -71,11 +71,11 @@ def concat_resample(
                         if qc:
                             m.qc(output_mri.scan_f,output_mri.scan_f+'.jpg')
     except mincError as e:
-        print "Exception in concat_resample:{}".format(str(e))
+        print("Exception in concat_resample:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in concat_resample:{}".format(sys.exc_info()[0])
+        print("Exception in concat_resample:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -150,11 +150,11 @@ def concat_resample_nl(
                     
         return True
     except mincError as e:
-        print "Exception in concat_resample_nl:{}".format(str(e))
+        print("Exception in concat_resample_nl:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in concat_resample_nl:{}".format(sys.exc_info()[0])
+        print("Exception in concat_resample_nl:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
