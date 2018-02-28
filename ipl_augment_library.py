@@ -39,7 +39,6 @@ def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Create augmented dataset for training deep nets')
     
-    
     parser.add_argument('source',
                     help="Library source")
     
@@ -79,7 +78,7 @@ def parse_options():
                         default=False,
                         help="Debug")
     
-    ### TODO
+    ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
                         #default=None,
                         #help="Provide alternative samples (TODO)")
@@ -106,6 +105,9 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
         
         use_fake_masks      = source_parameters.get( 'fake_mask', False )
         op_mask             = source_parameters.get( 'op_mask','E[2] D[4]')
+        
+        # Using linear XFM from the library
+        # TODO: make route to estimate when not available
         lib_sample          = library['library'][idx]
         
         lut                 = library['map']
@@ -170,7 +172,6 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
                 
                 # TODO: add nonlinear XFM
                 
-
                 if mask is not None:
                     m.resample_labels(mask, out_mask, 
                                     transform=out_xfm, like=model)

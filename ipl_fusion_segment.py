@@ -52,17 +52,9 @@ def parse_options():
                     help="Specify library for error correction",
                     dest='library')
     
-    parser.add_argument('--input',
-                    help="input file, required for application of method",
-                    dest='input')
-    
     parser.add_argument('--options',
                     help="Segmentation options in json format",
                     dest='options')
-    
-    parser.add_argument('--output',
-                    help="Output directory/file, required for application of method",
-                    dest='output')
     
     parser.add_argument('--work',
                     help="Work directory, place to store temporary files",
@@ -96,6 +88,13 @@ def parse_options():
                         default='ec',
                         dest='variant_reg')
     
+    parser.add_argument('input',
+                    help="input file, required for application of method" )
+    
+    parser.add_argument('output',
+                    help="Output directory/file, required for application of method")
+    
+   
     options = parser.parse_args()
     
     if options.debug:
@@ -108,8 +107,11 @@ if __name__ == '__main__':
     options = parse_options()
     
         
-    if options.segment is not None and options.input is not None:
-        library=load_library_info(options.segment)
+    if     options.library is not None \
+       and options.input is not None \
+       and options.output is not None:
+           
+        library=load_library_info( options.library )
         segmentation_parameters={}
 
         if options.options is not None:
