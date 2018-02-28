@@ -50,7 +50,7 @@ def parse_options():
                     help="Output directory")
 
     parser.add_argument('-n',type=int,
-                        default=3,
+                        default=10,
                         help="Aplification factor (i.e number of augmented samples per each input",
                         dest='n')
     
@@ -140,58 +140,60 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
             # apply pre-filtering before other stages
             filtered_dataset = MriDataset( prefix=m.tempdir, name=sample_name )
             filter_sample( input_dataset, filtered_dataset, pre_filters, model=model)
-            
             filtered_dataset.seg =input_samples[j].seg
             filtered_dataset.mask=input_samples[j].mask
         
         m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0, 1.0, 1.0])
         
+        out_=[]
         for r in range(options.n):
             out_suffix="_{:03d}".format(r)
             
-            out_vol  = options.output+os.sep+sample_name+out_suffix+'_scan.mnc'
-            out_seg  = options.output+os.sep+sample_name+out_suffix+'_seg.mnc'
-            out_mask = options.output+os.sep+sample_name+out_suffix+'_mask.mnc'
+            out_vol  = options.output+ os.sep+ sample_name+ out_suffix+ '_scan.mnc'
+            out_seg  = options.output+ os.sep+ sample_name+ out_suffix+ '_seg.mnc'
+            out_mask = options.output+ os.sep+ sample_name+ out_suffix+ '_mask.mnc'
+            out_xfm  = options.output+ os.sep+ sample_name+ out_suffix+ '.xfm'
             
-            out_xfm=options.output+os.sep+sample_name+out_suffix+'.xfm'
-            
-            ran_xfm=m.tmp('random_{}.xfm'.format(r))
-            
-            m.param2xfm(ran_xfm,
-                        scales=     ((np.random.rand(3)-0.5)*2*options.scale/100.0+1.0).tolist(),
-                        translation=((np.random.rand(3)-0.5)*2*options.shift).tolist(),
-                        rotations=  ((np.random.rand(3)-0.5)*2*options.rot).tolist())
-            
-            if flip:
-                m.xfmconcat([lib_sample[-1], m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
-            else:
-                m.xfmconcat([lib_sample[-1], ran_xfm], out_xfm)
-            
-            # TODO: add nonlinear XFM
-            
-
-            if mask is not None:
-                m.resample_labels(mask, out_mask, 
-                                  transform=out_xfm, like=model)
-            else:
-                out_mask=None
+            if not os.path.exists(out_vol) or not os.path.exists(out_seg) or not os.path.exists(out_mask) or not os.path.exists(out_xfm):
                 
-            m.resample_labels(filtered_dataset.seg, out_seg, 
-                              transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
+                ran_xfm=m.tmp('random_{}.xfm'.format(r))
+                
+                m.param2xfm(ran_xfm,
+                            scales=     ((np.random.rand(3)-0.5)*2*options.scale/100.0+1.0).tolist(),
+                            translation=((np.random.rand(3)-0.5)*2*options.shift).tolist(),
+                            rotations=  ((np.random.rand(3)-0.5)*2*options.rot).tolist())
+                
+                if flip:
+                    m.xfmconcat([lib_sample[-1], m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
+                else:
+                    m.xfmconcat([lib_sample[-1], ran_xfm], out_xfm)
+                
+                # TODO: add nonlinear XFM
+                
 
-            if post_filters is not None:
-                output_scan=m.tmp('scan_{}.mnc'.format(r))
-            else:
-                output_scan=out_vol
-            # create a file in temp dir first
-            m.resample_smooth(filtered_dataset.scan, output_scan, 
-                              order=options.order, transform=out_xfm,like=model)
+                if mask is not None:
+                    m.resample_labels(mask, out_mask, 
+                                    transform=out_xfm, like=model)
+                else:
+                    out_mask=None
+                    
+                m.resample_labels(filtered_dataset.seg, out_seg, 
+                                transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
 
-            if post_filters is not None:
-                apply_filter(output_scan, out_vol, post_filters, model=model, 
-                             input_mask=out_mask, input_labels=out_seg, model_labels=model_seg)
-        
-        return [out_vol, out_seg, out_xfm ]
+                if post_filters is not None:
+                    output_scan=m.tmp('scan_{}.mnc'.format(r))
+                else:
+                    output_scan=out_vol
+                # create a file in temp dir first
+                m.resample_smooth(filtered_dataset.scan, output_scan, 
+                                order=options.order, transform=out_xfm,like=model)
+
+                if post_filters is not None:
+                    apply_filter(output_scan, out_vol, post_filters, model=model, 
+                                input_mask=out_mask, input_labels=out_seg, model_labels=model_seg)
+            out_.append([out_vol, out_seg, out_xfm ])
+            
+        return out_
   except:
     print("Exception:{}".format(sys.exc_info()[0]))
     traceback.print_exc( file=sys.stdout)
@@ -248,7 +250,8 @@ if __name__ == '__main__':
         # wipe all the samples
         augmented_library['library']=[]
         
-        augmented_library['library']=[j.result() for j in outputs]
+        for j in outputs:
+            augmented_library['library'].extend(j.result())
         
         # save new library description
         save_library_info(augmented_library, options.output)
