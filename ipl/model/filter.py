@@ -110,11 +110,11 @@ def average_samples(
 
         return  True
     except mincError as e:
-        print "Exception in average_samples:{}".format(str(e))
+        print("Exception in average_samples:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_samples:{}".format(sys.exc_info()[0])
+        print("Exception in average_samples:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
     
@@ -132,11 +132,11 @@ def average_stats(
                 st=float(m.stats(sd.scan,'-median'))
         return st
     except mincError as e:
-        print "mincError in average_stats:{}".format(repr(e))
+        print("mincError in average_stats:{}".format(repr(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_stats:{}".format(sys.exc_info()[0])
+        print("Exception in average_stats:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -166,11 +166,11 @@ def calculate_diff_bias_field(sample, model, output, symmetric=False, distance=1
                         m.difference_n3(sample.scan_f, model.scan, output.scan_f, distance=distance, normalize=True )
         return True
     except mincError as e:
-        print "mincError in average_stats:{}".format(repr(e))
+        print("mincError in average_stats:{}".format(repr(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_stats:{}".format(sys.exc_info()[0])
+        print("Exception in average_stats:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -191,11 +191,11 @@ def average_bias_fields(samples, output, symmetric=False ):
             m.log_average(avg, output.scan)
         return True
     except mincError as e:
-        print "mincError in average_stats:{}".format(repr(e))
+        print("mincError in average_stats:{}".format(repr(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_stats:{}".format(sys.exc_info()[0])
+        print("Exception in average_stats:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -244,11 +244,11 @@ def resample_and_correct_bias(
             
         return True
     except mincError as e:
-        print "Exception in resample_and_correct_bias:{}".format(str(e))
+        print("Exception in resample_and_correct_bias:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in resample_and_correct_bias:{}".format(sys.exc_info()[0])
+        print("Exception in resample_and_correct_bias:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -493,11 +493,11 @@ def average_stats_regression(
 
         return (sd_int,sd_def)
     except mincError as e:
-        print "mincError in average_stats_regression:{}".format(repr(e))
+        print("mincError in average_stats_regression:{}".format(repr(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_stats_regression:{}".format(sys.exc_info()[0])
+        print("Exception in average_stats_regression:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 

@@ -28,7 +28,8 @@ from .aqc          import *
 def standard_pipeline(info,
                       output_dir,
                       options =None,
-                      work_dir=None):
+                      work_dir=None,
+                      manual_dir=None):
     """
     drop-in replacement for the standard pipeline
 
@@ -102,11 +103,12 @@ def standard_pipeline(info,
             }
                 
             # setup parameters
-            subject_id   = info['subject']
-            timepoint_id = info.get('visit', None)
-            t1w_scan     = info['t1w']
-            add_scans    = info.get('add', None)
+            subject_id       = info['subject']
+            timepoint_id     = info.get('visit', None)
+            t1w_scan         = info['t1w']
+            add_scans        = info.get('add', None)
             init_t1w_lin_xfm = info.get('init_t1w_lin_xfm', None)
+            manual           = options.get('manual',None)
             
 
             corr_t1w = info.get('corr_t1w', None)
@@ -152,7 +154,7 @@ def standard_pipeline(info,
 
             if work_dir is None:
                 work_dir=output_dir+os.sep+'work_'+dataset_id
-
+            
             run_qc    = options.get('qc',{})
             run_aqc   = options.get('aqc',None)
             run_nl    = options.get('nl',True)
@@ -182,6 +184,13 @@ def standard_pipeline(info,
             lob_dif = work_dir+os.sep+'lob'
             vol_dir = work_dir+os.sep+'vol'
             
+            manual_clp_dir = None
+            manual_tal_dir = None
+            
+            if manual_dir is not None:
+                manual_clp_dir = manual_dir+os.sep+'clp'
+                manual_tal_dir = manual_dir+os.sep+'tal'
+            
             # create all
             create_dirs([clp_dir,tal_dir,nl_dir,cls_dir,qc_dir,aqc_dir,lob_dif,vol_dir])
             
@@ -194,6 +203,15 @@ def standard_pipeline(info,
             
             # stereotaxic space
             t1w_tal_xfm=MriTransform(prefix=tal_dir,name='tal_xfm_'+dataset_id)
+            
+            if manual_dir is not None:
+                manual_t1w_tal_xfm=MriTransform(prefix=manual_tal_dir,name='tal_xfm_'+dataset_id)
+                
+                if os.path.exists(manual_t1w_tal_xfm.xfm) and init_t1w_lin_xfm is None: # HACK ish...
+                    init_t1w_lin_xfm=manual_t1w_tal_xfm
+                else:
+                    print("Missing manual xfm:{}".format(manual_t1w_tal_xfm.xfm))
+            
             t1w_tal_noscale_xfm=MriTransform(prefix=tal_dir,name='tal_noscale_xfm_'+dataset_id)
             unscale_xfm=MriTransform(prefix=tal_dir,name='unscale_xfm_'+dataset_id)
             
@@ -344,8 +362,15 @@ def standard_pipeline(info,
                     
                     add_qc_nu = MriQCImage(prefix=qc_dir,    name='nu_' + c.modality+'_' + dataset_id)
                     add_aqc_nu= MriQCImage(prefix=aqc_dir,   name='nu_' + c.modality+'_' + dataset_id)
-                    co_xfm= MriTransform(prefix=clp_dir, name='xfm_'+ c.modality+'_' + dataset_id)
+                    co_xfm= MriTransform(prefix=clp_dir,     name='xfm_'+ c.modality+'_' + dataset_id)
                     
+                    manual_co_xfm = None
+                    if manual_dir is not None:
+                        manual_co_xfm=MriTransform(prefix=manual_clp_dir,name='xfm_'+ c.modality+'_' + dataset_id)
+                        if not os.path.exists(manual_co_xfm.xfm):
+                            print("Missing manual xfm:{}".format(manual_co_xfm.xfm))
+                            manual_co_xfm=None
+
                     co_par=MriAux(prefix=clp_dir, name='xfm_par_'+ c.modality+'_'+dataset_id)
                     co_log=MriAux(prefix=clp_dir, name='xfm_log_'+ c.modality+'_'+dataset_id)
                     
@@ -398,7 +423,8 @@ def standard_pipeline(info,
                                         corr_xfm=corr_xfm,
                                         corr_ref=corr_t1w,
                                         par=co_par,
-                                        log=co_log)
+                                        log=co_log,
+                                        init_xfm = manual_co_xfm )
                         prev_co_xfm=co_xfm
                     else:
                         co_xfm=prev_co_xfm

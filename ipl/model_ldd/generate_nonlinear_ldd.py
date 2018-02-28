@@ -203,11 +203,11 @@ def generate_ldd_average(
 
         return results
     except mincError as e:
-        print "Exception in generate_ldd_average:{}".format(str(e))
+        print("Exception in generate_ldd_average:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in generate_ldd_average:{}".format(sys.exc_info()[0])
+        print("Exception in generate_ldd_average:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
     
@@ -249,11 +249,11 @@ def generate_ldd_model(samples,model=None,mask=None,work_prefix=None,options={})
                                     prefix=work_prefix,options=options)
 
     except mincError as e:
-        print "Exception in generate_ldd_model:{}".format(str(e))
+        print("Exception in generate_ldd_model:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in generate_ldd_model:{}".format(sys.exc_info()[0])
+        print("Exception in generate_ldd_model:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 

@@ -1831,7 +1831,7 @@ class mincTools(temp_files):
             elif isinstance(label_defs, dict) :
                 _label_file=self.temp_file(suffix='.csv')
                 with open(_label_file,'w') as f:
-                    for i, j in label_defs.iteritems():
+                    for i, j in label_defs.items():
                         f.write("{},{}\n".format(i,j))
         
             cmd.extend(['--labels',_label_file])

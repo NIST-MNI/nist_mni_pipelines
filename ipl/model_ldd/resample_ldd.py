@@ -107,11 +107,11 @@ def concat_resample_ldd(
                         m.qc(m.tmp('velocity_mag_f.mnc'), output_mri.scan_f+'_vel.jpg' )
                         
     except mincError as e:
-        print "Exception in concat_resample_ldd:{}".format(str(e))
+        print("Exception in concat_resample_ldd:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in concat_resample_ldd:{}".format(sys.exc_info()[0])
+        print("Exception in concat_resample_ldd:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 

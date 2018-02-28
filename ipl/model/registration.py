@@ -185,11 +185,11 @@ def linear_register_step(
 
         return True
     except mincError as e:
-        print "Exception in linear_register_step:{}".format(str(e))
+        print("Exception in linear_register_step:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in linear_register_step:{}".format(sys.exc_info()[0])
+        print("Exception in linear_register_step:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
         
@@ -297,11 +297,11 @@ def non_linear_register_step(
                     
         return True
     except mincError as e:
-        print "Exception in non_linear_register_step:{}".format(str(e))
+        print("Exception in non_linear_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -409,11 +409,11 @@ def dd_register_step(
                     
         return True
     except mincError as e:
-        print "Exception in non_linear_register_step:{}".format(str(e))
+        print("Exception in non_linear_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -523,11 +523,11 @@ def ants_register_step(
                     
         return True
     except mincError as e:
-        print "Exception in non_linear_register_step:{}".format(str(e))
+        print( "Exception in non_linear_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -638,11 +638,11 @@ def elastix_register_step(
                     
         return True
     except mincError as e:
-        print "Exception in non_linear_register_step:{}".format(str(e))
+        print("Exception in non_linear_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -674,11 +674,11 @@ def average_transforms(
                 m.xfminvert(out_xfm, output.xfm)
         return True
     except mincError as e:
-        print "Exception in average_transforms:{}".format(str(e))
+        print("Exception in average_transforms:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in average_transforms:{}".format(sys.exc_info()[0])
+        print("Exception in average_transforms:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -846,11 +846,11 @@ def non_linear_register_step_regress_std(
         # done
         
     except mincError as e:
-        print "Exception in non_linear_register_step_ldd:{}".format(str(e))
+        print("Exception in non_linear_register_step_ldd:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0])
+        print("Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
         
