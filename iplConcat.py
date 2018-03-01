@@ -28,17 +28,18 @@ def pipeline_concat(patient, tp):
         with mincTools()  as minc:
             # create QC images
             atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
-            minc.resample_smooth(patient[tp].stx_mnc['t1'],minc.tmp('nl_stx_t1.mnc'),transform=patient[tp].nl_xfm)
             
-            minc.qc(
-                minc.tmp('nl_stx_t1.mnc'),
-                patient[tp].qc_jpg['nl_t1'],
-                title=patient[tp].qc_title,
-                image_range=[0, 120],
-                mask=atlas_outline,
-                big=True,
-                clamp=True,
-            )
+            if not os.path.exists(patient[tp].qc_jpg['nl_t1']):
+                minc.resample_smooth(patient[tp].stx2_mnc['t1'],minc.tmp('nl_stx_t1.mnc'),transform=patient[tp].nl_xfm)
+                minc.qc(
+                    minc.tmp('nl_stx_t1.mnc'),
+                    patient[tp].qc_jpg['nl_t1'],
+                    title=patient[tp].qc_title,
+                    image_range=[0, 120],
+                    mask=atlas_outline,
+                    big=True,
+                    clamp=True,
+                )
 
 ###
         return True
