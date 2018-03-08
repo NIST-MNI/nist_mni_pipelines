@@ -379,9 +379,11 @@ def launchPipeline(options):
             comm.extend(['export OMP_DYNAMIC=TRUE'])
             comm.extend(['python -m scoop -n {} {} -p {}'.format(str(slots),os.path.abspath(sys.argv[0]),i.pickle)])
             
-            qsub_pe(comm,opts.pe,opts.peslots,
+            qsub_pe(comm,opts.pe, 
+                    opts.peslots,
                     name='LNG_{}'.format(str(id)),
-                    logfile=i.patientdir+os.sep+str(id)+".sge.log")
+                    logfile=i.patientdir+os.sep+str(id)+".sge.log",
+                    queue=opts.queue)
 
 def runTimePoint_FirstStage(tp, patient):
     '''
@@ -959,6 +961,10 @@ if __name__ == '__main__':
                      
     group.add_option('--peslots', dest='peslots',
                      help='PE slots [%default]', default=4, type="int")
+    
+    group.add_option('-q','--queue', dest='queue',
+                     help='Specify SGE queue for submission'
+                     )
 
     parser.add_option_group(group)
 
