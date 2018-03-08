@@ -305,11 +305,11 @@ def regress(
 
         return regression_results
     except mincError as e:
-        print "Exception in regress:{}".format(str(e))
+        print("Exception in regress:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in regress:{}".format(sys.exc_info()[0])
+        print("Exception in regress:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 

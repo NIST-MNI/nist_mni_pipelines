@@ -293,11 +293,11 @@ def generate_linear_model(samples,model=None,mask=None,work_prefix=None,options=
 
         return generate_linear_average(internal_sample,internal_model,prefix=work_prefix,options=options)
     except mincError as e:
-        print "Exception in generate_linear_model:{}".format(str(e))
+        print("Exception in generate_linear_model:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in generate_linear_model:{}".format(sys.exc_info()[0])
+        print("Exception in generate_linear_model:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 

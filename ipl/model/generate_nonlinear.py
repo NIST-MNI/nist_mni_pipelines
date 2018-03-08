@@ -93,7 +93,7 @@ def generate_nonlinear_average(
     it=0
     for (i,p) in enumerate(protocol):
         downsample=p.get('downsample',downsample_)
-        for j in xrange(1,p['iter']+1):
+        for j in range(1,p['iter']+1):
             it+=1
             if it>stop_early:
                 break
@@ -330,11 +330,11 @@ def generate_nonlinear_model(samples, model=None, mask=None, work_prefix=None, o
         return generate_nonlinear_average(internal_sample,internal_model,prefix=work_prefix,options=options,skip=skip,stop_early=stop_early)
 
     except mincError as e:
-        print "Exception in generate_nonlinear_model:{}".format(str(e))
+        print("Exception in generate_nonlinear_model:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print "Exception in generate_nonlinear_model:{}".format(sys.exc_info()[0])
+        print("Exception in generate_nonlinear_model:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
