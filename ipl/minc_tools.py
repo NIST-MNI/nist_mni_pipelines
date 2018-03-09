@@ -1049,15 +1049,14 @@ class mincTools(temp_files):
     def similarity(self, reference, sample, ref_mask=None, sample_mask=None,method="msq"):
         """Calculate image similarity metric"""
         args=['itk_similarity',reference,sample,'--'+method]
-        
+
         if ref_mask is not None:
             args.extend(['--src_mask',ref_mask])
         if sample_mask is not None:
             args.extend(['--target_mask',sample_mask])
-         
+
         r=self.execute_w_output(args,verbose=self.verbose)
         return float(r)
-        
 
     def label_similarity(self, reference, sample, method="gkappa"):
         """Calculate image similarity metric"""
@@ -1083,9 +1082,9 @@ class mincTools(temp_files):
 
     def log_average(self, inputs, output):
         """perform log-average (geometric average)"""
-        tmp = ['log(A[%d])' % i for i in xrange(len(inputs))]
-        self.calc(inputs, 'exp((%s)/%d)' % ('+'.join(tmp),
-                  len(inputs)), output, datatype='-float')
+        tmp = ['log(A[%d])' % i for i,_ in enumerate(inputs)]
+        self.calc(inputs, 'exp((%s)/%d)' % ('+'.join(tmp), len(inputs)), 
+                  output, datatype='-float')
 
 
     def param2xfm(self, output, scales=None, translation=None, rotations=None, shears=None):
@@ -1099,10 +1098,8 @@ class mincTools(temp_files):
             cmd.extend(['-scales',str(scales[0]),str(scales[1]),str(scales[2])])
         if shears is not None:
             cmd.extend(['-shears',str(shears[0]),str(shears[1]),str(shears[2])])
-
         self.command(cmd, inputs=[], outputs=[output], verbose=self.verbose)
 
-        
 
     def flip_volume_x(self,input,output, labels=False, datatype=None):
         '''flip along x axis'''

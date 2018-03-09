@@ -83,7 +83,7 @@ def generate_linear_average(
         futures.wait(flip_all, return_when=futures.ALL_COMPLETED)
 
     # go through all the iterations
-    for it in xrange(1,iterations+1):
+    for it in range(1,iterations+1):
 
         # this will be a model for next iteration actually
 
