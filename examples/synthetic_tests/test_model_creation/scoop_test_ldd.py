@@ -18,7 +18,7 @@ if __name__ == '__main__':
                             'smooth_field':1,
                             'conf': { 32:40,16:40,8:40,4:40,2:40 } }
             },
-    model='ref.mnc',
-    mask='mask.mnc'
+    model='test_data/ellipse_1.mnc',
+    mask='test_data/mask.mnc'
             
   )

@@ -81,7 +81,7 @@ def generate_ldd_average(
         # go through all the iterations
         it=0
         for (i,p) in enumerate(protocol):
-            for j in xrange(1,p['iter']+1):
+            for j in range(1,p['iter']+1):
                 it+=1
                 # this will be a model for next iteration actually
 

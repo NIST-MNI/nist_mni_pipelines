@@ -28,7 +28,7 @@ if __name__ == '__main__':
               'refine': True,
               'use_median': True,
             },
-    model='test_data/ref.mnc',
+    model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc'
             
   )

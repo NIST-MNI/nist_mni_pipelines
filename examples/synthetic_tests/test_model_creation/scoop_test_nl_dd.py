@@ -30,7 +30,7 @@ if __name__ == '__main__':
                 'hist_match':True 
               }
             },
-    model='ref.mnc',
-    mask='mask.mnc'
+    model='test_data/ellipse_1.mnc',
+    mask='test_data/mask.mnc'
             
   )
