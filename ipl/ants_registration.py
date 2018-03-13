@@ -334,9 +334,9 @@ def non_linear_register_ants2(
                 cost_function_=cost_function
             #    
             if isinstance(cost_function_par, list): 
-                cost_function_par_=cost_function[_s]
+                cost_function_par_=cost_function_par[_s]
             else:
-                cost_function_par_=cost_function
+                cost_function_par_=cost_function_par
             #
             cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
 
@@ -475,9 +475,9 @@ def linear_register_ants2(
                 cost_function_=cost_function
             #    
             if isinstance(cost_function_par, list): 
-                cost_function_par_=cost_function[_s]
+                cost_function_par_=cost_function_par[_s]
             else:
-                cost_function_par_=cost_function
+                cost_function_par_=cost_function_par
             #
             cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
         #
