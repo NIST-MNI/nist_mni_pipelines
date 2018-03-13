@@ -260,6 +260,24 @@ def non_linear_register_ants2(
     
     with minc_tools.mincTools(verbose=verbose) as minc:
 
+        sources = []
+        targets = []
+        
+        if isinstance(source, list):
+            sources.extend(source)
+        else:
+            sources.append(source)
+        
+        if isinstance(target, list):
+            targets.extend(target)
+        else:
+            targets.append(target)
+        if len(sources)!=len(targets):
+            raise mincError(' ** Error: Different number of inputs ')
+        
+        modalities=len(sources)
+
+
         if parameters is None:
             #TODO add more options here
             parameters={'conf':{},
@@ -285,7 +303,7 @@ def non_linear_register_ants2(
                 shrink+='x'
                 blur+='x'
                 
-        if not minc.checkfiles(inputs=[source,target], 
+        if not minc.checkfiles(inputs=sources+targets, 
                                 outputs=[output_xfm ]):
             return
         
@@ -305,32 +323,24 @@ def non_linear_register_ants2(
         
         cmd=['antsRegistration','--minc','-a','--dimensionality','3']
 
-        s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-        t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
 
-        source_lr=source
-        target_lr=target
-        source_mask_lr=source_mask
-        target_mask_lr=target_mask
+        (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
 
-        if downsample is not None:
-            s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-            t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-            
-            source_lr=minc.tmp(s_base+'_'+str(downsample)+'.mnc')
-            target_lr=minc.tmp(t_base+'_'+str(downsample)+'.mnc')
+        # generate modalities
+        for _s in range(modalities):
+            if isinstance(cost_function, list): 
+                cost_function_=cost_function[_s]
+            else:
+                cost_function_=cost_function
+            #    
+            if isinstance(cost_function_par, list): 
+                cost_function_par_=cost_function[_s]
+            else:
+                cost_function_par_=cost_function
+            #
+            cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
 
-            minc.resample_smooth(source,source_lr,unistep=downsample)
-            minc.resample_smooth(target,target_lr,unistep=downsample)
-
-            if target_mask is not None:
-                target_mask_lr=minc.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
-                minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
-            if target_mask is not None:
-                target_mask_lr=minc.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
-                minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
-
-        cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function,source_lr,target_lr,cost_function_par)])
+        
         cmd.extend(['--convergence','[{}]'.format(prog)])
         cmd.extend(['--shrink-factors',shrink])
         cmd.extend(['--smoothing-sigmas',blur])
@@ -342,7 +352,7 @@ def non_linear_register_ants2(
         if init_xfm is not None:
             cmd.extend(['--initial-fixed-transform',init_xfm])
         
-        inputs=[source_lr,target_lr]
+        inputs=sources_lr+targets_lr
         
         if target_mask_lr is not None and source_mask_lr is not None and use_mask:
             inputs.extend([source_mask_lr, target_mask_lr])
@@ -355,7 +365,7 @@ def non_linear_register_ants2(
             if isinstance(winsorize_intensity, dict):
                 cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',1)),str(winsorize_intensity.get('high',99))])
             else:
-                cmd.append('--winsorize-image-intensities')
+                cmd.append( '--winsorize-image-intensities')
             
         if use_float:
             cmd.append('--float')
@@ -372,12 +382,12 @@ def non_linear_register_ants2(
 
 def linear_register_ants2(
     source, target, output_xfm,
-    target_mask=None,
-    source_mask=None,
-    init_xfm   =None,
-    parameters =None,
-    downsample =None,
-    close=False,
+    target_mask= None,
+    source_mask= None,
+    init_xfm   = None,
+    parameters = None,
+    downsample = None,
+    close      = False,
     verbose=0
     ):
     """perform linear registration using ANTs"""
@@ -390,9 +400,9 @@ def linear_register_ants2(
         if parameters is None:
             #TODO add more options here
             parameters={ 
-                        'conf':{}, 
-                        'blur':{}, 
-                        'shrink':{} 
+                        'conf':  {},
+                        'blur':  {},
+                        'shrink':{}
                         }
         else:
             if not 'conf'   in parameters: parameters['conf']   = {}
@@ -417,52 +427,61 @@ def linear_register_ants2(
         # TODO: make it a parameter?
         prog+=','+parameters.get('convergence','1.e-8,20')
         
-        if not minc.checkfiles(inputs=[source,target], 
-                                outputs=[output_xfm ]):
+        sources = []
+        targets = []
+        
+        if isinstance(source, list):
+            sources.extend(source)
+        else:
+            sources.append(source)
+        
+        if isinstance(target, list):
+            targets.extend(target)
+        else:
+            targets.append(target)
+            
+            
+        if len(sources)!=len(targets):
+            raise mincError(' ** Error: Different number of inputs ')
+        
+        modalities=len(sources)
+        
+        if not minc.checkfiles(inputs=sources+targets,
+                               outputs=[output_xfm ]):
             return
         
-        output_base=output_xfm.rsplit('.xfm',1)[0]
-            
-        cost_function=parameters.get('cost_function','Mattes')
-        cost_function_par=parameters.get('cost_function_par','1,32,regular,0.3')
+        output_base            = output_xfm.rsplit('.xfm',1)[0]
         
-        transformation=parameters.get('transformation','affine[ 0.1 ]')
-        use_mask=parameters.get('use_mask',True)
-        use_histogram_matching=parameters.get('use_histogram_matching',False)
-        winsorize_intensity=parameters.get('winsorize-image-intensities',None)
-        use_float=parameters.get('use_float',False)
-        intialize_fixed=parameters.get('initialize_fixed',None)
-        intialize_moving=parameters.get('intialize_moving',None)
+        cost_function          = parameters.get('cost_function',    'Mattes')
+        cost_function_par      = parameters.get('cost_function_par','1,32,regular,0.3')
+        
+        transformation         = parameters.get('transformation','affine[ 0.1 ]')
+        use_mask               = parameters.get('use_mask',True)
+        use_histogram_matching = parameters.get('use_histogram_matching',False)
+        winsorize_intensity    = parameters.get('winsorize-image-intensities',None)
+        use_float              = parameters.get('use_float',False)
+        intialize_fixed        = parameters.get('initialize_fixed',None)
+        intialize_moving       = parameters.get('intialize_moving',None)
         
         cmd=['antsRegistration','--collapse-output-transforms', '0', '--minc','-a','--dimensionality','3']
 
-        s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-        t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-
-        source_lr=source
-        target_lr=target
-        source_mask_lr=source_mask
-        target_mask_lr=target_mask
-
-        if downsample is not None:
-            s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-            t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-            
-            source_lr=minc.tmp(s_base+'_'+str(downsample)+'.mnc')
-            target_lr=minc.tmp(t_base+'_'+str(downsample)+'.mnc')
-
-            minc.resample_smooth(source,source_lr,unistep=downsample)
-            minc.resample_smooth(target,target_lr,unistep=downsample)
-
-            if target_mask is not None:
-                target_mask_lr=minc.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
-                minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
-            if target_mask is not None:
-                target_mask_lr=minc.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
-                minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
-
-
-        cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function,source_lr,target_lr,cost_function_par)])
+        (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
+        
+        # generate modalities
+        for _s in range(modalities):
+            if isinstance(cost_function, list): 
+                cost_function_=cost_function[_s]
+            else:
+                cost_function_=cost_function
+            #    
+            if isinstance(cost_function_par, list): 
+                cost_function_par_=cost_function[_s]
+            else:
+                cost_function_par_=cost_function
+            #
+            cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
+        #
+        # 
         cmd.extend(['--convergence','[{}]'.format(prog)])
         cmd.extend(['--shrink-factors',shrink])
         cmd.extend(['--smoothing-sigmas',blur])
@@ -477,17 +496,17 @@ def linear_register_ants2(
             # and it causes lots of problems 
             cmd.extend(['--initialize-transforms-per-stage','1'])
         elif intialize_fixed is not None:
-            cmd.extend(['--initial-fixed-transform',"[{},{},{}]".format(source_lr,target_lr,str(intialize_fixed))])
+            cmd.extend(['--initial-fixed-transform',"[{},{},{}]".format(sources_lr[0],targets_lr[0],str(intialize_fixed))])
         elif not close:
-            cmd.extend(['--initial-fixed-transform',"[{},{},{}]".format(source_lr,target_lr,'0')])
+            cmd.extend(['--initial-fixed-transform',"[{},{},{}]".format(sources_lr[0],targets_lr[0],'0')])
         
         if intialize_moving is not None:
-            cmd.extend(['--initial-moving-transform',"[{},{},{}]".format(source_lr,target_lr,str(intialize_moving))])
+            cmd.extend(['--initial-moving-transform',"[{},{},{}]".format(sources_lr[0],targets_lr[0],str(intialize_moving))])
         elif not close:
-            cmd.extend(['--initial-moving-transform',"[{},{},{}]".format(source_lr,target_lr,'0')])
-        
-        inputs=[source_lr,target_lr]
-        
+            cmd.extend(['--initial-moving-transform',"[{},{},{}]".format(sources_lr[0],targets_lr[0],'0')])
+        #
+        inputs=sources_lr+targets_lr
+        #
         if target_mask_lr is not None and source_mask_lr is not None and use_mask:
             inputs.extend([source_mask_lr, target_mask_lr])
             cmd.extend(['-x','[{},{}]'.format(source_mask_lr, target_mask_lr)])
