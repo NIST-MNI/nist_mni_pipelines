@@ -151,8 +151,7 @@ def qc(
         _ovl.setup_standard_order()
         _ovl_data=_ovl.load_complete_volume(minc2_file.MINC2_FLOAT)
         if _ovl_data.shape != data_shape:
-            #print("Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl.data.shape),repr(data_shape))
-            raise "Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl_data.shape),repr(data_shape)
+            raise "Overlay shape does not match image!\nOvl={} Image={}".format(repr(_ovl_data.shape),repr(data_shape))
         if mask_range is None:
             omin=np.nanmin(_ovl_data)
             omax=np.nanmax(_ovl_data)
