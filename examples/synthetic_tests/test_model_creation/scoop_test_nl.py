@@ -14,6 +14,6 @@ if __name__ == '__main__':
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc',
-    stop_early=4,
-    skip=0,
+    #stop_early=4,
+    #skip=0,
   )
