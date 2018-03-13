@@ -320,6 +320,23 @@ def linear_register(
       if not minc.checkfiles(inputs=[source,target], outputs=[output_xfm]):
           return
 
+      sources = []
+      targets = []
+        
+      if isinstance(source, list):
+            sources.extend(source)
+      else:
+            sources.append(source)
+        
+      if isinstance(target, list):
+            targets.extend(target)
+      else:
+            targets.append(target)
+    
+      if len(sources)!=len(targets):
+            raise mincError(' ** Error: Different number of inputs ')
+
+
       # python version
       if conf is None:
           conf = linear_registration_config['bestlinreg'] # bestlinreg_new ?
@@ -336,6 +353,8 @@ def linear_register(
       if not isinstance(conf, list): # assume that it is a string
           # assume it's external program's name
           # else run internally
+          # TODO: check if we are given multiple sources/targets?
+          # 
           with minc_tools.mincTools() as m:
               cmd=[conf,source,target,output_xfm]
               if source_mask is not None:
@@ -348,35 +367,20 @@ def linear_register(
                   cmd.append(objective)
               if init_xfm is not None:
                   cmd.extend(['-init_xfm', init_xfm])
+            
               m.command(cmd, inputs=[source,target], outputs=[output_xfm],verbose=2)
           return output_xfm
       else:
 
         prev_xfm = None
 
-        s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-        t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+        s_base=os.path.basename(sources[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+        t_base=os.path.basename(targets[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
 
-        source_lr=source
-        target_lr=target
-        
-        source_mask_lr=source_mask
-        target_mask_lr=target_mask
         # figure out what to do here:
         with minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
-            if downsample is not None:
-                source_lr=tmp.cache(s_base+'_'+str(downsample)+'.mnc')
-                target_lr=tmp.cache(t_base+'_'+str(downsample)+'.mnc')
-                
-                minc.resample_smooth(source, source_lr, unistep=downsample)
-                minc.resample_smooth(target, target_lr, unistep=downsample)
-                
-                if source_mask is not None:
-                    source_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
-                    minc.resample_labels(source_mask,source_mask_lr,unistep=downsample,datatype='byte')
-                if target_mask is not None:
-                    target_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
-                    minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
+            
+            (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources, targets, source_mask, target_mask, downsample)
                 
             # a fitting we shall go...
             for (i,c) in enumerate(conf):
@@ -394,32 +398,57 @@ def linear_register(
                 
                 tmp_xfm =    tmp.tmp(s_base+'_'+t_base+'_'+str(i)+'.xfm')
 
-                tmp_source = source_lr
-                tmp_target = target_lr
+                tmp_sources = sources_lr
+                tmp_targets = targets_lr
 
-                if c['blur_fwhm']>0: 
-                    tmp_source = tmp.cache(s_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'.mnc')
-                    if not os.path.exists(tmp_source):
-                        minc.blur(source_lr,tmp_source,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
-                    tmp_target = tmp.cache(t_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'.mnc')
-                    if not os.path.exists(tmp_target):
-                        minc.blur(target_lr,tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
                 
+                if c['blur_fwhm']>0:
+                    tmp_sources=[]
+                    tmp_targets=[]
+                    
+                    for s_,_ in enumerate(sources_lr):
+                        tmp_source = tmp.cache(s_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'_'+str(s_)+'.mnc')
+                        if not os.path.exists(tmp_source):
+                            minc.blur(sources_lr[s_],tmp_source,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
+                            
+                        tmp_target = tmp.cache(t_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'_'+str(s_)+'.mnc')
+                        if not os.path.exists(tmp_target):
+                            minc.blur(targets_lr[s_],tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
+                            
+                        tmp_sources.append(tmp_source)
+                        tmp_targets.append(tmp_target)
+                
+                objective_=objective
+                
+                if isinstance(objective, list):
+                    objective_=objective[0]
+                    
                 if _reverse:
                   args =[  'minctracc', 
-                              tmp_target, tmp_source,'-clobber', 
+                              tmp_targets[0], tmp_sources[0],'-clobber', 
                               _parameters , 
-                              objective ,
+                              objective_ ,
                           '-simplex', c['simplex'],
                           '-tol',     c['tolerance'] ]
+                  
+                  # additional modalities
+                  for s_ in range(len(tmp_targets)-1):
+                    if isinstance(objective, list):
+                        objective_=objective[s_+1]
+                    args.extend([ '-feature_vol',tmp_targets[s_+1],tmp_sources[s_+1],objective_.lstrip('-'),1.0])
                 else:
                   # set up registration
                   args =[  'minctracc', 
-                              tmp_source, tmp_target,'-clobber', 
+                              tmp_sources[0], tmp_targets[0],'-clobber', 
                               _parameters , 
-                              objective ,
+                              objective_ ,
                           '-simplex', c['simplex'],
                           '-tol',     c['tolerance'] ]
+                  
+                  for s_ in range(len(tmp_targets)-1):
+                    if isinstance(objective, list):
+                        objective_=objective[s_+1]
+                    args.extend([ '-feature_vol',tmp_sources[s_+1],tmp_targets[s_+1],objective_.lstrip('-'),1.0])
 
                 args.append('-step')
                 args.extend(c['steps'])
@@ -637,31 +666,31 @@ def non_linear_register_full(
       prev_xfm = None
       prev_grid = None
 
-      s_base=os.path.basename(source).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
-      t_base=os.path.basename(target).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
       
-      source_lr=source
-      target_lr=target
-      
-      source_mask_lr=source_mask
-      target_mask_lr=target_mask
+      sources = []
+      targets = []
+        
+      if isinstance(source, list):
+            sources.extend(source)
+      else:
+            sources.append(source)
+        
+      if isinstance(target, list):
+            targets.extend(target)
+      else:
+            targets.append(target)
+    
+      if len(sources)!=len(targets):
+            raise mincError(' ** Error: Different number of inputs ')
+
+      s_base=os.path.basename(sources[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+      t_base=os.path.basename(targets[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+
       
       # figure out what to do here:
       with minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
           # a fitting we shall go...
-          if downsample is not None:
-              source_lr=tmp.cache(s_base+'_'+str(downsample)+'.mnc')
-              target_lr=tmp.cache(t_base+'_'+str(downsample)+'.mnc')
-              
-              minc.resample_smooth(source,source_lr,unistep=downsample)
-              minc.resample_smooth(target,target_lr,unistep=downsample)
-              
-              if source_mask is not None:
-                  source_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
-                  minc.resample_labels(source_mask,source_mask_lr,unistep=downsample,datatype='byte')
-              if target_mask is not None:
-                  target_mask_lr=tmp.cache(s_base+'_mask_'+str(downsample)+'.mnc')
-                  minc.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
+          (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources, targets, source_mask, target_mask, downsample)
           
           for (i,c) in enumerate(parameters['conf']):
 
@@ -676,24 +705,26 @@ def non_linear_register_full(
               tmp_xfm =    tmp_+'.xfm'
               tmp_grid=    tmp_+'_grid_0.mnc'
 
-              tmp_source=source_lr
-              tmp_target=target_lr
-
+              tmp_sources=sources_lr
+              tmp_targets=targets_lr
 
               if c['blur_fwhm']>0:
-                  tmp_source = tmp.cache(s_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'.mnc')
+                    tmp_sources=[]
+                    tmp_targets=[]
+                    
+                    for s_,_ in enumerate(sources_lr):
+                        tmp_source = tmp.cache(s_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'_'+str(s_)+'.mnc')
+                        if not os.path.exists(tmp_source):
+                            minc.blur(sources_lr[s_],tmp_source,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
+                        tmp_target = tmp.cache(t_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'_'+str(s_)+'.mnc')
+                        if not os.path.exists(tmp_target):
+                            minc.blur(targets_lr[s_],tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
+                        tmp_sources.append(tmp_source)
+                        tmp_targets.append(tmp_target)
 
-                  if not os.path.exists(tmp_source):
-                      minc.blur(source_lr,tmp_source,gmag=(c['blur']=='dxyz'),fwhm=c['blur_fwhm'])
-                  tmp.unlock(tmp_source)
-
-                  tmp_target = tmp.cache(t_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'.mnc')
-                  if not os.path.exists(tmp_target):
-                      minc.blur(target_lr,tmp_target,gmag=(c['blur']=='dxyz'),fwhm=c['blur_fwhm'])
-                  tmp.unlock(tmp_target)
 
               # set up registration
-              args =['minctracc', tmp_source,tmp_target,'-clobber', 
+              args =['minctracc', tmp_sources[0],tmp_targets[0],'-clobber', 
                           '-nonlinear',  parameters['cost'],
                           '-weight',     parameters['weight'],
                           '-stiffness',  parameters['stiffness'],
@@ -705,8 +736,11 @@ def non_linear_register_full(
               args.extend(['-lattice_diam',   c['step']*3.0, c['step']*3.0, c['step']*3.0 ] )
               args.extend(['-step',           c['step'],     c['step'],     c['step'] ] )
               
-              if c['step']<4:
+              if c['step']<4: #TODO: check if it's 4*minc_step ?
                   args.append('-no_super')
+              
+              for s_ in range(len(tmp_targets)-1):
+                  args.extend([ '-feature_vol',tmp_sources[s_+1],tmp_targets[s_+1],parameters['cost'],1.0])
               
                   # Current transformation at this step
               if prev_xfm is not None:

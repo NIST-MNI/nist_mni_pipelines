@@ -8,7 +8,7 @@ if __name__ == '__main__':
     work_prefix='tmp_nl',
     options={'symmetric':False,
              'protocol': [{'iter':4,'level':16},
-                         {'iter':4,'level':8},
+                          {'iter':4,'level':8},
                           ],
              'cleanup': True
             },
