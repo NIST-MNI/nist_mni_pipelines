@@ -27,7 +27,9 @@ def generate_linear_average(
     output_model=None,
     output_model_sd=None,
     prefix='.',
-    options={}
+    options={},
+    skip=0,
+    stop_early=100000
     ):
     """ perform iterative model creation"""
 
@@ -113,29 +115,30 @@ def generate_linear_average(
             if it > 1 and biascorr:
                 prev_bias_field = bias_fields[i]
 
-
-            transforms.append(
-                futures.submit(
-                    linear_register_step,
-                    s,
-                    current_model,
-                    sample_xfm,
-                    output_invert=sample_inv_xfm,
-                    init_xfm=prev_transform,
-                    symmetric=symmetric,
-                    reg_type=reg_type,
-                    objective=objective,
-                    linreg=linreg,
-                    work_dir=prefix,
-                    bias=prev_bias_field,
-                    downsample=downsample)
-                )
-            inv_transforms.append(sample_inv_xfm)
-            fwd_transforms.append(sample_xfm)
+            if it>skip and it<stop_early:
+                transforms.append(
+                    futures.submit(
+                        linear_register_step,
+                        s,
+                        current_model,
+                        sample_xfm,
+                        output_invert=sample_inv_xfm,
+                        init_xfm=prev_transform,
+                        symmetric=symmetric,
+                        reg_type=reg_type,
+                        objective=objective,
+                        linreg=linreg,
+                        work_dir=prefix,
+                        bias=prev_bias_field,
+                        downsample=downsample)
+                    )
+                inv_transforms.append(sample_inv_xfm)
+                fwd_transforms.append(sample_xfm)
 
 
         # wait for jobs to finish
-        futures.wait(transforms, return_when=futures.ALL_COMPLETED)
+        if it>skip and it<stop_early:
+            futures.wait(transforms, return_when=futures.ALL_COMPLETED)
     
         # remove information from previous iteration
         if cleanup and it>1 :
@@ -148,17 +151,18 @@ def generate_linear_average(
         avg_inv_transform=MriTransform(name='avg_inv', prefix=it_prefix,iter=it,linear=True)
 
         # 2 average all transformations
-        result=futures.submit(
-            average_transforms, inv_transforms, avg_inv_transform, nl=False, symmetric=symmetric
-            # TODO: maybe make median transforms?
-            )
-        futures.wait([result], return_when=futures.ALL_COMPLETED)
+        if it>skip and it<stop_early:
+            result=futures.submit(
+                average_transforms, inv_transforms, avg_inv_transform, nl=False, symmetric=symmetric
+                # TODO: maybe make median transforms?
+                )
+            futures.wait([result], return_when=futures.ALL_COMPLETED)
 
         corr=[]
         corr_transforms=[]
         corr_samples=[]
+        
         # 3 concatenate correction and resample
-
         for (i, s) in enumerate(samples):
             prev_bias_field = None
             if it > 1 and biascorr:
@@ -167,13 +171,17 @@ def generate_linear_average(
             c=MriDataset(  prefix=it_prefix,iter=it,name=s.name)
             x=MriTransform(name=s.name+'_corr',prefix=it_prefix,iter=it,linear=True)
             
-            corr.append(futures.submit( 
-                concat_resample, s, fwd_transforms[i], avg_inv_transform, 
-                c, x, current_model, symmetric=symmetric, qc=qc, bias=prev_bias_field 
-                ))
+            if it>skip and it<stop_early:
+                corr.append(futures.submit( 
+                    concat_resample, s, fwd_transforms[i], avg_inv_transform, 
+                    c, x, current_model, symmetric=symmetric, qc=qc, bias=prev_bias_field 
+                    ))
+            
             corr_transforms.append(x)
             corr_samples.append(c)
-        futures.wait(corr, return_when=futures.ALL_COMPLETED)
+        
+        if it>skip and it<stop_early:
+            futures.wait(corr, return_when=futures.ALL_COMPLETED)
 
         # cleanup transforms
         if cleanup :
@@ -184,16 +192,18 @@ def generate_linear_average(
             avg_inv_transform.cleanup()
             
         # 4 average resampled samples to create new estimate
-        result=futures.submit(
-            average_samples, corr_samples, next_model, next_model_sd, symmetric=symmetric, symmetrize=symmetric,median=use_median
-            )
+        if it>skip and it<stop_early:
+            result=futures.submit(
+                average_samples, corr_samples, next_model, next_model_sd, symmetric=symmetric, symmetrize=symmetric,median=use_median
+                )
 
         if cleanup :
             # remove previous template estimate
             models.append(next_model)
             models_sd.append(next_model_sd)
 
-        futures.wait([result], return_when=futures.ALL_COMPLETED)
+        if it>skip and it<stop_early:        
+            futures.wait([result], return_when=futures.ALL_COMPLETED)
 
         if biascorr:
             biascorr_results=[]
@@ -206,19 +216,23 @@ def generate_linear_average(
                 c=corr_samples[i]
                 x=corr_transforms[i]
                 b=MriDataset(prefix=it_prefix,iter=it,name='bias_'+s.name)
-                biascorr_results.append( futures.submit( 
-                    calculate_diff_bias_field, 
-                        c, next_model, b, symmetric=symmetric, distance=biasdist,
-                        n4=use_n4
-                    ) )
+                
+                if it>skip and it<stop_early:
+                    biascorr_results.append( futures.submit( 
+                        calculate_diff_bias_field, 
+                            c, next_model, b, symmetric=symmetric, distance=biasdist,
+                            n4=use_n4
+                        ) )
                 new_bias_fields.append(b)
 
-            futures.wait(biascorr_results, return_when=futures.ALL_COMPLETED)
+            if it>skip and it<stop_early:
+                futures.wait(biascorr_results, return_when=futures.ALL_COMPLETED)
 
-            result=futures.submit( 
-                average_bias_fields, new_bias_fields, next_model_bias, symmetric=symmetric
-                )
-            futures.wait([result], return_when=futures.ALL_COMPLETED)
+                result=futures.submit( 
+                    average_bias_fields, new_bias_fields, next_model_bias, symmetric=symmetric
+                    )
+                futures.wait([result], return_when=futures.ALL_COMPLETED)
+                
             biascorr_results=[]
             new_corr_bias_fields=[]
             for (i, s) in enumerate(samples):
@@ -229,18 +243,23 @@ def generate_linear_average(
                 x=corr_transforms[i]
                 b=new_bias_fields[i]
                 out=MriDataset(prefix=it_prefix,iter=it,name='c_bias_'+s.name)
-                biascorr_results.append( futures.submit( 
-                    resample_and_correct_bias, b, x , next_model_bias, out, previous=prev_bias_field, symmetric=symmetric 
-                    ) )
+                if it>skip and it<stop_early:
+                    biascorr_results.append( futures.submit( 
+                        resample_and_correct_bias, b, x , next_model_bias, out, previous=prev_bias_field, symmetric=symmetric 
+                        ) )
                 new_corr_bias_fields.append( out )
-            futures.wait(biascorr_results, return_when=futures.ALL_COMPLETED)
+            
+            if it>skip and it<stop_early:
+                futures.wait(biascorr_results, return_when=futures.ALL_COMPLETED)
 
         # swap bias fields
         if biascorr: bias_fields=new_bias_fields
         
         current_model=next_model
         current_model_sd=next_model_sd
-        sd.append( futures.submit(average_stats, next_model, next_model_sd ) )
+        
+        if it>skip and it<stop_early:
+            sd.append( futures.submit(average_stats, next_model, next_model_sd ) )
 
     # copy output to the destination
     futures.wait(sd, return_when=futures.ALL_COMPLETED)
@@ -276,7 +295,7 @@ def generate_linear_average(
 
 
 
-def generate_linear_model(samples,model=None,mask=None,work_prefix=None,options={}):
+def generate_linear_model(samples,model=None,mask=None,work_prefix=None,options={},skip=0,stop_early=100000):
     internal_sample=[]
 
     try:
@@ -291,7 +310,7 @@ def generate_linear_model(samples,model=None,mask=None,work_prefix=None,options=
         if work_prefix is not None and not os.path.exists(work_prefix):
             os.makedirs(work_prefix)
 
-        return generate_linear_average(internal_sample,internal_model,prefix=work_prefix,options=options)
+        return generate_linear_average(internal_sample,internal_model,prefix=work_prefix,options=options,skip=skip,stop_early=stop_early)
     except mincError as e:
         print("Exception in generate_linear_model:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
@@ -301,7 +320,7 @@ def generate_linear_model(samples,model=None,mask=None,work_prefix=None,options=
         traceback.print_exc(file=sys.stdout)
         raise
 
-def generate_linear_model_csv(input_csv,model=None,mask=None,work_prefix=None,options={}):
+def generate_linear_model_csv(input_csv,model=None,mask=None,work_prefix=None,options={},skip=0,stop_early=100000):
     internal_sample=[]
 
     with open(input_csv, 'r') as csvfile:
@@ -316,6 +335,6 @@ def generate_linear_model_csv(input_csv,model=None,mask=None,work_prefix=None,op
     if work_prefix is not None and not os.path.exists(work_prefix):
         os.makedirs(work_prefix)
 
-    return generate_linear_average(internal_sample,internal_model,prefix=work_prefix,options=options)
+    return generate_linear_average(internal_sample,internal_model,prefix=work_prefix,options=options,skip=skip,stop_early=stop_early)
  
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
