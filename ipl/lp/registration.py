@@ -19,7 +19,7 @@ import ipl.ants_registration
 import ipl.elastix_registration
 
 
-def lin_registration(scan, model, out_xfm, init_xfm=None, parameters={},corr_xfm=None,par=None, log=None):
+def lin_registration(scan, model, out_xfm, init_xfm=None, parameters={}, corr_xfm=None, par=None, log=None):
     """Perform linear registration
     
     """
@@ -172,14 +172,14 @@ def intermodality_co_registration(scan, ref, out_xfm,
                                   log=None):
     with mincTools() as m:
         
-        if not m.checkfiles(inputs=[scan.scan,ref.scan],outputs=[out_xfm.xfm]):
+        if not m.checkfiles(inputs=[scan.scan, ref.scan],outputs=[out_xfm.xfm]):
             return
         
-        lin_mode=  parameters.get('type',       'ants')
-        options=   parameters.get('options',    None)
+        lin_mode  =parameters.get('type',      'ants')
+        options   =parameters.get('options',    None)
         downsample=parameters.get('downsample', None)
-        close=     parameters.get('close',      True)
-        resample=  parameters.get('resample',   False)
+        close     =parameters.get('close',      True)
+        resample  =parameters.get('resample',   False)
         objective =parameters.get('objective',  '-nmi')
         nl        =parameters.get('nl',         False)
         
@@ -206,13 +206,13 @@ def intermodality_co_registration(scan, ref, out_xfm,
             #_init_xfm=init_xfm.xfm
             _init_xfm=None
             _out_xfm=m.tmp('out.xfm')
-            m.resample_smooth(_in_scan,m.tmp('scan_scan.mnc'), transform=init_xfm.xfm, like=model.scan)
+            m.resample_smooth(_in_scan,m.tmp('scan_scan.mnc'), transform=init_xfm.xfm, like=ref.scan)
             _in_scan=m.tmp('scan_scan.mnc')
             if scan.mask is not None:
-                m.resample_labels(scan.mask,_in_mask, transform=init_xfm.xfm, like=model.scan)
+                m.resample_labels(scan.mask,_in_mask, transform=init_xfm.xfm, like=ref.scan)
                 _in_mask=m.tmp('scan_mask.mnc')
 
-        print("intermodality_co_registration: mode={} init_xfm={} scan_mask={}".format(lin_mode,_init_xfm,scan.mask))
+        print("intermodality_co_registration: mode={} init_xfm={} scan_mask={}".format(lin_mode, _init_xfm, scan.mask))
         
         if lin_mode=='ants':
             ipl.ants_registration.linear_register_ants2(
@@ -272,11 +272,11 @@ def nl_registration(scan, model, out_xfm, init_xfm=None, parameters={}):
     """Perform non-linear registration
     
     """
-    nl_mode=parameters.get('type','ants')
-    options=parameters.get('options',None)
-    downsample=parameters.get('downsample',None)
-    level=parameters.get('level',2)
-    start=parameters.get('start_level',32)
+    nl_mode     =parameters.get('type','ants')
+    options     =parameters.get('options',None)
+    downsample  =parameters.get('downsample',None)
+    level       =parameters.get('level',2)
+    start       =parameters.get('start_level',32)
 
     with mincTools() as m:
         
@@ -324,7 +324,6 @@ def nl_registration(scan, model, out_xfm, init_xfm=None, parameters={}):
                 source_mask=scan.mask,
                 target_mask=model.mask,
                 init_xfm=_init_xfm,
-                objective=objective,
                 downsample=downsample,
                 parameters=options,
                 level=level,

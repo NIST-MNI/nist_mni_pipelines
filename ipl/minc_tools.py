@@ -1271,7 +1271,7 @@ class mincTools(temp_files):
            shrink=None,      weight_mask=None,
            datatype=None,    iter=None,
            sharpening=None,  threshold=None,
-           downsample_field=None
+           downsample_field =None
            ):
         
         outputs=[]
@@ -1316,7 +1316,7 @@ class mincTools(temp_files):
         
         if output_field is not None:
             if downsample_field is not None:
-                self.resample_smooth(_out_fld, output_field, datatype=datatype,unistep=downsample_field)
+                self.resample_smooth(_out_fld, output_field, datatype=datatype, unistep=downsample_field)
             else:
                 if datatype is not None:
                     self.reshape(_out_fld, output_field, datatype=datatype)
