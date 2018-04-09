@@ -273,7 +273,7 @@ def non_linear_register_ants2(
         else:
             targets.append(target)
         if len(sources)!=len(targets):
-            raise mincError(' ** Error: Different number of inputs ')
+            raise minc_tools.mincError(' ** Error: Different number of inputs ')
         
         modalities=len(sources)
 
@@ -442,7 +442,7 @@ def linear_register_ants2(
             
             
         if len(sources)!=len(targets):
-            raise mincError(' ** Error: Different number of inputs ')
+            raise minc_tools.mincError(' ** Error: Different number of inputs ')
         
         modalities=len(sources)
         
