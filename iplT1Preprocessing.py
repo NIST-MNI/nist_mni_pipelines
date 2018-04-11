@@ -38,7 +38,7 @@ def pipeline_t1preprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
         and os.path.exists(patient[tp].stx_ns_mnc['t1']):
-        print ' -- pipeline_t1preprocessing was already performed'
+        print(' -- pipeline_t1preprocessing was already performed')
     else:
         # # Run the appropiate version
         t1preprocessing_v10(patient, tp)
@@ -282,12 +282,12 @@ if __name__ == '__main__':
     (opts, args) = parser.parse_args()
 
     if opts.output is None:
-        print ' -- Please specify and output dir (-o)'
+        print(' -- Please specify and output dir (-o)')
         sys.exit(1)
 
     (id, visit, t1w) = args
 
-    print ' -- Copying data to patient structure!'
+    print(' -- Copying data to patient structure!')
     patient = LngPatient(id)
 
     patient.pipeline_version = version

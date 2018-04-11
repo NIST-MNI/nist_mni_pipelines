@@ -26,14 +26,14 @@ import shutil
 def pipeline_t2pdpreprocessing(patient, tp):
 
     isDone = True
-    for s in patient[tp].native.keys():
+    for s in list(patient[tp].native.keys()):
         if s == 't1' or s == 't2les':
             continue  # t1 has its own processing
 
         if os.path.exists(patient[tp].clp[s]) \
             and os.path.exists(patient[tp].stx_xfm[s]) \
             and os.path.exists(patient[tp].stx_mnc[s]):
-            print ' -- T2/PD Processing was already performed'
+            print(' -- T2/PD Processing was already performed')
             isDone = True
         else:
             isDone = False
@@ -48,7 +48,7 @@ def pipeline_t2pdpreprocessing(patient, tp):
             isDone = False
 
     if isDone:
-        print ' -- pipeline_t2pdpreprocessing was already performed or not required'
+        print(' -- pipeline_t2pdpreprocessing was already performed or not required')
     else:
         t2pdpreprocessing_v10(patient, tp)
 
@@ -90,11 +90,11 @@ def t2pdpreprocessing_v10(patient, tp):
         # ##################
 
         if not 't2' in patient[tp].native:
-            print ' -- No T2 image!'
+            print(' -- No T2 image!')
         elif os.path.exists(patient[tp].clp['t2']) \
             and os.path.exists(patient[tp].stx_xfm['t2']) \
             and os.path.exists(patient[tp].stx_mnc['t2']):
-            print ' -- T2 preprocessing exists!'
+            print(' -- T2 preprocessing exists!')
         else:
 
             tmpt2 =   minc.tmp('float_t2.mnc')
@@ -266,10 +266,10 @@ def t2pdpreprocessing_v10(patient, tp):
 
         # # PD Preprocessing
         if not 'pd' in patient[tp].native:
-            print ' -- No PD image!'
+            print(' -- No PD image!')
         elif os.path.exists(patient[tp].clp['pd']) \
             and os.path.exists(patient[tp].stx_mnc['pd']):
-            print ' -- PD preprocessing exists!'
+            print(' -- PD preprocessing exists!')
         else:
 
             # create tmpdir
@@ -304,7 +304,7 @@ def t2pdpreprocessing_v10(patient, tp):
             if not 't2' in patient[tp].native:
 
                 # tmp_xfm=tmpdir+'tmp_t1pd.xfm"'
-                print ' -- Using PD to register to T1'  # TODO: convert to minctools
+                print(' -- Using PD to register to T1')  # TODO: convert to minctools
                 
                 init_xfm = None
                 # VF: this is probably incorrect!
@@ -472,11 +472,11 @@ def t2pdpreprocessing_v10(patient, tp):
         # #####################
 
         if not 't2les' in patient[tp].native:
-            print ' -- No T2les image!'
+            print(' -- No T2les image!')
         elif os.path.exists(patient[tp].stx_mnc['t2les']) \
             and os.path.exists(patient[tp].stx_mnc['masknoles']) \
             and os.path.exists(patient[tp].stx_ns_mnc['masknoles']):
-            print ' -- T2Lesions preprocessing exists!'
+            print(' -- T2Lesions preprocessing exists!')
         else:
 
             tmpdilated = minc.tmp('dilated.mnc')
