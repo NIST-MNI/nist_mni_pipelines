@@ -348,6 +348,7 @@ def qsub_pe(
     name=None,
     logfile=None,
     depends=None,
+    queue=None
     ):
     """ 
     Send the job into the sge queue using paralle environment
@@ -365,12 +366,15 @@ def qsub_pe(
             '-V', '-pe', pe, str(peslots)
             ]
         path = ''
-        if logfile:
+        
+        if logfile is not None:
             path = os.path.abspath(logfile)
             qsub_comm.extend(['-o', path])
-        if depends:
+        if depends is not None:
             qsub_comm.extend(['-hold_jid', depends])
-
+        if queue is not None:
+            qsub_comm.extend(['-q', queue])
+        
         print(' - Name    ' + name)
         print(' - PE      ' + pe)
         print(' - PESLOTS ' + str(peslots))

@@ -166,7 +166,9 @@ def launchPipeline(options):
     options.output = os.path.abspath(options.output) + os.sep  # always use abs paths for sge
     if options.workdir is not None:
         options.workdir = os.path.abspath(options.workdir) + os.sep  # always use abs paths for sge
-
+        if not os.path.exists(options.workdir):
+          os.makedirs(options.workdir)
+    
     # for each patient
     with open(options.list) as p:
         for line in p:
@@ -204,6 +206,8 @@ def launchPipeline(options):
                 if options.workdir is None:
                     patients[id].workdir = patients[id].patientdir + os.sep + 'tmp' + os.sep
                     mkdir(patients[id].workdir)
+                else:
+                    patients[id].workdir=options.workdir 
 
                 if options.manual is not None:
                     patients[id].manualdir = options.manual + os.sep + id + os.sep
@@ -346,7 +350,7 @@ def launchPipeline(options):
                 i.write(i.pickle)
             pickles.append(i.pickle)
     
-        jobs=[futures.submit(runPipeline,i) for i in pickles]
+        jobs=[futures.submit(runPipeline,i) for i in pickles] # assume workdir is properly set in pickle...
         futures.wait(jobs, return_when=futures.ALL_COMPLETED)
         print('All subjects finished:%d' % len(jobs))
         
@@ -375,9 +379,11 @@ def launchPipeline(options):
             comm.extend(['export OMP_DYNAMIC=TRUE'])
             comm.extend(['python -m scoop -n {} {} -p {}'.format(str(slots),os.path.abspath(sys.argv[0]),i.pickle)])
             
-            qsub_pe(comm,opts.pe,opts.peslots,
+            qsub_pe(comm,opts.pe, 
+                    opts.peslots,
                     name='LNG_{}'.format(str(id)),
-                    logfile=i.patientdir+os.sep+str(id)+".sge.log")
+                    logfile=i.patientdir+os.sep+str(id)+".sge.log",
+                    queue=opts.queue)
 
 def runTimePoint_FirstStage(tp, patient):
     '''
@@ -537,7 +543,7 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         traceback.print_exc(file=sys.stdout)
         raise
 
-def runPipeline(pickle):
+def runPipeline(pickle, workdir=None):
     '''
     RUN PIPELINE
     Process selected pickle file
@@ -557,7 +563,9 @@ def runPipeline(pickle):
                         )
 
         setFilenames(patient)
-
+        
+        if workdir is not None:
+          patient.workdir=workdir
         # prepare qc folder
 
         tps = patient.keys()
@@ -954,6 +962,10 @@ if __name__ == '__main__':
                      
     group.add_option('--peslots', dest='peslots',
                      help='PE slots [%default]', default=4, type="int")
+    
+    group.add_option('-q','--queue', dest='queue',
+                     help='Specify SGE queue for submission'
+                     )
 
     parser.add_option_group(group)
 
@@ -965,7 +977,7 @@ if __name__ == '__main__':
             sys.exit(1)
         launchPipeline(opts)
     elif opts.pickle is not None:
-        runPipeline(opts.pickle)
+        runPipeline(opts.pickle,workdir=opts.workdir)
     else:
         parser.print_help()
         
