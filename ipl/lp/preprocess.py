@@ -42,7 +42,7 @@ def denoise(in_scan, out_scan, parameters={}):
     regularize=parameters.get('regularize', None )
     with mincTools() as minc:
         if use_anlm:
-            minc.anlm( in_scan.scan, out_scan.scan, beta=denoise_beta, patch=patch, search=search ) 
+            minc.anlm( in_scan.scan, out_scan.scan, beta=denoise_beta, patch=patch, search=search, regularize=regularize ) 
         else:
             minc.nlm( in_scan.scan, out_scan.scan, beta=denoise_beta, patch=patch, search=search ) 
         # TODO: maybe USE anlm sometimes?
@@ -110,7 +110,8 @@ def estimate_nu(in_scan, out_field, parameters={},model=None):
                     shrink=parameters.get('shrink',4),
                     datatype=parameters.get('datatype',None),
                     iter=parameters.get('iter','200x200x200'),
-                    distance=parameters.get('distance',200))
+                    distance=parameters.get('distance',200),
+                    downsample_field=parameters.get('downsample_field',None))
 
 def apply_nu(in_scan, field, out_scan, parameters={}):
     """ Apply non-uniformity correction 

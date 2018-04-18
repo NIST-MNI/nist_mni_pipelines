@@ -437,7 +437,8 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
 
         pipeline_stx2_skullstripping(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
-
+        
+        print("pipeline_atlasregistration")
         pipeline_atlasregistration(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -601,12 +602,12 @@ def runPipeline(pickle, workdir=None):
             # ################################################
             pipeline_lngtemplate(patient)
 
-            if len(patient.add)>0:
-                pipeline_run_add(patient)
-
             # non-linear registration of the template to the atlas
             # ##########################
             pipeline_atlasregistration(patient)
+            
+            if len(patient.add)>0:
+                pipeline_run_add(patient)
 
             # Concatenate xfm files for each timepoint.
             # run per tp tissue classification
