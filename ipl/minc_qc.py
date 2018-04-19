@@ -187,7 +187,7 @@ def qc(
     
     # axial slices
     for j in range(0,samples):
-        i=(data_shape[0]/samples)*j+(data_shape[0]%samples)/2
+        i=int( (data_shape[0]/samples)*j+(data_shape[0]%samples)/2 )
         si=scalarMap.to_rgba(_idata[i , : ,:])
 
         if _ovl is not None:
@@ -199,7 +199,7 @@ def qc(
         aspects.append( spacing[0]/spacing[1] )
     # coronal slices
     for j in range(0,samples):
-        i=(data_shape[1]/samples)*j+(data_shape[1]%samples)/2
+        i=int( (data_shape[1]/samples)*j+(data_shape[1]%samples)/2 )
         si=scalarMap.to_rgba(_idata[: , i ,:])
         
         if _ovl is not None:
@@ -212,7 +212,7 @@ def qc(
         
     # sagittal slices
     for j in range(0,samples):
-        i=(data_shape[2]/samples)*j+(data_shape[2]%samples)/2
+        i=int( (data_shape[2]/samples)*j+(data_shape[2]%samples)/2 )
         si=scalarMap.to_rgba(_idata[: , : , i])
         if _ovl is not None:
             so=oscalarMap.to_rgba(_odata[: , : , i])
@@ -229,7 +229,7 @@ def qc(
     ax=None
     imgplot=None
     for i,j in enumerate(slices):
-        ax =  plt.subplot2grid( (3, samples), (i/samples, i%samples) )
+        ax =  plt.subplot2grid( (3, samples), (  int( i/samples) , i%samples) )
         imgplot = ax.imshow(j,origin='lower',cmap=cm, aspect=aspects[i])
         ax.set_xticks([])
         ax.set_yticks([])

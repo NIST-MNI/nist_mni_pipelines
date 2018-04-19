@@ -19,7 +19,7 @@ def pipeline_lobe_segmentation(patient, tp):
     if os.path.exists(patient[tp].stx2_mnc['lobes']) \
         and os.path.exists(patient[tp].vol['lobes']) \
         and os.path.exists(patient[tp].qc_jpg['lobes']):
-        print ' -- Lobe Segmentation - Processing already done!'
+        print(' -- Lobe Segmentation - Processing already done!')
     else:
         lobe_segmentation_v10(patient, tp)  # beast by simon fristed
 
@@ -46,7 +46,7 @@ def lobe_segmentation_v10(patient, tp):
         cls = ''
 
         # Do lobe segment
-        if patient.dolngcls and len(patient.keys()) > 1:
+        if patient.dolngcls and len(list(patient.keys())) > 1:
             cls = patient[tp].stx2_mnc['lng_classification']
         else:
             cls = patient[tp].stx2_mnc['classification']

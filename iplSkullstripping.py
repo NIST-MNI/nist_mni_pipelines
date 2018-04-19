@@ -62,7 +62,7 @@ def pipeline_stx_skullstripping(patient, tp):
     if os.path.exists(params.stx_mask) \
         and os.path.exists(params.ns_stx_mask) \
         and os.path.exists(params.qc_stx_mask):
-        print ' -- pipeline_stx_skullstripping is done'
+        print(' -- pipeline_stx_skullstripping is done')
     else:
 
         runSkullstripping(params)
@@ -120,7 +120,7 @@ def pipeline_stx2_skullstripping(patient, tp):
         or not os.path.exists(params.qc_stx_mask):
         runSkullstripping(params)
     else:
-        print ' -- pipeline_stx2_skullstripping is done'
+        print(' -- pipeline_stx2_skullstripping is done')
 
 
     if 't2les' in patient[tp].native:
@@ -140,7 +140,7 @@ def runSkullstripping(params):
     if params.pipeline_version == '1.0':
         skullstripping_v10(params)  # beast by simon fristed
     else:
-        print ' -- Chosen version not found!'
+        print(' -- Chosen version not found!')
 
 
 # function using beast
@@ -275,11 +275,11 @@ if __name__ == '__main__':
     (opts, args) = parser.parse_args()
 
     if opts.stxt1 is None and opts.clpt1 is None:
-        print ' -- ERROR: -i, or -c are mandatory'
+        print(' -- ERROR: -i, or -c are mandatory')
         sys.exit(-1)
 
     if opts.stx_mask is None and opts.clp_mask is None:
-        print ' -- ERROR: no output was given'
+        print(' -- ERROR: no output was given')
         sys.exit(-1)
 
   # The skull stripping requires images in the standard space.

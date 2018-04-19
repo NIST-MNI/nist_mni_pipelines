@@ -22,7 +22,7 @@ from ipl.minc_tools import mincTools,mincError
 def pipeline_concat(patient, tp):
 
     if os.path.exists(patient[tp].nl_xfm):
-        print ' -- pipeline_concat already done!'
+        print(' -- pipeline_concat already done!')
         
 ###
         with mincTools()  as minc:

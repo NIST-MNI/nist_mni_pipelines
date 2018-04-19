@@ -26,7 +26,7 @@ def pipeline_vbm(patient, tp, options):
         and os.path.exists(patient[tp].vbm['idet'])  \
         and os.path.exists(patient[tp].vbm['grid']) \
         and os.path.exists(patient[tp].vbm['xfm']) :
-        print ' -- Processing already done'
+        print(' -- Processing already done')
         return True
 
     return VBM_v10(patient, tp, options)

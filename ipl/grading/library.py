@@ -52,7 +52,7 @@ def save_library_info(library_description, output,name='library.json'):
         with open(output+os.sep+name,'w') as f:
             json.dump(tmp_library_description,f,indent=1)
     except :
-        print "Error saving library information into:{} {}".format(output,sys.exc_info()[0])
+        print("Error saving library information into:{} {}".format(output,sys.exc_info()[0]))
         traceback.print_exc(file=sys.stderr)
         raise
 
@@ -101,7 +101,7 @@ def load_library_info(prefix, name='library.json'):
 
         return library_description
     except :
-        print "Error loading library information from:{} {}".format(prefix,sys.exc_info()[0])
+        print("Error loading library information from:{} {}".format(prefix,sys.exc_info()[0]))
         traceback.print_exc(file=sys.stderr)
         raise
 

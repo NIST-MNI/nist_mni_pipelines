@@ -683,6 +683,8 @@ class mincTools(temp_files):
         invert_transform=False,
         resample=None,
         datatype=None,
+        tfm_input_sampling=False,
+        labels=False
         ):
         """resample an image, interpreting voxels as intnsities 
         
@@ -701,6 +703,8 @@ class mincTools(temp_files):
                      otherwise use itk_resample
         datatype -- output minc file data type, variants 
                      'byte','short','long','float','double'
+        labels   -- assume scan contains integer labels, only works with nearest neignour
+        tfm_input_sampling -- apply linear xfm to sampling parameters, assumes mincresample is used
         """
         if os.path.exists(output):
             return
@@ -713,6 +717,8 @@ class mincTools(temp_files):
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -728,6 +734,8 @@ class mincTools(temp_files):
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -743,6 +751,8 @@ class mincTools(temp_files):
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -752,12 +762,14 @@ class mincTools(temp_files):
             if datatype:
                 cmd.append('-' + datatype)
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
-        elif resample == 'nearest':
+        elif resample == 'nearest' or labels:
             cmd = ['mincresample', input, output, '-nearest', '-q']
             if transform:
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -766,6 +778,8 @@ class mincTools(temp_files):
                 raise mincError('Not implemented!')
             if datatype:
                 cmd.append('-' + datatype)
+            if labels:
+                cmd.append('-labels')
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
         else:
             cmd = ['itk_resample', input, output, '--order', str(order)]

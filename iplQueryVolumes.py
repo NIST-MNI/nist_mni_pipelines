@@ -17,7 +17,7 @@ def load_volume_std(template,in_file,sep=',',exclude=[]):
                 vols[ll[0]]=float(ll[1])
             else:
                 if not ll[0] in exclude:
-                    print("{} unexpected key found:{}".format(in_file,ll[0]))
+                    print(("{} unexpected key found:{}".format(in_file,ll[0])))
     return vols
 
 def list_to_dict(lll):
@@ -35,8 +35,8 @@ def query_volumes(options):
 
             size = len(sp)  # depending the number of items not all information was given
             if size < 3:
-                print ' -- Line error: ' + str(len(sp))
-                print '     - Minimum format is :  id,visit,t1'
+                print(' -- Line error: ' + str(len(sp)))
+                print('     - Minimum format is :  id,visit,t1')
                 continue
 
             id = sp[0]  # set id
@@ -55,7 +55,7 @@ def query_volumes(options):
                 # check if the pickle file exists
                 pickle_file=patientdir + id + '.pickle'
                 if not os.path.exists(pickle_file):
-                    print("{} file is missing!".format(pickle_file))
+                    print(("{} file is missing!".format(pickle_file)))
                 else:
                     patients[id]=LngPatient.read(pickle_file)
     # now we have all the patients info loadade in memory
@@ -123,13 +123,13 @@ def query_volumes(options):
     measurements=[]
     kk={'id':True, 'lobes':False,'lng_lobes':False,'deep':False,'vent':False,'hc':False,'am':False}
     print("Found following datasets:")
-    for i,p in patients.iteritems():
+    for i,p in patients.items():
         #print("{} - {}".format(p.id,' '.join(p.keys())))
-        for j,t in p.iteritems():
+        for j,t in p.items():
             #print(t.vol.keys())
             vols={'id':{'id':i,'visit':j}}
             
-            for k in kk.keys():
+            for k in list(kk.keys()):
                 if k in t.vol:
                     pp=t.vol[k]
                     
@@ -146,11 +146,11 @@ def query_volumes(options):
                         
                         vols[k]=load_volume_std(templates[k],pp,sep=sep,exclude=exclude)
                     else:
-                        print("Missing:{}".format(pp))
+                        print(("Missing:{}".format(pp)))
                         t.vol[k]=None
                         vols[k]=None
             measurements.append(vols)
-    print(repr(kk))
+    print((repr(kk)))
     # flatten structure and write out csv file
     # going to overwrite with more precise measurements , if available
     
@@ -166,7 +166,7 @@ def query_volumes(options):
     # now output is flat structure with the same entries everywhere
     # will write out into csv file
     with open(options.output, 'w') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=output[0].keys())
+        writer = csv.DictWriter(csvfile, fieldnames=list(output[0].keys()))
         writer.writeheader()
         for o in output:
             writer.writerow(o)
@@ -207,7 +207,7 @@ def parse_options():
     options = parser.parse_args()
 
     if options.debug:
-        print(repr(options))
+        print((repr(options)))
 
     return options
 
