@@ -568,8 +568,7 @@ def runPipeline(pickle, workdir=None):
           patient.workdir=workdir
         # prepare qc folder
 
-        tps = patient.keys()
-        tps.sort()
+        tps = sorted(patient.keys())
         jobs=[]
         for tp in tps:
             jobs.append(futures.submit(runTimePoint_FirstStage,tp, patient))
