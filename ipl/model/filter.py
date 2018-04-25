@@ -46,7 +46,9 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
     
     if out_sd is not None:
         vol_sd=vol_avg*vol_avg
-    
+
+    lll=0
+
     for i in range(1,len(infiles)):
         print(infiles[i])
         in_minc=minc2_file(infiles[i])
@@ -55,9 +57,11 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
         v=in_minc.load_complete_volume(minc2_file.MINC2_FLOAT)
         in_minc.close()
         vol_avg+=v
-        
+        lll+=1
+
         if out_sd is not None:
             vol_sd+=v*v
+
         
     #Averaging
     vol_avg/=lll
