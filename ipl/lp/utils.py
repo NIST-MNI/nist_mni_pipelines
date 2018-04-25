@@ -79,7 +79,7 @@ def extract_volumes(in_lob, in_cls, tal_xfm, out,
             if produce_json:
                 json.dump(volumes,f,indent=1)
             else:
-                for i,j in volumes.iteritems():
+                for i,j in volumes.items():
                     f.write("{} {}\n".format(i,j))
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
