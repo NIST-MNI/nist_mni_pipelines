@@ -128,7 +128,7 @@ class LngPatient(dict):
     @staticmethod  # static function to load pickle
     def read(filename):
         if os.path.exists:
-            p = open(filename)
+            p = open(filename,'rb')
             try:
                 newpatient = pickle.load(p)
             except:
@@ -147,9 +147,9 @@ class LngPatient(dict):
 
         # write into the pickle
 
-        p = open(filename, 'w')
-        pickle.dump(tmppatient, p)
-        p.close()
+        with open(filename, 'wb') as p:
+            pickle.dump(tmppatient, p)
+
 
     def printself(self):
         print(' -- Printing LngPatient ' + self.id)
