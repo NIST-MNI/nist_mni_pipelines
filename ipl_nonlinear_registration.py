@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # @author Vladimir S. FONOV
@@ -15,7 +15,7 @@ import argparse
 import json
 import math
 
-from ipl.minc_tools    import mincTools,mincError
+from   ipl.minc_tools    import mincTools,mincError
 
 import ipl.registration
 import ipl.ants_registration
@@ -65,6 +65,11 @@ def parse_options():
                     help="Metric function (elastix)",
                     dest="metric",
                     default=None)
+
+    parser.add_argument("--objective",
+                    help="objectiuve function (std)",
+                    dest="objective",
+                    default='xcorr')
 
     parser.add_argument("--init_xfm",
                     help="Initial transform",
@@ -173,7 +178,7 @@ if __name__ == '__main__':
                 nl=True
                 )
         else:
-            objective='-xcorr'
+            objective='-'+options.objective
             if parameters is not None:
                 objective=parameters.get('objective')
         
@@ -192,7 +197,7 @@ if __name__ == '__main__':
         
         if options.qc is not None:
             # create QC image for deformation field
-            create_qc(options.source,options.target,options.output,options.qc)
+            create_qc(options.source, options.target, options.output, options.qc)
         
     except mincError as e:
         print(str(e),file=sys.stderr)
