@@ -334,7 +334,7 @@ def standard_pipeline(info,
                 for i,c in enumerate(add_scans):
                     # get add options 
                     #TODO do it per modality
-                    add_options        = options.get('add',options)
+                    add_options            = options.get('add',options)
                     
                     add_denoise_parameters = add_options.get('denoise',denoise_parameters)
                     add_nuc_parameters     = add_options.get('nuc'    ,nuc_parameters)
