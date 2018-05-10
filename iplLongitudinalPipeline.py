@@ -7,47 +7,48 @@
 
 from __future__ import print_function
 
-
-# Generic python functions for scripting
-
-from iplGeneral import *  # functions to call binaries and general functions
-from iplPatient import *  # class to store all the data
-
-# parallel processing
-from scoop import futures, shared
-
 import os
 import traceback
 import json
 import six
 
+# Generic python functions for scripting
+
+from ipl.longitudinal.general            import *  # functions to call binaries and general functions
+from ipl.longitudinal.patient            import *  # class to store all the data
+
+
 from   ipl.minc_tools import mincTools,mincError
 
-
 # files storing all processing
-from iplT1Preprocessing   import pipeline_t1preprocessing
-from iplT2PDPreprocessing import pipeline_t2pdpreprocessing
-from iplSkullstripping    import pipeline_stx_skullstripping
-from iplSkullstripping    import pipeline_stx2_skullstripping
-from iplLinearLngTemplate import pipeline_linearlngtemplate
-from iplLngtemplate       import pipeline_lngtemplate
-from iplLinearAtlasRegistration import pipeline_linearatlasregistration
-from iplAtlasRegistration import pipeline_atlasregistration
-from iplConcat            import pipeline_concat
+from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing
+from ipl.longitudinal.t2pd_preprocessing import pipeline_t2pdpreprocessing
+from ipl.longitudinal.skull_stripping    import pipeline_stx_skullstripping
+from ipl.longitudinal.skull_stripping    import pipeline_stx2_skullstripping
+from ipl.longitudinal.linear_template    import pipeline_linearlngtemplate
+from ipl.longitudinal.nonlinear_template import pipeline_lngtemplate
+from ipl.longitudinal.stx2_registration  import pipeline_linearatlasregistration
+from ipl.longitudinal.atlas_registration import pipeline_atlasregistration
+from ipl.longitudinal.concat             import pipeline_concat
+
 
 # possibly deprecate
-from iplClassification    import pipeline_classification
-from iplLngClassification import pipeline_lng_classification
+from ipl.longitudinal.classification     import pipeline_classification
+from ipl.longitudinal.lng_classification import pipeline_lng_classification
 
 # refactor ?
-from iplVBM               import pipeline_vbm
-from iplDBM               import pipeline_lngDBM
+from ipl.longitudinal.vbm                import pipeline_vbm
+from ipl.longitudinal.dbm                import pipeline_lngDBM
 
 # 
-from iplADD               import pipeline_run_add_tp,pipeline_run_add
+from ipl.longitudinal.add                import pipeline_run_add_tp,pipeline_run_add
 
 # to be deprecated 
-from iplLobeSegmentation  import pipeline_lobe_segmentation
+from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
+
+# parallel processing
+from scoop import futures, shared
+
 
 version = '1.0'
 
