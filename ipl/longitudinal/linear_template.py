@@ -7,14 +7,16 @@
 
 
 import shutil
+import traceback
 
 #
 # Create a longitudinal model
 #
-from iplGeneral import *
-from iplScoopGenerateModel import generate_linear_model
+
+from ipl.model.generate_linear             import generate_linear_model
 from ipl.minc_tools import mincTools,mincError
-import traceback
+
+from .general import *
 
 from scoop import futures, shared
 

@@ -9,7 +9,7 @@
 # Longitudinal classification
 #
 
-from iplGeneral import *
+from .general import *
 from ipl.minc_tools import mincTools,mincError
 import shutil
 

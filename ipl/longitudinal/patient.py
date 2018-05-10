@@ -11,7 +11,7 @@
 import pickle  # to store the class
 import os
 import copy
-from iplGeneral import *  # functions to call binaries and general functions
+from  .general import *  # functions to call binaries and general functions
 
 
 def printImages(images):

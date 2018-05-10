@@ -19,8 +19,8 @@ from optparse import OptionGroup  # to change when python updates in the machine
 
 from ipl.minc_tools import mincTools,mincError
 
-from iplGeneral import *
-from iplPatient import *
+from .general import *
+from .patient import *
 
 import shutil
 

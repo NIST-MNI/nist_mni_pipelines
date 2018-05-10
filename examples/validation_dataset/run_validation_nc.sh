@@ -38,7 +38,7 @@ export OMP_NUM_THREADS=1
 export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
 
 ### Run pipeline for NC scan rescan data ###
-python -m scoop -vvv -n $PARALLEL $pipeline_dir/iplLongitudinalPipeline.py \
+python3 -m scoop -vvv -n $PARALLEL $pipeline_dir/iplLongitudinalPipeline.py \
  -L \
  -l $data_dir/subject43.csv \
  -o $output_dir \

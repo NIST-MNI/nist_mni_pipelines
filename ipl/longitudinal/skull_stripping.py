@@ -11,7 +11,7 @@ version = '1.0'
 # Skull stripping in t1-w
 # - Using bet or beast
 
-from iplGeneral import *
+from .general import *
 from optparse import OptionParser  # to change when python updates in the machines for argparse
 from optparse import OptionGroup  # to change when python updates in the machines for argparse
 

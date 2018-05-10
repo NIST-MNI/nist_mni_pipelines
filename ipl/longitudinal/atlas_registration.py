@@ -12,7 +12,7 @@ version = '1.0'
 #
 from ipl.minc_tools import mincTools,mincError
 
-from iplGeneral import *
+from .general import *
 
 
 

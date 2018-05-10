@@ -7,7 +7,7 @@
 # Longitudinal deformation based morphometry
 #
 
-from iplGeneral import *
+from .general import *
 from ipl.minc_tools import mincTools,mincError
 
 

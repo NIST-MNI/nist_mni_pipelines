@@ -10,8 +10,9 @@
 
 
 import shutil
-from iplGeneral import *
-from iplScoopGenerateModel import generate_nonlinear_model
+
+from .general import *
+from ipl.model.generate_nonlinear             import generate_nonlinear_model
 from ipl.minc_tools import mincTools,mincError
 
 

@@ -10,7 +10,7 @@ version = '1.0'
 #
 # Do the VBM masks of GM WM and CSF
 #
-from iplGeneral import *
+from .general import *
 
 from ipl.minc_tools import mincTools,mincError
 
