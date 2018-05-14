@@ -5,7 +5,8 @@
 # @author Daniel, Vladimir S. FONOV, Guizz
 # @date 10/07/2011
 
-
+import os
+import sys
 import shutil
 import traceback
 
@@ -99,14 +100,14 @@ class LngOptions:
     pass
 
 # apply additional processing steps
-def post_process(patient,i,tp,transform,biascorr):
+def post_process(patient, i, tp, transform, biascorr, rigid=False):
     # bias in stx space
     modelt1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
     modelmask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
     
     with mincTools() as minc:
         xfmfile = transform.xfm
-        
+        stx_xfm_file = tp.stx_xfm['t1'] if rigid else tp.stx_ns_xfm['t1']
         clp_tp = tp.clp['t1']
 
         if patient.geo_corr and 't1' in patient[i].geo:
@@ -121,7 +122,7 @@ def post_process(patient,i,tp,transform,biascorr):
             minc.resample_smooth(
                 stx_bias,
                 native_bias,
-                transform=tp.stx_xfm['t1'],
+                transform=stx_xfm_file,
                 like=tp.clp['t1'],
                 invert_transform=True,
                 resample='linear',
@@ -153,7 +154,7 @@ def post_process(patient,i,tp,transform,biascorr):
             # skullreg
             tmpstx2xfm = minc.tmp('stx2tmp' + patient.id + '_' + i + '.xfm')
             
-            minc.xfmconcat([tp.stx_xfm['t1'], xfmfile,
+            minc.xfmconcat([stx_xfm_file, xfmfile,
                         patient.template['stx2_xfm']],
                         tmpstx2xfm)
 
@@ -163,12 +164,12 @@ def post_process(patient,i,tp,transform,biascorr):
                 patient.template['linear_template'],
                 tp.clp['mask'],
                 patient.template['linear_template_mask'],
-                tp.stx2_xfm['t1'],
+                stx_xfm_file,
                 tmpstx2xfm,
                 patient.template['stx2_xfm'],
                 )
         else:
-            minc.xfmconcat([tp.stx_xfm['t1'], xfmfile,
+            minc.xfmconcat([stx_xfm_file, xfmfile,
                         patient.template['stx2_xfm']],
                         tp.stx2_xfm['t1'])
 
@@ -187,7 +188,7 @@ def post_process(patient,i,tp,transform,biascorr):
                 clp_t2_tp = tp.corr['t2']
             
             minc.xfmconcat([tp.clp['t2t1xfm'],
-                        tp.stx_xfm['t1'],
+                        stx_xfm_file,
                         patient.template['stx2_xfm']],
                         tp.stx2_xfm['t2'])
 
@@ -203,7 +204,7 @@ def post_process(patient,i,tp,transform,biascorr):
                 clp_pd_tp = tp.corr['pd']
                 
             minc.xfmconcat([tp.clp['pdt1xfm'],
-                        tp.stx_xfm['t1'],
+                        stx_xfm_file,
                         patient.template['stx2_xfm']],
                         tp.stx2_xfm['pd'])
             minc.resample_smooth(clp_pd_tp,
@@ -245,14 +246,26 @@ def linearlngtemplate_v11(patient):
                     'biasdist':biasdist,
                     'linreg': patient.linreg }
         
-        samples= [ [tp.stx_mnc['t1'], tp.stx_mnc['masknoles']]
-                        for (i, tp) in patient.items()]
+        if patient.rigid:
+            options['reg_type']='-lsq6' # TODO: use nsstx (?)
+
+        if patient.symmetric:
+            options['symmetric']=True 
+
+        # Here we are relying on the time point order (1)
+
+        samples=None
+        if patient.rigid:
+            samples= [ [tp.stx_ns_mnc['t1'], tp.stx_ns_mnc['masknoles']]
+                        for (i, tp) in patient.items() ]
+        else:
+            samples= [ [tp.stx_mnc['t1'], tp.stx_mnc['masknoles']]
+                        for (i, tp) in patient.items() ]
 
         if patient.fast:
             options['iterations'] = 2
 
         work_prefix = patient.workdir+os.sep+'lin'
-
 
         output=generate_linear_model(samples, model=atlas, mask=atlas_mask, options=options, work_prefix=work_prefix)
 
@@ -262,6 +275,8 @@ def linearlngtemplate_v11(patient):
         shutil.copyfile(output['model_sd'].scan,patient.template['linear_template_sd'])
 
         # Create the new stx space using the template
+        
+        # TODO: add pre-scaling in case of rigid (?)
 
         if patient.large_atrophy:
             minc.linear_register(patient.template['linear_template'],
@@ -280,11 +295,12 @@ def linearlngtemplate_v11(patient):
         print(repr(output))
         
         for (i, tp) in patient.items():
-            bias=None
+            biascorr=None
             if patient.dobiascorr:
-                bias=output['biascorr'][k]
-            jobs.append(futures.submit(post_process,patient,i,tp,output['xfm'][k],bias))
-            #post_process(patient,i,tp,output['xfm'][k],bias)
+                biascorr=output['biascorr'][k]
+            # Here we are relying on the time point order (1) - see above
+            jobs.append(futures.submit(post_process, patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid))
+
             k+=1
         # wait for all substeps to finish
         futures.wait(jobs, return_when=futures.ALL_COMPLETED)

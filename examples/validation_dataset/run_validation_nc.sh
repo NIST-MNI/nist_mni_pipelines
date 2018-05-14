@@ -16,7 +16,6 @@ fi
 MNI_DATAPATH=${MNI_DATAPATH:-/opt/minc/share}
 PARALLEL=${PARALLEL:-1}
 
-
 icbm_model_dir=$MNI_DATAPATH/icbm152_model_09c
 beast_model_dir=$MNI_DATAPATH/beast-library-1.1
 

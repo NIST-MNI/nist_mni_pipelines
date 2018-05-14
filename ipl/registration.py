@@ -297,7 +297,8 @@ def linear_register(
                bestlinreg (default)
                bestlinreg_s
                bestlinreg_s2
-               bestlinreg_new - Claude's latest and greatest
+               bestlinreg_new
+               bestlinreg_20180117 -  based on Claude's latest and greatest, circa 2018-01-17
         debug - debug flag (optional) , default False
         close - closeness flag (optional) , default False
         norot - disable rotation flag (optional) , default False
@@ -334,12 +335,12 @@ def linear_register(
             targets.append(target)
     
       if len(sources)!=len(targets):
-            raise mincError(' ** Error: Different number of inputs ')
+            raise minc_tools.mincError(' ** Error: Different number of inputs ')
 
 
       # python version
       if conf is None:
-          conf = linear_registration_config['bestlinreg'] # bestlinreg_new ?
+          conf = linear_registration_config['bestlinreg_20180117'] # bestlinreg_new ?
       elif not isinstance(conf, list): # assume that it is a string
           if conf in linear_registration_config:
             conf = linear_registration_config[conf]
@@ -681,7 +682,7 @@ def non_linear_register_full(
             targets.append(target)
     
       if len(sources)!=len(targets):
-            raise mincError(' ** Error: Different number of inputs ')
+            raise minc_tools.mincError(' ** Error: Different number of inputs ')
 
       s_base=os.path.basename(sources[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
       t_base=os.path.basename(targets[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]

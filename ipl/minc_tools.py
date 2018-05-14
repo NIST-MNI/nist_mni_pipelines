@@ -70,7 +70,7 @@ class mincError(Exception):
         return self.__repr__()
         
 
-class temp_files(object):
+class temp_files:
     """Class to keep track of temp files"""
     
     def __init__(self,tempdir=None,prefix=None):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #
@@ -11,6 +11,8 @@ import os
 import traceback
 import json
 import six
+
+import argparse
 
 # Generic python functions for scripting
 
@@ -137,6 +139,9 @@ def launchPipeline(options):
             
         if 'add' in _opts:
             options.add = _opts['add']
+
+        if 'rigid' in _opts:
+            options.rigid = _opts['rigid']
             
         # TODO: add more options
     # patients dictionary
@@ -260,6 +265,7 @@ def launchPipeline(options):
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
                 patients[id].linreg   = options.linreg
+                patients[id].rigid    = options.rigid
                 patients[id].add      = options.add
                 
                 patients[id].vbm_options = { 'vbm_fwhm':options.vbm_blur, 
@@ -660,18 +666,13 @@ def cleanPickle(pickle):
     patient.write(pickle)
 
 
-# Classes to parse input
 
-from optparse import OptionParser  # to change when python updates in the machines for argparse
-from optparse import OptionGroup  # to change when python updates in the machines for argparse
 
-## If used in a stand-alone application on one patient
-
-if __name__ == '__main__':
+def parse_options():
     usage = \
-        """usage: %prog -l <patients.list> -o <outputdir> [--run]
-   or: %prog -p <patient.pickle> [--status|--run]
-   or: %prog -h
+    """%(prog)s -l <patients.list> -o <outputdir> [--run]
+   or: %(prog)s -p <patient.pickle> [--status|--run]
+   or: %(prog)s -h
    
    The list have this structure:
       id,visit,t1w(,t2w,pdw,sex,age,geot1,geot2,lesions)
@@ -689,29 +690,34 @@ if __name__ == '__main__':
           If the image exists it will replace part of the processing. 
    """
 
-    parser = OptionParser(usage=usage, version=version)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                      usage=usage, 
+                                      description="Longitudinal pipeline")
 
-    group = OptionGroup(parser, ' -- Mandatory options ', ' Necessary')
 
-    group.add_option('-l', '--list', dest='list',
+    group = parser.add_argument_group('Mondatory options ')
+
+    group.add_argument('-l', '--list', dest='list',
                      help='CSV file with the list of subjects: (format) id,visit,t1w,t2w,pdw,sex,age,geot1,geot2,lesions'
                      )
     
-    group.add_option('-o', '--output-dir', dest='output',
+    group.add_argument('-o', '--output-dir', dest='output',
                      help='Output dir')
                      
 
-    group = OptionGroup(parser, ' -- Pipeline options ',
-                        ' Options to start processing')
+    group = group.add_argument_group('Pipeline options ',
+                         ' Options to start processing')
     
-    group.add_option('-j', '--json', dest='json',
+    group.add_argument('-j', '--json', dest='json',
                      help='Json file with processing options',
                      default=None)
     
-    group.add_option('-w', '--work-dir', dest='workdir',
+    group.add_argument('-w', '--work-dir', dest='workdir',
                      help='Work dir',default=None)
                      
-    group.add_option(
+    group = parser.add_argument_group('Processing options ')
+
+    group.add_argument(
         '-d',
         '--deface',
         dest='deface',
@@ -720,7 +726,7 @@ if __name__ == '__main__':
         default=False,
         )
 
-    group.add_option(
+    group.add_argument(
         '-D',
         '--denoise',
         dest='denoise',
@@ -729,7 +735,7 @@ if __name__ == '__main__':
         default=False,
         )
     
-    group.add_option(
+    group.add_argument(
         "-I", 
         "--inpaint", 
         dest="inpaint", 
@@ -737,7 +743,7 @@ if __name__ == '__main__':
         action="store_true",
         default=False)
 
-    group.add_option(
+    group.add_argument(
         '-N',
         '--no-nonlinear',
         dest='donl',
@@ -746,12 +752,12 @@ if __name__ == '__main__':
         default=True,
         )
     
-    group.add_option('-3', '--3T', dest='mri3T',
+    group.add_argument('-3', '--3T', dest='mri3T',
                      help='Parameters for 3T scans', action='store_true',
                      default=False
                      )
     
-    group.add_option(
+    group.add_argument(
         '-L',
         '--lngcls',
         dest='dolngcls',
@@ -760,7 +766,7 @@ if __name__ == '__main__':
         default=False,
         )
     
-    group.add_option(
+    group.add_argument(
         "-1", 
         "--onlyt1", 
         dest="onlyt1", 
@@ -768,8 +774,7 @@ if __name__ == '__main__':
         action="store_true",
         default=False)
     
-    group.add_option(
-        '',
+    group.add_argument(
         '--DBM',
         dest='dodbm',
         help='Do longitudinal dbm',
@@ -777,8 +782,7 @@ if __name__ == '__main__':
         default=False,
         )
         
-    group.add_option(
-        '',
+    group.add_argument(
         '--VBM',
         dest='dovbm',
         help='Run VBM',
@@ -786,34 +790,30 @@ if __name__ == '__main__':
         default=False,
         )
     
-    group.add_option(
-        '',
+    group.add_argument(
         '--vbm_blur',
         dest='vbm_blur',
         help='VBM blurring',
         default=4.0,
         )
     
-    group.add_option(
-        '',
+    group.add_argument(
         '--vbm_res',
         dest='vbm_res',
         help='VBM resolution',
         default=2.0,
         )
     
-    group.add_option(
-        '',
+    group.add_argument(
         '--vbm_nl_level',
         dest='vbm_nl',
         help='VBM nl level'
         )
     
 
-    # group.add_option("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
+    # group.add_argument("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
 
-    group.add_option(
-        '',
+    group.add_argument(
         '--nogeo',
         dest='geo',
         help='Disable distorsion correction, default enabled if present',
@@ -821,8 +821,7 @@ if __name__ == '__main__':
         default=True,
         )
 
-    group.add_option(
-        '',
+    group.add_argument(
         '--no_mask_n3',
         dest='mask_n3',
         help='Disable masking of MRI for N3',
@@ -830,8 +829,7 @@ if __name__ == '__main__':
         default=False,
         )
     
-    group.add_option(
-        '',
+    group.add_argument(
         '--n4',
         dest='n4',
         help='Use N4 + advanced masking',
@@ -839,44 +837,41 @@ if __name__ == '__main__':
         default=False,
         )
     
-    group.add_option(
-        '',
+    group.add_argument(
         '--noles',
         dest='les',
         help='Disable lesion masks',
         action='store_false',
         default=True,
         )
-    group.add_option(
-        '',
+    group.add_argument(
         '--biascorr',
         dest='dobiascorr',
         help='Perform longitudinal bias correction',
         action='store_true',
         default=False)
 
-    group.add_option('', '--model-dir', dest='modeldir',
-                     help='Directory with the model [%default]',
+    group.add_argument('--model-dir', dest='modeldir',
+                     help='Directory with the model ',
                      default='/ipl/quarantine/models/icbm152_model_09c/'
                      )
     
-    group.add_option('', '--model-name', dest='modelname',
+    group.add_argument('--model-name', dest='modelname',
                      help='Model name',
                      default='mni_icbm152_t1_tal_nlin_sym_09c')
     
-    group.add_option('', '--beast-dir', dest='beastdir',
-                     help='Directory with the beast library [%default]', 
+    group.add_argument('--beast-dir', dest='beastdir',
+                     help='Directory with the beast library ', 
                      default='/ipl/quarantine/models/beast')
 
-    #group.add_option('', '--sym', dest='sym',
+    #group.add_argument( '--sym', dest='sym',
                      #help='Use symmetric minctracc (NOT YET)')
 
-    group.add_option('-4', '--4Dregu', dest='temporalregu',
-                     help="Use 4D regularization for the individual template creation with a linear regressor ('linear' or 'taylor' serie decomposition)", 
-                     default=False)
+    # group.add_argument('-4', '--4Dregu', dest='temporalregu',
+    #                  help="Use 4D regularization for the individual template creation with a linear regressor ('linear' or 'taylor' serie decomposition)", 
+    #                  default=False)
 
-    group.add_option(
-        '',
+    group.add_argument(
         '--skullreg',
         dest='skullreg',
         help='Run skull registration in stx2',
@@ -884,8 +879,7 @@ if __name__ == '__main__':
         default=False,
         )
 
-    group.add_option(
-        '',
+    group.add_argument(
         '--large_atrophy',
         dest='large_atrophy',
         help='Remove the ventricles for the linear template creation',
@@ -893,20 +887,26 @@ if __name__ == '__main__':
         default=False,
         )
 
-    group.add_option('', '--manual', dest='manual',
+    group.add_argument('--manual', dest='manual',
                      help='Manual or alternative processing path to find auxiliary data (look info)'
                      )
 
-    group.add_option(
-        '',
+    group.add_argument(
         '--linreg',
         dest='linreg',
         help='Linear registration method',
-        default='bestlinreg_new',
+        default='bestlinreg_20180117',
         )
 
-    group.add_option(
-        '',
+    group.add_argument(
+        '--rigid',
+        dest='rigid',
+        help='Use lsq6 for linear average',
+        action='store_true',
+        default=False
+        )
+
+    group.add_argument(
         '--add',
         action='append',
         dest='add',
@@ -914,15 +914,14 @@ if __name__ == '__main__':
         default=[],
         )
 
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, ' -- Individual options ',
-                        ' Once the picke files are created')
+    group = parser.add_argument_group('Execution options ',
+                         ' Once the picke files are created')
 
-    group.add_option('-p', '--pickle', dest='pickle',
+    group.add_argument('-p', '--pickle', dest='pickle',
                      help=' Open a pickle file')
 
-    group.add_option(
+    group.add_argument(
         '-s',
         '--status',
         dest='pstatus',
@@ -931,7 +930,7 @@ if __name__ == '__main__':
         default=False,
         )
 
-    group.add_option(
+    group.add_argument(
         '-c',
         '--clean',
         dest='pclean',
@@ -940,10 +939,11 @@ if __name__ == '__main__':
         default=False,
         )
 
-    parser.add_option_group(group)
+    # parser.add_option_group(group)
 
-    group = OptionGroup(parser, ' -- General Options ', '')
-    group.add_option(
+    group = parser.add_argument_group('General Options ')
+
+    group.add_argument(
         '-v',
         '--verbose',
         dest='verbose',
@@ -952,33 +952,44 @@ if __name__ == '__main__':
         default=False,
         )
         
-    group.add_option('-f', '--fast', dest='fast',
+    group.add_argument('-f', '--fast', dest='fast',
                      help='Fast mode : quick & dirty mostly for testing pipeline'
                      , action='store_true')
 
-    group.add_option('--pe', dest='pe',
+    group.add_argument('--pe', dest='pe',
                      help='Submit jobs using parallel environment'
                      )
                      
-    group.add_option('--peslots', dest='peslots',
-                     help='PE slots [%default]', default=4, type="int")
+    group.add_argument('--peslots', dest='peslots',
+                     help='PE slots ', default=4, type=int)
     
-    group.add_option('-q','--queue', dest='queue',
+    group.add_argument('-q','--queue', dest='queue',
                      help='Specify SGE queue for submission'
                      )
 
-    parser.add_option_group(group)
+    options = parser.parse_args()
 
-    (opts, args) = parser.parse_args()
+    return options
+
+
+## If used in a stand-alone application on one patient
+
+if __name__ == '__main__':
+
+    opts = parse_options()
+
+    # VF: disabled in public release
+    opts.temporalregu = False
 
     if opts.list is not None :
         if opts.output is None:
-            print(' -- Please specify and output dir (-o)')
+            print('Please specify and output dir (-o)')
             sys.exit(1)
         launchPipeline(opts)
     elif opts.pickle is not None:
         runPipeline(opts.pickle,workdir=opts.workdir)
     else:
-        parser.print_help()
+        print("missing something...")
+        sys.exit(1)
         
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

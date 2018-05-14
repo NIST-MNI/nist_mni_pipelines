@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #
@@ -105,6 +104,10 @@ class LngPatient(dict):
         
         # additional outputs
         self.add = {}
+
+        self.rigid = False # run rigid body linear model creation
+
+        self.symmetric = False # run symmetric linear model creation
 
     def clean(self):
         cleanImages(self.template)
@@ -365,7 +368,7 @@ class TP:
 def setFilenames(patient):
 
     patient.qcdir = patient.patientdir + 'qc' + os.sep
-    mkdir(patient.qcdir)
+    os.makedirs(patient.qcdir,exist_ok=True)
     
     if patient.workdir is None:
         patient.workdir = patient.patientdir + 'tmp' + os.sep
@@ -376,25 +379,25 @@ def setFilenames(patient):
         # # Create directories
 
         clpdir = patient[tp].tpdir + 'clp' + os.sep
-        mkdir(clpdir)
+        os.makedirs(clpdir,exist_ok=True)
         clp2dir = patient[tp].tpdir + 'clp2' + os.sep
-        mkdir(clp2dir)
+        os.makedirs(clp2dir,exist_ok=True)
         stxdir = patient[tp].tpdir + 'stx' + os.sep
-        mkdir(stxdir)
+        os.makedirs(stxdir,exist_ok=True)
         stx2dir = patient[tp].tpdir + 'stx2' + os.sep
-        mkdir(stx2dir)
+        os.makedirs(stx2dir,exist_ok=True)
         nldir = patient[tp].tpdir + 'nl' + os.sep
-        mkdir(nldir)
+        os.makedirs(nldir,exist_ok=True)
         vbmdir = patient[tp].tpdir + 'vbm' + os.sep
-        mkdir(vbmdir)
+        os.makedirs(vbmdir,exist_ok=True)
         clsdir = patient[tp].tpdir + 'cls' + os.sep
-        mkdir(clsdir)
+        os.makedirs(clsdir,exist_ok=True)
         adddir = patient[tp].tpdir + 'add' + os.sep
-        mkdir(adddir)
+        os.makedirs(adddir,exist_ok=True)
         voldir = patient[tp].tpdir + 'vol' + os.sep
-        mkdir(voldir)
+        os.makedirs(voldir,exist_ok=True)
         lngdir = patient[tp].tpdir + 'lng' + os.sep
-        mkdir(lngdir)
+        os.makedirs(lngdir,exist_ok=True)
 
         # take the sequences of the patient from the native images
         # this includes t1,t2,pd and t2les
@@ -625,7 +628,7 @@ def setFilenames(patient):
     # directories
 
     lngtmpldir = patient.patientdir + 'lng_template' + os.sep
-    mkdir(lngtmpldir)
+    os.makedirs(lngtmpldir)
 
     # ## template images
     # a) linear
