@@ -11,6 +11,7 @@ import pickle  # to store the class
 import os
 import copy
 from  .general import *  # functions to call binaries and general functions
+from   ipl.minc_tools import mincError
 
 
 def printImages(images):
@@ -27,9 +28,6 @@ def cleanImages(images):
         if not os.path.exists(i):
             removekeys.append(key)
     for k in removekeys:
-
-    # print(" -- Removing "+k+" --> "+images[k])
-
         del images[k]
 
 
@@ -105,9 +103,9 @@ class LngPatient(dict):
         # additional outputs
         self.add = {}
 
-        self.rigid = False # run rigid body linear model creation
-
+        self.rigid     = False # run rigid body linear model creation
         self.symmetric = False # run symmetric linear model creation
+        self.linreg    = None
 
     def clean(self):
         cleanImages(self.template)
@@ -131,15 +129,15 @@ class LngPatient(dict):
     @staticmethod  # static function to load pickle
     def read(filename):
         if os.path.exists:
-            p = open(filename,'rb')
-            try:
-                newpatient = pickle.load(p)
-            except:
-                raise IplError(' -- Problem reading the pickle %s !'
-                               % filename)
+            with open(filename,'rb') as p:
+                try:
+                    newpatient = pickle.load(p)
+                except:
+                    raise mincError(' -- Problem reading the pickle %s !'
+                                % filename)
             return newpatient
         else:
-            raise IplError(' -- Pickle %s does not exists!' % filename)
+            raise mincError(' -- Pickle %s does not exists!' % filename)
 
     def write(self, filename):
 
@@ -179,8 +177,10 @@ class LngPatient(dict):
         print('        - modeldir     = ' + self.modeldir)
         print('        - modelname    = ' + self.modelname)
         print('        - beastdir     = ' + self.beastdir)
-        print('        - run Skull rgistration     = ' + str(self.skullreg))
+        print('        - rigid        = ' + str(self.rigid))
+        print('        - run Skull registration     = ' + str(self.skullreg))
         print('        - Geo Corr     = ' + str(self.geo_corr))
+        print('        - linreg       = ' + str(self.linreg))
         print('')
         print('    - Patient Info ' + self.id)
         print('        - sex = ' + self.sex)

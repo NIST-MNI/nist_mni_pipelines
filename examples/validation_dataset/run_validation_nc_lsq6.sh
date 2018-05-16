@@ -39,9 +39,9 @@ export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
 ### Run pipeline for NC scan rescan data ###
 python3 -m scoop -vvv -n $PARALLEL $pipeline_dir/iplLongitudinalPipeline.py \
  -L \
- -l $data_dir/subject43.csv \
+ -l $data_dir/subject43_2.csv \
  -o $output_dir \
  --model-dir=$icbm_model_dir \
  --model-name=mni_icbm152_t1_tal_nlin_sym_09c  \
  --beast-dir=$beast_model_dir \
- --VBM --rigid
+ --VBM --rigid 

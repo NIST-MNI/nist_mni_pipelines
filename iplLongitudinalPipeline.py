@@ -568,8 +568,11 @@ def runPipeline(pickle, workdir=None):
             print(' #### NOT THE SAME PIPELINE VERSION!! ')
             raise IplError('       - Change the pipeline version or restart all processing'
                         )
-
+        
         setFilenames(patient)
+        print("Processing:")
+        patient.printself()
+
         
         if workdir is not None:
           patient.workdir=workdir

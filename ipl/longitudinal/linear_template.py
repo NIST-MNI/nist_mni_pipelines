@@ -107,7 +107,7 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False):
     
     with mincTools() as minc:
         xfmfile = transform.xfm
-        stx_xfm_file = tp.stx_xfm['t1'] if rigid else tp.stx_ns_xfm['t1']
+        stx_xfm_file = tp.stx_ns_xfm['t1'] if rigid else tp.stx_xfm['t1']
         clp_tp = tp.clp['t1']
 
         if patient.geo_corr and 't1' in patient[i].geo:
@@ -259,7 +259,7 @@ def linearlngtemplate_v11(patient):
             samples= [ [tp.stx_ns_mnc['t1'], tp.stx_ns_mnc['masknoles']]
                         for (i, tp) in patient.items() ]
         else:
-            samples= [ [tp.stx_mnc['t1'], tp.stx_mnc['masknoles']]
+            samples= [ [tp.stx_mnc['t1'],    tp.stx_mnc['masknoles']]
                         for (i, tp) in patient.items() ]
 
         if patient.fast:
