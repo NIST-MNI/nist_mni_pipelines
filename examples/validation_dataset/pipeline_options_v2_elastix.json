@@ -1,0 +1,35 @@
+{
+  "model":     "mni_icbm152_t1_tal_nlin_sym_09c",
+  "model_dir": "/opt/minc/share/icbm152_model_09c",
+
+  "mri_3t":    false,
+  "qc":        {"big":true},
+  "aqc":       {},
+  "t1w_clp":   null,
+  "t1w_nuc":   null,
+  "denoise":   null,
+  
+  "t1w_stx":   {
+                "type":"elx",
+                "options":   [{
+                    "metric":    "AdvancedMattesMutualInformation",
+                    "optimizer": "AdaptiveStochasticGradientDescent",
+                    "transform": "SimilarityTransform"
+                    },{
+                    "metric":    "AdvancedMattesMutualInformation",
+                    "optimizer": "AdaptiveStochasticGradientDescent",
+                    "transform": "AffineTransform"
+                    }],
+                "resample": false
+                },               
+  "nl_reg":    null,
+  
+ 
+  "tissue_classify": null,
+  "lobe_segment": null,
+  "beast":     null,
+  
+  "nl":        false,
+  "cls":       false,
+  "lobes":     false
+}
