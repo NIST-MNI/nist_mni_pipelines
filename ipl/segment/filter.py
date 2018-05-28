@@ -46,9 +46,9 @@ def apply_filter(input, output, filters, model=None, input_mask=None, model_mask
                 if filters.get('nuc',False) : # RUN N4
                     m.n4(output_scan,output_corr=m.tmp('n4.mnc'),
                         weight_mask=input_mask,
-                        shrink=parameters.get('nuc_shrink',4),
-                        iter=parameters.get('nuc_iter','200x200x200'),
-                        distance=parameters.get('nuc_distance',200))
+                        shrink=filters.get('nuc_shrink',4),
+                        iter=filters.get('nuc_iter','200x200x200'),
+                        distance=filters.get('nuc_distance',200))
                     output_scan  =m.tmp('n4.mnc')
                 
                 if filters.get('normalize',False) and model is not None:

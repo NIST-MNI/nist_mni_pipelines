@@ -125,8 +125,6 @@ def standard_pipeline(info,
             model_name=None
             model_dir=None
             
-            #print(json.dumps(options,indent=2))
-            
             # generate model reference
             if info.get('model_dir',None) is not None:
                 model_dir =info['model_dir']
@@ -336,7 +334,7 @@ def standard_pipeline(info,
                 for i,c in enumerate(add_scans):
                     # get add options 
                     #TODO do it per modality
-                    add_options        = options.get('add',options)
+                    add_options            = options.get('add',options)
                     
                     add_denoise_parameters = add_options.get('denoise',denoise_parameters)
                     add_nuc_parameters     = add_options.get('nuc'    ,nuc_parameters)
@@ -424,7 +422,7 @@ def standard_pipeline(info,
                                         corr_ref=corr_t1w,
                                         par=co_par,
                                         log=co_log,
-                                        init_xfm = manual_co_xfm )
+                                        init_xfm=manual_co_xfm )
                         prev_co_xfm=co_xfm
                     else:
                         co_xfm=prev_co_xfm

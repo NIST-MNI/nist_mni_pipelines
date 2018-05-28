@@ -344,7 +344,7 @@ def launchPipeline(options):
     if opts.pe is None: # use SCOOP to run all subjects in parallel
         pickles = []
     
-        for (id, i) in patients.iteritems():
+        for (id, i) in patients.items():
             # writing the pickle file
             if not os.path.exists(i.pickle):
                 i.write(i.pickle)
@@ -357,7 +357,7 @@ def launchPipeline(options):
     else: # USE SGE to submit one job per subject, using required peslots 
         pickles = []
         
-        for (id, i) in patients.iteritems():
+        for (id, i) in patients.items():
             # writing the pickle file
             slots=opts.peslots
             # don't submit jobs with too many requested slots, when only limited number of 
@@ -379,9 +379,11 @@ def launchPipeline(options):
             comm.extend(['export OMP_DYNAMIC=TRUE'])
             comm.extend(['python -m scoop -n {} {} -p {}'.format(str(slots),os.path.abspath(sys.argv[0]),i.pickle)])
             
-            qsub_pe(comm,opts.pe,opts.peslots,
+            qsub_pe(comm,opts.pe, 
+                    opts.peslots,
                     name='LNG_{}'.format(str(id)),
-                    logfile=i.patientdir+os.sep+str(id)+".sge.log")
+                    logfile=i.patientdir+os.sep+str(id)+".sge.log",
+                    queue=opts.queue)
 
 def runTimePoint_FirstStage(tp, patient):
     '''
@@ -435,7 +437,8 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
 
         pipeline_stx2_skullstripping(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
-
+        
+        print("pipeline_atlasregistration")
         pipeline_atlasregistration(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -565,8 +568,7 @@ def runPipeline(pickle, workdir=None):
           patient.workdir=workdir
         # prepare qc folder
 
-        tps = patient.keys()
-        tps.sort()
+        tps = sorted(patient.keys())
         jobs=[]
         for tp in tps:
             jobs.append(futures.submit(runTimePoint_FirstStage,tp, patient))
@@ -599,12 +601,12 @@ def runPipeline(pickle, workdir=None):
             # ################################################
             pipeline_lngtemplate(patient)
 
-            if len(patient.add)>0:
-                pipeline_run_add(patient)
-
             # non-linear registration of the template to the atlas
             # ##########################
             pipeline_atlasregistration(patient)
+            
+            if len(patient.add)>0:
+                pipeline_run_add(patient)
 
             # Concatenate xfm files for each timepoint.
             # run per tp tissue classification
@@ -959,6 +961,10 @@ if __name__ == '__main__':
                      
     group.add_option('--peslots', dest='peslots',
                      help='PE slots [%default]', default=4, type="int")
+    
+    group.add_option('-q','--queue', dest='queue',
+                     help='Specify SGE queue for submission'
+                     )
 
     parser.add_option_group(group)
 

@@ -377,7 +377,7 @@ class LinearModelGenerator(mincTools):
 
         # go through all the iterations
 
-        for it in xrange(0, self.iterations):
+        for it in range(0, self.iterations):
 
             # this will be a model for next iteration actually
 
@@ -612,7 +612,7 @@ class NonLinearModelGenerator(LinearModelGenerator):
             iterations = self.registration_parameters[level]
             print('Level:%d iterations:%s Total iterations:%d' \
                    % (level, iterations, it))
-            for it_i in xrange(iterations):
+            for it_i in range(iterations):
                 # this will be a model for next iteration actually
 
                 current_model.append(ModelIterationSample(name='avg',

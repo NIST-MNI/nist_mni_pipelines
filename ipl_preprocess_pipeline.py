@@ -202,7 +202,7 @@ if __name__ == '__main__':
                 with open(options.csv, 'r') as csvfile:
                     reader = csv.reader(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
                     for row in reader:
-                        if len(row)>1:
+                        if len(row)>=3:
                             data_name='{}_{}'.format(row[0],row[1])
                             
                             t1w=MriScan(name=data_name, 
@@ -251,6 +251,9 @@ if __name__ == '__main__':
                                 line['add']=add
                             
                             inputs.append( line )
+                        else:
+                            print("Error, unexpected line format:{}".format(repr(row)))
+                            raise
             
             pipeline_parameters['debug']=options.debug
             if options.debug:

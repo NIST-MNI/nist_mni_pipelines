@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # @author Vladimir S. FONOV
@@ -17,26 +16,13 @@ import traceback
 #from sigtools.modifiers import kwoargs,autokwoargs
 
 # local stuff
-from ipl.minc_tools import mincTools,mincError
-#from ipl.optfunc import optfunc
-#from clize import run
+from .minc_tools import mincTools
 
-# numpy & scipy
-#from scipy import stats
+# import xfmavg from model/registration
+from .model.registration import xfmavg
+
 import numpy as np
 from sklearn import linear_model
-
-try:
-    # needed to read and write XFM files
-    import pyezminc
-except:
-    pass
-
-try:
-    # needed for matrix log and exp
-    import scipy.linalg
-except:
-    pass
 
 def label_normalize(sample, sample_labels, ref, ref_labels, out=None,sample_mask=None, ref_mask=None,median=False,order=3,debug=False):
     '''Use label-based intensity normalization'''
@@ -206,62 +192,10 @@ def patch_normalize(sample, sample_labels, ref, ref_labels, out=None,sample_mask
         return cmd
 
 
-def xfmavg(inputs,output):
-    # TODO: handle inversion flag correctly
-    all_linear=True
-    all_nonlinear=True
-    input_xfms=[]
-    if not mincTools.checkfiles(inputs=inputs,
-                        outputs=[output ]):
-        return
-    for j in inputs:
-        x=pyezminc.read_transform(j)
-        if x[0][0] and len(x)==1 and (not x[0][1]):
-            # this is a linear matrix
-            input_xfms.append(x[0])
-        else:
-            all_linear&=False
-            # strip identity matrixes
-            nl=[]
-            _identity=np.asmatrix(np.identity(4))
-            _eps=1e-6
-            for i in x:
-                if i[0]:
-                     if scipy.linalg.norm(_identity-i[2])>_eps: # this is non-identity matrix
-                        all_nonlinear&=False
-                else:
-                    nl.append(i)
-            if len(nl)!=1: 
-                all_nonlinear&=False
-            else:
-                input_xfms.append(nl[0])
-    if all_linear:
-        acc=np.asmatrix(np.zeros([4,4],dtype=np.complex))
-        for i in input_xfms:
-            acc+=scipy.linalg.logm(i[2])
-        acc/=len(input_xfms)
-        out_xfm=[(True,False,scipy.linalg.expm(acc).real)]
-        pyezminc.write_transform(output,out_xfm)
-    elif all_nonlinear:
-        input_grids=[]
-        for i in input_xfms:
-            input_grids.append(i[2])
-        output_grid=output.rsplit('.xfm',1)[0]+'_grid_0.mnc'
-        with mincTools(verbose=2) as m:
-            m.average(input_grids,output_grid)
-        out_xfm=[(False,False,output_grid)]
-        print("xfmavg output:{}".format(repr(out_xfm)))
-        pyezminc.write_transform(output,out_xfm)
-    else:
-        raise Exception("Mixed XFM files provided as input")
-
-
 
 if __name__ == '__main__':
-    #optfunc.run([nuyl_normalize2,label_normalize]) 
-    # TODO: re-implement using optparse
     pass
     
-    
+  
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
 

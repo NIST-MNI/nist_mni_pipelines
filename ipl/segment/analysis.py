@@ -162,7 +162,7 @@ def seg_to_volumes(seg, output_json, label_map=None,volume=None):
 def invert_lut(inp):
     if inp is None:
         return None
-    return { str(j):str(i) for i,j in inp.iteritems()}
+    return { str(j):str(i) for i,j in inp.items()}
 
 
 def volume_measure(seg,library,output_json):

@@ -1,10 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # @author Vladimir S. FONOV
 # @date 11/21/2011
 #
-# Tools for creating QC images
+# routines for creating QC images
 
 from __future__ import print_function
 
@@ -17,13 +16,11 @@ matplotlib.use('AGG')
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-#from minc2.simple import minc2_file
+
 from minc2_simple import minc2_file
 
 import matplotlib.cm  as cmx
 import matplotlib.colors as colors
-import argparse
-
 
 try:
     unicode = unicode
@@ -151,8 +148,7 @@ def qc(
         _ovl.setup_standard_order()
         _ovl_data=_ovl.load_complete_volume(minc2_file.MINC2_FLOAT)
         if _ovl_data.shape != data_shape:
-            #print("Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl.data.shape),repr(data_shape))
-            raise "Overlay shape does not match image!\nOvl={} Image={}",repr(_ovl_data.shape),repr(data_shape)
+            raise "Overlay shape does not match image!\nOvl={} Image={}".format(repr(_ovl_data.shape),repr(data_shape))
         if mask_range is None:
             omin=np.nanmin(_ovl_data)
             omax=np.nanmax(_ovl_data)
@@ -188,7 +184,7 @@ def qc(
     
     # axial slices
     for j in range(0,samples):
-        i=(data_shape[0]/samples)*j+(data_shape[0]%samples)/2
+        i=int( (data_shape[0]/samples)*j+(data_shape[0]%samples)/2 )
         si=scalarMap.to_rgba(_idata[i , : ,:])
 
         if _ovl is not None:
@@ -200,7 +196,7 @@ def qc(
         aspects.append( spacing[0]/spacing[1] )
     # coronal slices
     for j in range(0,samples):
-        i=(data_shape[1]/samples)*j+(data_shape[1]%samples)/2
+        i=int( (data_shape[1]/samples)*j+(data_shape[1]%samples)/2 )
         si=scalarMap.to_rgba(_idata[: , i ,:])
         
         if _ovl is not None:
@@ -213,7 +209,7 @@ def qc(
         
     # sagittal slices
     for j in range(0,samples):
-        i=(data_shape[2]/samples)*j+(data_shape[2]%samples)/2
+        i=int( (data_shape[2]/samples)*j+(data_shape[2]%samples)/2 )
         si=scalarMap.to_rgba(_idata[: , : , i])
         if _ovl is not None:
             so=oscalarMap.to_rgba(_odata[: , : , i])
@@ -230,7 +226,7 @@ def qc(
     ax=None
     imgplot=None
     for i,j in enumerate(slices):
-        ax =  plt.subplot2grid( (3, samples), (i/samples, i%samples) )
+        ax =  plt.subplot2grid( (3, samples), (  int( i/samples) , i%samples) )
         imgplot = ax.imshow(j,origin='lower',cmap=cm, aspect=aspects[i])
         ax.set_xticks([])
         ax.set_yticks([])
@@ -378,72 +374,7 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue',
                 (1.0, 1.0, 1.0))         
     }))
 
-def parse_options():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                 description='Make QC image')
-
-    parser.add_argument("--debug",
-                    action="store_true",
-                    dest="debug",
-                    default=False,
-                    help="Print debugging information" )
-    
-    parser.add_argument("--contour",
-                    action="store_true",
-                    dest="contour",
-                    default=False,
-                    help="Make contour plot" )
-    
-    parser.add_argument("--bar",
-                    action="store_true",
-                    dest="bar",
-                    default=False,
-                    help="Show colour-bar" )
-    
-    parser.add_argument("--cmap",
-                    dest="cmap",
-                    default=None,
-                    help="Colour map" )
-    
-    parser.add_argument("--mask",
-                    dest="mask",
-                    default=None,
-                    help="Add mask" )
-    
-    parser.add_argument("--over",
-                    dest="use_over",
-                    action="store_true",
-                    default=False,
-                    help="Overplot" )
-    
-    parser.add_argument("--max",
-                    dest="use_max",
-                    action="store_true",
-                    default=False,
-                    help="Use max mixing" )
-
-    parser.add_argument("input",
-                        help="Input minc file")
-
-    parser.add_argument("output",
-                        help="Output QC file")
-    
-    options = parser.parse_args()
-
-    if options.debug:
-        print(repr(options))
-
-    return options    
 
 if __name__ == '__main__':
-    options = parse_options()
-    if options.input is not None and options.output is not None:
-        if options.contour:
-            qc_field_contour(options.input,options.output,show_image_bar=options.bar,image_cmap=options.cmap)
-        else:
-            qc(options.input,options.output,mask=options.mask,use_max=options.use_max,use_over=options.use_over,mask_bg=0.5)
-    else:
-        print("Refusing to run without input data, run --help")
-        exit(1)
-        
+    pass
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80

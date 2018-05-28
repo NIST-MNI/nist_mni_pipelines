@@ -683,6 +683,8 @@ class mincTools(temp_files):
         invert_transform=False,
         resample=None,
         datatype=None,
+        tfm_input_sampling=False,
+        labels=False
         ):
         """resample an image, interpreting voxels as intnsities 
         
@@ -701,6 +703,8 @@ class mincTools(temp_files):
                      otherwise use itk_resample
         datatype -- output minc file data type, variants 
                      'byte','short','long','float','double'
+        labels   -- assume scan contains integer labels, only works with nearest neignour
+        tfm_input_sampling -- apply linear xfm to sampling parameters, assumes mincresample is used
         """
         if os.path.exists(output):
             return
@@ -713,6 +717,8 @@ class mincTools(temp_files):
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -728,6 +734,8 @@ class mincTools(temp_files):
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -743,6 +751,8 @@ class mincTools(temp_files):
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -752,12 +762,14 @@ class mincTools(temp_files):
             if datatype:
                 cmd.append('-' + datatype)
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
-        elif resample == 'nearest':
+        elif resample == 'nearest' or labels:
             cmd = ['mincresample', input, output, '-nearest', '-q']
             if transform:
                 cmd.extend(['-transform', transform])
             if like:
                 cmd.extend(['-like', like])
+            elif tfm_input_sampling:
+                cmd.append('-tfm_input_sampling')
             else:
                 cmd.append('-use_input_sampling')
             if invert_transform:
@@ -766,6 +778,8 @@ class mincTools(temp_files):
                 raise mincError('Not implemented!')
             if datatype:
                 cmd.append('-' + datatype)
+            if labels:
+                cmd.append('-labels')
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
         else:
             cmd = ['itk_resample', input, output, '--order', str(order)]
@@ -1049,15 +1063,14 @@ class mincTools(temp_files):
     def similarity(self, reference, sample, ref_mask=None, sample_mask=None,method="msq"):
         """Calculate image similarity metric"""
         args=['itk_similarity',reference,sample,'--'+method]
-        
+
         if ref_mask is not None:
             args.extend(['--src_mask',ref_mask])
         if sample_mask is not None:
             args.extend(['--target_mask',sample_mask])
-         
+
         r=self.execute_w_output(args,verbose=self.verbose)
         return float(r)
-        
 
     def label_similarity(self, reference, sample, method="gkappa"):
         """Calculate image similarity metric"""
@@ -1083,9 +1096,9 @@ class mincTools(temp_files):
 
     def log_average(self, inputs, output):
         """perform log-average (geometric average)"""
-        tmp = ['log(A[%d])' % i for i in xrange(len(inputs))]
-        self.calc(inputs, 'exp((%s)/%d)' % ('+'.join(tmp),
-                  len(inputs)), output, datatype='-float')
+        tmp = ['log(A[%d])' % i for i,_ in enumerate(inputs)]
+        self.calc(inputs, 'exp((%s)/%d)' % ('+'.join(tmp), len(inputs)), 
+                  output, datatype='-float')
 
 
     def param2xfm(self, output, scales=None, translation=None, rotations=None, shears=None):
@@ -1099,10 +1112,8 @@ class mincTools(temp_files):
             cmd.extend(['-scales',str(scales[0]),str(scales[1]),str(scales[2])])
         if shears is not None:
             cmd.extend(['-shears',str(shears[0]),str(shears[1]),str(shears[2])])
-
         self.command(cmd, inputs=[], outputs=[output], verbose=self.verbose)
 
-        
 
     def flip_volume_x(self,input,output, labels=False, datatype=None):
         '''flip along x axis'''
@@ -1274,7 +1285,7 @@ class mincTools(temp_files):
            shrink=None,      weight_mask=None,
            datatype=None,    iter=None,
            sharpening=None,  threshold=None,
-           downsample_field=None
+           downsample_field =None
            ):
         
         outputs=[]
@@ -1319,7 +1330,7 @@ class mincTools(temp_files):
         
         if output_field is not None:
             if downsample_field is not None:
-                self.resample_smooth(_out_fld, output_field, datatype=datatype,unistep=downsample_field)
+                self.resample_smooth(_out_fld, output_field, datatype=datatype, unistep=downsample_field)
             else:
                 if datatype is not None:
                     self.reshape(_out_fld, output_field, datatype=datatype)
@@ -1460,8 +1471,8 @@ class mincTools(temp_files):
         try:
             (out, err) = subprocess.Popen(['xfm2param', input],
                     stdout=subprocess.PIPE).communicate()
-            scale_ = filter(lambda x: re.match('^\-scale', x),
-                            out.decode().split('\n'))
+            scale_ = list(filter(lambda x: re.match('^\-scale', x),
+                            out.decode().split('\n')))
             if len(scale_) != 1:
                 raise mincError("Can't extract scale from " + input)
             scale__ = re.split('\s+', scale_[0])
@@ -2099,7 +2110,7 @@ class mincTools(temp_files):
 
         out=self.execute_w_output(['xfm2param', input])
         
-        params_=[ [ float(k) if s>0 else k for s,k in enumerate(re.split('\s+', l))] for l in out.decode().split('\n') if re.match('^\-', l) ]
+        params_=[ [ float(k) if s>0 else k for s,k in enumerate(re.split('\s+', l))] for l in out.split('\n') if re.match('^\-', l) ]
             
         return { k[0][1:] :[k[1],k[2],k[3]] for k in params_ }
         
@@ -2126,6 +2137,41 @@ class mincTools(temp_files):
         if mask is not None:
             cmd.extend(['--mask',mask])
         self.command(cmd, inputs=inputs,outputs=[output], verbose=self.verbose)
+        
+        
+    def downsample_registration_files(self, sources, targets, source_mask, target_mask, downsample=None):
+        
+        sources_lr=sources
+        targets_lr=targets
+        
+        source_mask_lr=source_mask
+        target_mask_lr=target_mask
+        
+        modalities=len(sources)
+
+        if downsample is not None:
+            for _s in range(modalities):
+                s_base=os.path.basename(sources[_s]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+                t_base=os.path.basename(targets[_s]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+                
+                source_lr=self.tmp(s_base+'_'+str(downsample)+'_'+str(_s)+'.mnc')
+                target_lr=self.tmp(t_base+'_'+str(downsample)+'_'+str(_s)+'.mnc')
+
+                self.resample_smooth(sources[_s],source_lr,unistep=downsample)
+                self.resample_smooth(targets[_s],target_lr,unistep=downsample)
+                
+                sources_lr.append(source_lr)
+                targets_lr.append(target_lr)
+                
+                if _s==0:
+                    if target_mask is not None:
+                        target_mask_lr=self.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
+                        self.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
+                    if target_mask is not None:
+                        target_mask_lr=self.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
+                        self.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
+        
+        return (sources_lr, targets_lr, source_mask_lr, target_mask_lr)
         
 if __name__ == '__main__':
     pass

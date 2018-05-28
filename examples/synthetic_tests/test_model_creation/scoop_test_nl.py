@@ -8,12 +8,12 @@ if __name__ == '__main__':
     work_prefix='tmp_nl',
     options={'symmetric':False,
              'protocol': [{'iter':4,'level':16},
-                         {'iter':4,'level':8},
+                          {'iter':4,'level':8},
                           ],
              'cleanup': True
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc',
-    stop_early=4,
-    skip=0,
+    #stop_early=4,
+    #skip=0,
   )

@@ -205,7 +205,8 @@ def non_linear_register_step(
     parameters=None,
     work_dir=None,
     downsample=None,
-    avg_symmetric=True    
+    avg_symmetric=True,
+    verbose=2   
     ):
     """perform linear registration to the model, and calculate inverse"""
 
@@ -221,7 +222,7 @@ def non_linear_register_step(
             if symmetric:
                 _init_xfm_f=init_xfm.xfm_f
         
-        with mincTools() as m:
+        with mincTools(verbose=verbose) as m:
             
             if symmetric:
 
@@ -317,7 +318,8 @@ def dd_register_step(
     parameters=None,
     work_dir=None,
     downsample=None,
-    avg_symmetric=True    
+    avg_symmetric=True,
+    verbose=2
     ):
     """perform linear registration to the model, and calculate inverse"""
 
@@ -333,7 +335,7 @@ def dd_register_step(
             if symmetric:
                 _init_xfm_f=init_xfm.xfm_f
         
-        with mincTools() as m:
+        with mincTools(verbose=verbose) as m:
             
             if symmetric:
 
@@ -409,11 +411,11 @@ def dd_register_step(
                     
         return True
     except mincError as e:
-        print("Exception in non_linear_register_step:{}".format(str(e)) )
+        print("Exception in dd_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
+        print("Exception in dd_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -430,7 +432,8 @@ def ants_register_step(
     parameters=None,
     work_dir=None,
     downsample=None,
-    avg_symmetric=True    
+    avg_symmetric=True,
+    verbose=2 
     ):
     """perform linear registration to the model, and calculate inverse"""
 
@@ -446,7 +449,7 @@ def ants_register_step(
             if symmetric:
                 _init_xfm_f=init_xfm.xfm_f
         
-        with mincTools() as m:
+        with mincTools(verbose=verbose) as m:
             out=m.tmp('forward')
             out_f=m.tmp('forward_f')
             if symmetric:
@@ -523,11 +526,11 @@ def ants_register_step(
                     
         return True
     except mincError as e:
-        print( "Exception in non_linear_register_step:{}".format(str(e)) )
+        print( "Exception in ants_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
+        print("Exception in ants_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -544,7 +547,8 @@ def elastix_register_step(
     parameters=None,
     work_dir=None,
     downsample=None,
-    avg_symmetric=True    
+    avg_symmetric=True,
+    verbose=2   
     ):
     """perform linear registration to the model, and calculate inverse"""
 
@@ -564,7 +568,7 @@ def elastix_register_step(
         elx_parameters=parameters.get(str(level),{})
         downsample_grid=elx_parameters.get('downsample_grid',level/2.0)
         
-        with mincTools() as m:
+        with mincTools(verbose=verbose) as m:
             out=m.tmp('forward')
             out_f=m.tmp('forward_f')
             if symmetric:
@@ -638,11 +642,11 @@ def elastix_register_step(
                     
         return True
     except mincError as e:
-        print("Exception in non_linear_register_step:{}".format(str(e)) )
+        print("Exception in elastix_register_step:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in non_linear_register_step:{}".format(sys.exc_info()[0]) )
+        print("Exception in elastix_register_step:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -697,12 +701,13 @@ def non_linear_register_step_regress_std(
     debug=False,
     previous_def=None,
     datatype='short',
-    nl_mode='animal'
+    nl_mode='animal',
+    verbose=2
     ):
     """perform linear registration to the model, and calculate new estimate"""
     try:
 
-        with mincTools() as m:
+        with mincTools(verbose=verbose) as m:
             if m.checkfiles(inputs=[sample.scan],
                             outputs=[output_def.xfm]):
 
@@ -846,11 +851,11 @@ def non_linear_register_step_regress_std(
         # done
         
     except mincError as e:
-        print("Exception in non_linear_register_step_ldd:{}".format(str(e)) )
+        print("Exception in non_linear_register_step_regress_std:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in non_linear_register_step_ldd:{}".format(sys.exc_info()[0]))
+        print("Exception in non_linear_register_step_regress_std:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
         

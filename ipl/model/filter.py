@@ -7,6 +7,80 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
+try:
+    from minc2_simple import minc2_file
+    import numpy as np
+    have_minc2_simple=True
+except ImportError:
+    # minc2_simple not available :(
+    have_minc2_simple=False
+
+
+
+def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
+    # faster then mincaverage for large number of samples
+    ref=minc2_file(infiles[0])
+    dims_ref=ref.store_dims()
+    o_avg=minc2_file()
+    
+    if binary:
+        o_avg.define(dims_ref, minc2_file.MINC2_BYTE,  minc2_file.MINC2_BYTE)
+    else:
+        o_avg.define(dims_ref, minc2_file.MINC2_FLOAT, minc2_file.MINC2_FLOAT)
+        
+    o_avg.create(out_avg)
+    o_avg.copy_metadata(ref)
+    o_avg.setup_standard_order()
+    
+    if out_sd is not None:
+        o_sd=minc2_file()
+        o_sd.define(dims_ref, minc2_file.MINC2_FLOAT, minc2_file.MINC2_FLOAT)
+        o_sd.create(out_sd)
+        o_sd.copy_metadata(ref)
+        o_sd.setup_standard_order()
+
+    ref.setup_standard_order()
+    
+    # iterate over all input files and update avg and sd
+    vol_avg=ref.load_complete_volume(minc2_file.MINC2_FLOAT).astype(np.float64)
+    ref.close()
+    
+    if out_sd is not None:
+        vol_sd=vol_avg*vol_avg
+
+    lll=1.0
+
+    for i in range(1,len(infiles)):
+        print(infiles[i])
+        in_minc=minc2_file(infiles[i])
+        #TODO: check dimensions
+        in_minc.setup_standard_order()
+        v=in_minc.load_complete_volume(minc2_file.MINC2_FLOAT).astype(np.float64)
+        in_minc.close()
+        vol_avg+=v
+        lll+=1.0
+
+        if out_sd is not None:
+            vol_sd+=v*v
+
+        
+    #Averaging
+    vol_avg/=lll
+    
+    if binary:
+        # binarize:
+        vol_avg=np.greater(vol_avg,threshold).astype('int8')
+    else:
+        vol_avg=vol_avg.astype(np.float)
+    
+    o_avg.save_complete_volume(vol_avg)
+    
+    if out_sd is not None:
+        vol_sd/=lll
+        vol_sd-=vol_avg*vol_avg
+        vol_sd=np.sqrt(vol_sd).astype(np.float)
+        o_sd.save_complete_volume(vol_sd)
+
 
 def generate_flip_sample(input):
     '''generate flipped version of sample'''
@@ -73,7 +147,10 @@ def average_samples(
             if median:
                 m.median(avg, out_scan,madfile=out_sd)
             else:
-                m.average(avg, out_scan,sdfile=out_sd)
+                if have_minc2_simple:
+                    faster_average(avg,out_scan,out_sd=out_sd)
+                else:
+                    m.average(avg, out_scan,sdfile=out_sd)
 
             if symmetrize:
                 # TODO: replace flipping of averages with averaging of flipped 
@@ -94,16 +171,21 @@ def average_samples(
                 if not os.path.exists(output.mask):
                     
                     if symmetrize:
-                        m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
+                        if have_minc2_simple:
+                            faster_average(avg,m.tmp('avg_mask.mnc'))
+                        else:
+                            m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
+                        
                         m.flip_volume_x(m.tmp('avg_mask.mnc'),m.tmp('flip_avg_mask.mnc'))
                         m.average([m.tmp('avg_mask.mnc'),m.tmp('flip_avg_mask.mnc')],m.tmp('sym_avg_mask.mnc'),datatype='-float')
-                        
-                        m.calc([m.tmp('sym_avg_mask.mnc')],'A[0]>=0.5?1:0',m.tmp('sym_avg_mask_.mnc'),datatype='-byte')
-                        m.reshape(m.tmp('sym_avg_mask_.mnc'),output.mask,image_range=[0,1],valid_range=[0,1])
+                        m.calc([m.tmp('sym_avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
                     else:
-                        m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
-                        m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',m.tmp('avg_mask_.mnc'),datatype='-byte')
-                        m.reshape(m.tmp('avg_mask_.mnc'),output.mask,image_range=[0,1],valid_range=[0,1])
+                        if have_minc2_simple:
+                            faster_average(avg,m.tmp('avg_mask.mnc'))
+                        else:
+                            m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
+                        m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
+
 
                     
                     
