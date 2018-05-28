@@ -1,11 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 #
 # @author Vladimir S. FONOV
 # @date 12/10/2014
 #
-# Run fusion segmentation
+# Run data augmentation
 
 from __future__ import print_function
 
@@ -158,6 +157,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
             
             if not os.path.exists(out_vol) or not os.path.exists(out_seg) or not os.path.exists(out_mask) or not os.path.exists(out_xfm):
                 
+                # apply random linear xfm
                 ran_xfm=m.tmp('random_{}.xfm'.format(r))
                 
                 m.param2xfm(ran_xfm,
