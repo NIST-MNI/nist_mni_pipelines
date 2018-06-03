@@ -42,22 +42,27 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
     ref.setup_standard_order()
     
     # iterate over all input files and update avg and sd
-    vol_avg=ref.load_complete_volume(minc2_file.MINC2_FLOAT)
+    vol_avg=ref.load_complete_volume(minc2_file.MINC2_FLOAT).astype(np.float64)
+    ref.close()
     
     if out_sd is not None:
         vol_sd=vol_avg*vol_avg
-    
+
+    lll=1.0
+
     for i in range(1,len(infiles)):
         print(infiles[i])
         in_minc=minc2_file(infiles[i])
         #TODO: check dimensions
         in_minc.setup_standard_order()
-        v=in_minc.load_complete_volume(minc2_file.MINC2_FLOAT)
+        v=in_minc.load_complete_volume(minc2_file.MINC2_FLOAT).astype(np.float64)
         in_minc.close()
         vol_avg+=v
-        
+        lll+=1.0
+
         if out_sd is not None:
             vol_sd+=v*v
+
         
     #Averaging
     vol_avg/=lll
@@ -65,13 +70,15 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
     if binary:
         # binarize:
         vol_avg=np.greater(vol_avg,threshold).astype('int8')
+    else:
+        vol_avg=vol_avg.astype(np.float)
     
     o_avg.save_complete_volume(vol_avg)
     
     if out_sd is not None:
         vol_sd/=lll
         vol_sd-=vol_avg*vol_avg
-        vol_sd=np.sqrt(vol_sd)
+        vol_sd=np.sqrt(vol_sd).astype(np.float)
         o_sd.save_complete_volume(vol_sd)
 
 

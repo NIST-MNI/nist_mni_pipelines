@@ -35,6 +35,23 @@ from scoop import futures, shared
 # 
 import numpy as np
 
+
+def load_pca_lib(loc):
+    pca_lib_dir=os.path.dirname(loc)
+    
+    pca_lib=[]
+    
+    with open(loc,'r') as f:
+        for l in f:
+            l=l.rstrip("\n")
+            pca_lib.append(pca_lib_dir+os.sep+l.split(',')[1])
+    
+    # remove mean
+    pca_lib.pop(0)
+    return pca_lib
+    
+    
+
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='Create augmented dataset for training deep nets')
@@ -78,6 +95,16 @@ def parse_options():
                         default=False,
                         help="Debug")
     
+    parser.add_argument('--intpca',
+                    help="Apply intensity variance using PCA library of log fields")
+    
+    parser.add_argument('--intvar',
+                    default=0.1,
+                    help="Intensity variance (log space)")
+    
+    parser.add_argument('--int_n',
+                    default=3,
+                    help="Number of PCA components (log space)")
     ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
                         #default=None,
@@ -92,7 +119,7 @@ def parse_options():
     return options
 
 
-def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
+def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, pca_lib=None):
   try:
     with mincTools() as m:
         
@@ -161,9 +188,9 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
                 ran_xfm=m.tmp('random_{}.xfm'.format(r))
                 
                 m.param2xfm(ran_xfm,
-                            scales=     ((np.random.rand(3)-0.5)*2*options.scale/100.0+1.0).tolist(),
-                            translation=((np.random.rand(3)-0.5)*2*options.shift).tolist(),
-                            rotations=  ((np.random.rand(3)-0.5)*2*options.rot).tolist())
+                            scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
+                            translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
+                            rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
                 
                 if flip:
                     m.xfmconcat([lib_sample[-1], m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
@@ -181,17 +208,46 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False):
                 m.resample_labels(filtered_dataset.seg, out_seg, 
                                 transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
 
-                if post_filters is not None:
-                    output_scan=m.tmp('scan_{}.mnc'.format(r))
-                else:
-                    output_scan=out_vol
+                #if post_filters is not None:
+                    #output_scan=m.tmp('scan_{}.mnc'.format(r))
+                #else:
+                    #output_scan=out_vol
+                output_scan=m.tmp('scan_{}.mnc'.format(r))
+                    
                 # create a file in temp dir first
                 m.resample_smooth(filtered_dataset.scan, output_scan, 
                                 order=options.order, transform=out_xfm,like=model)
 
                 if post_filters is not None:
-                    apply_filter(output_scan, out_vol, post_filters, model=model, 
-                                input_mask=out_mask, input_labels=out_seg, model_labels=model_seg)
+                    output_scan2=m.tmp('scan2_{}.mnc'.format(r))
+                    apply_filter(output_scan, output_scan2, 
+                                post_filters, model=model, 
+                                input_mask=out_mask, 
+                                input_labels=out_seg, 
+                                model_labels=model_seg)
+                    output_scan=output_scan2
+                
+                # apply itensity variance
+                if pca_lib is not None and options.int_n>0:
+                    output_scan2=m.tmp('scan3_{}.mnc'.format(r))
+                    
+                    _files=[output_scan]
+                    cmd='A[0]'
+                    _par=((np.random.rand(options.int_n)-0.5)*2.0*float(options.intvar)).tolist()
+                    # resample fields first
+                    for i in range(options.int_n):
+                        fld=m.tmp('field_{}_{}.mnc'.format(r,i))
+                        m.resample_smooth(pca_lib[i], fld, order=1, transform=out_xfm,like=model)
+                        _files.append(fld)
+                        cmd+='*exp(A[{}]*{})'.format(i+1,_par[i])
+                    # apply to the output
+                    m.calc(_files,cmd,output_scan2)
+                    output_scan=output_scan2
+                
+                # finally copy to putput
+                shutil.copyfile(output_scan,out_vol)
+                
+            # end of loop    
             out_.append([out_vol, out_seg, out_xfm ])
             
         return out_
@@ -233,16 +289,21 @@ if __name__ == '__main__':
         if not os.path.exists(options.output):
             os.makedirs(options.output)
         
+        pca_lib=None
+        if options.intpca is not None:
+            pca_lib=load_pca_lib(options.intpca)
+        
+        
         outputs=[]
         print(repr(samples))
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
-                gen_sample, library, options, source_parameters, j , idx=i  ) )
+                gen_sample, library, options, source_parameters, j , idx=i,pca_lib=pca_lib ) )
             # flipped (?)
             if build_symmetric:
                 outputs.append( futures.submit( 
-                    gen_sample, library, options, source_parameters, j , idx=i , flip=True ) )
+                    gen_sample, library, options, source_parameters, j , idx=i , flip=True,pca_lib=pca_lib) )
                     
         #
         futures.wait(outputs, return_when=futures.ALL_COMPLETED)

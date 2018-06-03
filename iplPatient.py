@@ -16,7 +16,7 @@ from iplGeneral import *  # functions to call binaries and general functions
 
 def printImages(images):
     if len(images) > 0:
-        for (i, j) in images.iteritems():
+        for (i, j) in images.items():
             print('         - ' + i + '  -  ' + j)
     else:
         print('         - EMPTY!!')
@@ -24,7 +24,7 @@ def printImages(images):
 
 def cleanImages(images):
     removekeys = []
-    for (key, i) in images.iteritems():
+    for (key, i) in images.items():
         if not os.path.exists(i):
             removekeys.append(key)
     for k in removekeys:
@@ -122,13 +122,13 @@ class LngPatient(dict):
         # do it in the timepoints to
 
         if len(self) > 0:
-            for (i, j) in self.iteritems():
+            for (i, j) in self.items():
                 j.clean()
 
     @staticmethod  # static function to load pickle
     def read(filename):
         if os.path.exists:
-            p = open(filename)
+            p = open(filename,'rb')
             try:
                 newpatient = pickle.load(p)
             except:
@@ -147,9 +147,9 @@ class LngPatient(dict):
 
         # write into the pickle
 
-        p = open(filename, 'w')
-        pickle.dump(tmppatient, p)
-        p.close()
+        with open(filename, 'wb') as p:
+            pickle.dump(tmppatient, p)
+
 
     def printself(self):
         print(' -- Printing LngPatient ' + self.id)
@@ -202,7 +202,7 @@ class LngPatient(dict):
         print('')
         print(' -- TIMEPOINTS ')
         if len(self) > 0:
-            for (i, j) in self.iteritems():
+            for (i, j) in self.items():
                 print('')
                 j.printself()
 

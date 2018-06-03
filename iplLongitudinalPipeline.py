@@ -344,7 +344,7 @@ def launchPipeline(options):
     if opts.pe is None: # use SCOOP to run all subjects in parallel
         pickles = []
     
-        for (id, i) in patients.iteritems():
+        for (id, i) in patients.items():
             # writing the pickle file
             if not os.path.exists(i.pickle):
                 i.write(i.pickle)
@@ -357,7 +357,7 @@ def launchPipeline(options):
     else: # USE SGE to submit one job per subject, using required peslots 
         pickles = []
         
-        for (id, i) in patients.iteritems():
+        for (id, i) in patients.items():
             # writing the pickle file
             slots=opts.peslots
             # don't submit jobs with too many requested slots, when only limited number of 
@@ -568,8 +568,7 @@ def runPipeline(pickle, workdir=None):
           patient.workdir=workdir
         # prepare qc folder
 
-        tps = patient.keys()
-        tps.sort()
+        tps = sorted(patient.keys())
         jobs=[]
         for tp in tps:
             jobs.append(futures.submit(runTimePoint_FirstStage,tp, patient))

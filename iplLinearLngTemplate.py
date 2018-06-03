@@ -34,7 +34,7 @@ def pipeline_linearlngtemplate(patient):
                         patient.template['stx2_xfm']]
 
         # tp.clp2['t1'],
-        for (i, tp) in patient.iteritems():
+        for (i, tp) in patient.items():
             outputImages.extend([tp.stx2_xfm['t1'], 
                                  tp.stx2_mnc['t1']])  # TODO add T2/PD ?
 
@@ -71,7 +71,7 @@ def pipeline_linearlngtemplate(patient):
 
             # qc stx2
 
-            for (i, tp) in patient.iteritems():
+            for (i, tp) in patient.items():
                 minc.qc(
                     tp.stx2_mnc['t1'],
                     tp.qc_jpg['stx2_t1'],
@@ -244,7 +244,7 @@ def linearlngtemplate_v11(patient):
                     'linreg': patient.linreg }
         
         samples= [ [tp.stx_mnc['t1'], tp.stx_mnc['masknoles']]
-                        for (i, tp) in patient.iteritems()]
+                        for (i, tp) in patient.items()]
 
         if patient.fast:
             options['iterations'] = 2
@@ -277,7 +277,7 @@ def linearlngtemplate_v11(patient):
         jobs=[]
         print(repr(output))
         
-        for (i, tp) in patient.iteritems():
+        for (i, tp) in patient.items():
             bias=None
             if patient.dobiascorr:
                 bias=output['biascorr'][k]

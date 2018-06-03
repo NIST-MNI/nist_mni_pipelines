@@ -29,7 +29,7 @@ def pipeline_lngtemplate(patient):
     outputImages = [patient.template['nl_template'],
                     patient.template['nl_template_mask']]
                     
-    for (i, tp) in patient.iteritems():
+    for (i, tp) in patient.items():
         outputImages.append(tp.lng_xfm['t1'])
 
     # check if images exists
@@ -69,7 +69,7 @@ def lngtemplate_v11(patient):
             options['protocol']=[{'iter':1,'level':16},{'iter':2,'level':8}]
 
         samples= [ [tp.stx2_mnc['t1'], tp.stx2_mnc['masknoles']]
-                        for (i, tp) in patient.iteritems()]
+                        for (i, tp) in patient.items()]
 
         model = atlas
         model_mask = atlas_mask
@@ -98,7 +98,7 @@ def lngtemplate_v11(patient):
 
         # copy each timepoint images too
         k=0
-        for (i, tp) in patient.iteritems():
+        for (i, tp) in patient.items():
             xfmfile =      output['xfm' ][k].xfm
             corrected_t1 = output['scan'][k].scan
             # creating lng images

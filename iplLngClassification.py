@@ -29,7 +29,7 @@ def pipeline_lng_classification(patient):
     # make a vector with all output images
 
     allDone = True
-    for (i, tp) in patient.iteritems():
+    for (i, tp) in patient.items():
         if not os.path.exists(tp.stx2_mnc['lng_classification']) \
             or not os.path.exists(tp.qc_jpg['lngclassification']):
             allDone = False
@@ -173,7 +173,7 @@ def lng_classification_v10(patient):
 
         masks = []
         clss = []
-        for (i, tp) in patient.iteritems():
+        for (i, tp) in patient.items():
             if os.path.exists(tp.stx2_mnc['classification']):
                 clss.append(tp.stx2_mnc['classification'])
                 masks.append(tp.stx2_mnc['masknoles'])
@@ -202,7 +202,7 @@ def lng_classification_v10(patient):
             gcut1 = []
             gcut2 = []
             lngclassif = []
-            for (i, tp) in patient.iteritems():
+            for (i, tp) in patient.items():
                 if os.path.exists(tp.stx2_mnc['t1']):
                     t1.append(tp.stx2_mnc['t1'])
                 if os.path.exists(tp.stx2_mnc['masknoles']):
@@ -269,7 +269,7 @@ def lng_classification_v10(patient):
             masks = []
             tps = []
 
-            for (i, tp) in patient.iteritems():
+            for (i, tp) in patient.items():
                 tps.append(i)  # add for later
                 if os.path.exists(tp.stx2_mnc['t1']):
                     t1.append(tp.stx2_mnc['t1'])
@@ -360,7 +360,7 @@ def lng_classification_v10(patient):
         else:
             # use bayesian classification
             # ###################################################
-            for (i, tp) in patient.iteritems():
+            for (i, tp) in patient.items():
                 
                 inputs=[tp.stx2_mnc['t1']]
                 if not patient.onlyt1 and 't2' in tp.stx2_mnc:
@@ -377,7 +377,7 @@ def lng_classification_v10(patient):
 
         # create QC images for all timepoints
 
-        for (i, tp) in patient.iteritems():
+        for (i, tp) in patient.items():
             comm = [
                 'minc_qc.pl',
                 tp.stx2_mnc['t1'],

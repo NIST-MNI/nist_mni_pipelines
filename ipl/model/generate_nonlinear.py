@@ -49,7 +49,6 @@ def generate_nonlinear_average(
     transforms=[]
     corr=[]
 
-    bias_fields=[]
     corr_transforms=[]
     sd=[]
     corr_samples=[]
@@ -120,7 +119,6 @@ def generate_nonlinear_average(
                 sample_inv_xfm=MriTransform(name=s.name+'_inv',prefix=it_prefix,iter=it)
 
                 prev_transform = None
-                prev_bias_field = None
 
                 if it > 1:
                     if refine:

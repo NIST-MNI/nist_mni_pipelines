@@ -197,7 +197,7 @@ def convert_summary(in_dict):
     ret={}
     # iterate over all entries, assuming they should contain only 
     # recognized types
-    for i,j in in_dict.iteritems():
+    for i,j in in_dict.items():
         if isinstance(j, dict):
             if j.get('type',None)=='aux':
                 ret[i]=MriAux(

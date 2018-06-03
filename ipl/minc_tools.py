@@ -1471,8 +1471,8 @@ class mincTools(temp_files):
         try:
             (out, err) = subprocess.Popen(['xfm2param', input],
                     stdout=subprocess.PIPE).communicate()
-            scale_ = filter(lambda x: re.match('^\-scale', x),
-                            out.decode().split('\n'))
+            scale_ = list(filter(lambda x: re.match('^\-scale', x),
+                            out.decode().split('\n')))
             if len(scale_) != 1:
                 raise mincError("Can't extract scale from " + input)
             scale__ = re.split('\s+', scale_[0])
