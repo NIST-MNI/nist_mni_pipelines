@@ -21,7 +21,7 @@ import collections
 import math
 
 # local stuff
-from . import minc_tools
+import ipl.minc_tools
 
 
 # hack to make it work on Python 3
@@ -317,7 +317,7 @@ def linear_register(
     """
     print("linear_register s:{} s_m:{} t:{} t_m:{} i:{} ".format(source,source_mask,target,target_mask,init_xfm))
     
-    with minc_tools.mincTools(verbose=verbose) as minc:
+    with ip.minc_tools.mincTools(verbose=verbose) as minc:
       if not minc.checkfiles(inputs=[source,target], outputs=[output_xfm]):
           return
 
@@ -356,7 +356,7 @@ def linear_register(
           # else run internally
           # TODO: check if we are given multiple sources/targets?
           # 
-          with minc_tools.mincTools() as m:
+          with ip.minc_tools.mincTools() as m:
               cmd=[conf,source,target,output_xfm]
               if source_mask is not None:
                   cmd.extend(['-source_mask',source_mask])
@@ -379,7 +379,7 @@ def linear_register(
         t_base=os.path.basename(targets[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
 
         # figure out what to do here:
-        with minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
+        with ip.minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
             
             (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources, targets, source_mask, target_mask, downsample)
                 
@@ -539,7 +539,7 @@ def linear_register_to_self(
     """
 
     # TODO convert mritoself to python (?)
-    with minc_tools.mincTools() as minc:
+    with ip.minc_tools.mincTools() as minc:
         cmd = ['mritoself', source, target, output_xfm]
         if parameters is not None:
             cmd.append(parameters)
@@ -595,7 +595,7 @@ def non_linear_register_full(
     Raises:
         mincError when tool fails
     """
-    with minc_tools.mincTools() as minc:
+    with ip.minc_tools.mincTools() as minc:
 
       if not minc.checkfiles(inputs=[source,target], 
                               outputs=[output_xfm]):
@@ -689,7 +689,7 @@ def non_linear_register_full(
 
       
       # figure out what to do here:
-      with minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
+      with ip.minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
           # a fitting we shall go...
           (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources, targets, source_mask, target_mask, downsample)
           
@@ -770,7 +770,7 @@ def non_linear_register_full(
 
           # done
           if prev_xfm is None:
-              raise minc_tools.mincError("No iterations were performed!")
+              raise ip.minc_tools.mincError("No iterations were performed!")
 
           # STOP-gap measure to save space for now
           # TODO: fix minctracc?

@@ -20,7 +20,7 @@ import collections
 import math
 
 # local stuff
-from . import minc_tools
+import ipl.minc_tools
 
 
 # hack to make it work on Python 3
@@ -63,7 +63,7 @@ def ants_linear_register(
     if parameters is None:
         parameters={}
     
-    with minc_tools.mincTools(verbose=verbose) as minc:
+    with ipl.minc_tools.mincTools(verbose=verbose) as minc:
       if not minc.checkfiles(inputs=[source,target], outputs=[output_xfm]):
           return
 
@@ -78,7 +78,7 @@ def ants_linear_register(
       source_mask_lr=source_mask
       target_mask_lr=target_mask
       # figure out what to do here:
-      with minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
+      with ipl.minc_tools.cache_files(work_dir=work_dir,context='reg') as tmp:
           
           if downsample is not None:
               source_lr=tmp.cache(s_base+'_'+str(downsample)+'.mnc')
@@ -174,7 +174,7 @@ def non_linear_register_ants(
     ):
     """perform non-linear registration using ANTs, WARNING: will create inverted xfm  will be named output_invert.xfm"""
 
-    with minc_tools.mincTools(verbose=verbose) as minc:
+    with ipl.minc_tools.mincTools(verbose=verbose) as minc:
 
         if parameters is None:
             #print("Using default  ANTS parameters")
@@ -254,7 +254,7 @@ def non_linear_register_ants2(
     if start is None:
         start=level
     
-    with minc_tools.mincTools(verbose=verbose) as minc:
+    with ipl.minc_tools.mincTools(verbose=verbose) as minc:
 
         sources = []
         targets = []
@@ -269,7 +269,7 @@ def non_linear_register_ants2(
         else:
             targets.append(target)
         if len(sources)!=len(targets):
-            raise minc_tools.mincError(' ** Error: Different number of inputs ')
+            raise ipl.minc_tools.mincError(' ** Error: Different number of inputs ')
         
         modalities=len(sources)
 
@@ -390,7 +390,7 @@ def linear_register_ants2(
     #TODO:implement close
     
     
-    with minc_tools.mincTools(verbose=verbose) as minc:
+    with ipl.minc_tools.mincTools(verbose=verbose) as minc:
 
         
         if parameters is None:
@@ -438,7 +438,7 @@ def linear_register_ants2(
             
             
         if len(sources)!=len(targets):
-            raise minc_tools.mincError(' ** Error: Different number of inputs ')
+            raise ipl.minc_tools.mincError(' ** Error: Different number of inputs ')
         
         modalities=len(sources)
         

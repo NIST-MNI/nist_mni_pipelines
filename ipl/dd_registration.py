@@ -20,7 +20,7 @@ import collections
 import math
 
 # local stuff
-from . import minc_tools
+import ipl.minc_tools
 
 
 # hack to make it work on Python 3
@@ -55,7 +55,7 @@ def non_linear_register_ldd(
     ):
     """Use log-diffeomorphic demons to run registration"""
     
-    with minc_tools.mincTools() as minc:
+    with ip.minc_tools.mincTools() as minc:
         if not minc.checkfiles(inputs=[source,target],
                                 outputs=[output_velocity]):
             return
@@ -188,7 +188,7 @@ def non_linear_register_dd(
     ):
     """perform incremental non-linear registration with diffeomorphic demons"""
     
-    with minc_tools.mincTools() as minc:
+    with ip.minc_tools.mincTools() as minc:
         if not minc.checkfiles(inputs=[source,target],
                                 outputs=[output_xfm]):
             return
