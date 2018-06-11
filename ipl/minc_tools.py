@@ -73,7 +73,7 @@ class mincError(Exception):
 class temp_files:
     """Class to keep track of temp files"""
     
-    def __init__(self,tempdir=None,prefix=None):
+    def __init__(self, tempdir=None, prefix=None):
         
         self.tempdir = tempdir
         self.clean_tempdir = False
@@ -81,7 +81,7 @@ class temp_files:
         if not self.tempdir:
             if prefix is None:
                 prefix='iplMincTools'
-            self.tempdir = tempfile.mkdtemp(prefix=prefix,dir=os.environ.get('TMPDIR',None))
+            self.tempdir = tempfile.mkdtemp(prefix=prefix, dir=os.environ.get('TMPDIR',None) )
             self.clean_tempdir = True
             
         if not os.path.exists(self.tempdir):
@@ -136,7 +136,7 @@ class temp_files:
     
 class cache_files(temp_files):
     """Class to keep track of work files"""
-    def __init__(self,work_dir=None,context='',tempdir=None):
+    def __init__(self, work_dir=None, context='',tempdir=None):
         self._locks={}
         super(cache_files,self).__init__(tempdir=tempdir)
         self.work_dir=work_dir
