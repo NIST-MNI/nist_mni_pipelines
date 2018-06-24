@@ -335,11 +335,11 @@ if __name__ == '__main__':
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
-                gen_sample, library, options, source_parameters, j , idx=i,pca_lib=pca_lib ) )
+                gen_sample, library, options, source_parameters, j , idx=i,pca_grid=pca_grid,pca_int=pca_int ) )
             # flipped (?)
             if build_symmetric:
                 outputs.append( futures.submit( 
-                    gen_sample, library, options, source_parameters, j , idx=i , flip=True,pca_lib=pca_lib) )
+                    gen_sample, library, options, source_parameters, j , idx=i , flip=True,pca_grid=pca_grid,pca_int=pca_int) )
                     
         #
         futures.wait(outputs, return_when=futures.ALL_COMPLETED)
