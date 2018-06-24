@@ -52,7 +52,7 @@ class pca_lib:
             l=l.rstrip("\n")
             (_v,_f)=l.split(',')
             self.var.append(float(_v))
-            self.lib.append(pca_lib_dir+os.sep+_f)
+            self.lib.append(self.pca_lib_dir+os.sep+_f)
             
     # remove mean
     self.lib.pop(0)
