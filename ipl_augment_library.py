@@ -51,7 +51,7 @@ class pca_lib:
         for l in f:
             l=l.rstrip("\n")
             (_v,_f)=l.split(',')
-            self.var.appen(float(_v))
+            self.var.append(float(_v))
             self.lib.append(pca_lib_dir+os.sep+_f)
             
     # remove mean
