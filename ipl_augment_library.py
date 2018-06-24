@@ -114,15 +114,15 @@ def parse_options():
                     help="Apply nonlinar tranformation variance using PCA library of log fields")
     
     parser.add_argument('--intvar',
-                    default=0.1,
+                    default=0.1,type=float,
                     help="Intensity variance (log space)")
     
     parser.add_argument('--int_n',
-                    default=3,
+                    default=3,type=int,
                     help="Number of Intensity PCA components (log space)")
                     
     parser.add_argument('--grid_n',
-                    default=10,
+                    default=10,type=int,
                     help="Number of grid PCA components to use")
     ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
