@@ -207,28 +207,28 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 # apply random linear xfm
                 ran_xfm=m.tmp('random_{}.xfm'.format(r))
                 
-                if pca_grid is Nonw:
+                if pca_grid is None:
                   m.param2xfm(ran_xfm,
                               scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
                               translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
                               rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
                 else:
                   # create a random transform
-                    ran_grid=ran_xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
-                    
-                    _files=[]
-                    cmd=[]
-                    _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.shift)).tolist()
-                    # resample fields first
-                    for i in range(options.grid_n):
-                        _files.append(pca_grid[i])
-                        cmd.append('A[{}]*{}'.format(i+1,_par[i]))
-                    cmd='+'.join(cmd)
-                    # apply to the output
-                    m.calc(_files,cmd,ran_grid)
-                    with open(ran_xfm,'w') as f:
-                      f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
-                        format(os.path.basename(ran_grid)))
+                  ran_grid=ran_xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
+                
+                  _files=[]
+                  cmd=[]
+                  _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.shift)).tolist()
+                  # resample fields first
+                  for i in range(options.grid_n):
+                      _files.append(pca_grid[i])
+                      cmd.append('A[{}]*{}'.format(i+1,_par[i]))
+                  cmd='+'.join(cmd)
+                  # apply to the output
+                  m.calc(_files,cmd,ran_grid)
+                  with open(ran_xfm,'w') as f:
+                    f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
+                      format(os.path.basename(ran_grid)))
                 if flip:
                     m.xfmconcat([lib_sample[-1], m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
                 else:
