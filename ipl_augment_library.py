@@ -328,7 +328,7 @@ if __name__ == '__main__':
             pca_int=pca_lib(options.intpca)
             
         if options.gridpca is not None:
-            pca_grid=pca_lib(options.intpca)
+            pca_grid=pca_lib(options.gridpca)
         
         
         outputs=[]
