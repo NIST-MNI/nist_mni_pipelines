@@ -223,7 +223,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                   # resample fields first
                   for i in range(options.grid_n):
                       _files.append(pca_grid[i])
-                      cmd.append('A[{}]*{}'.format(i+1,_par[i]))
+                      cmd.append('A[{}]*{}'.format(i,_par[i]))
                   cmd='+'.join(cmd)
                   # apply to the output
                   m.calc(_files,cmd,ran_grid)
