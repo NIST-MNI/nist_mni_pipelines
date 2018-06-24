@@ -53,6 +53,7 @@ class pca_lib:
             (_v,_f)=l.split(',')
             self.var.appen(float(_v))
             self.lib.append(pca_lib_dir+os.sep+_f)
+            
     # remove mean
     self.lib.pop(0)
     self.var.pop(0)
@@ -332,6 +333,7 @@ if __name__ == '__main__':
         
         outputs=[]
         print(repr(samples))
+        print(repr(pca_grid.lib))
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
