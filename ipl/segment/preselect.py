@@ -41,12 +41,12 @@ def preselect(sample,
     
     # TODO: use multiple modalities for preselection?
     if use_nl:
-        column=4+lib_add_n
+        column = 4 + lib_add_n
         
-    for (i,j) in enumerate(library):
-        results.append( futures.submit(
+    for (i, j) in enumerate(library):
+        results.append(futures.submit(
             calculate_similarity, sample, MriDataset(scan=j[column]), method=method, mask=mask, flip=flip, step=step
-            ) )
+            ))
     futures.wait(results, return_when=futures.ALL_COMPLETED)
         
     val=[ (j.result(), library[i] ) for (i,j) in enumerate(results)]
@@ -61,7 +61,7 @@ def calculate_similarity(sample1, sample2,
                          flip=False, step=None):
     try:
         with mincTools() as m:
-            scan=sample1.scan
+            scan = sample1.scan
             
             if flip:
                 scan=sample1.scan_f
@@ -69,12 +69,12 @@ def calculate_similarity(sample1, sample2,
             # figure out step size, minctracc works extremely slow when step size is smaller then file step size
             info_sample1=m.mincinfo( sample1.scan )
             
-            cmds=[ 'minctracc', scan, sample2.scan, '-identity' ]
+            cmds=['minctracc', scan, sample2.scan, '-identity']
             
-            if method=='MI':
-                cmds.extend( ['-nmi', '-blur_pdf', '9'] )
+            if method == 'MI':
+                cmds.extend(['-nmi', '-blur_pdf', '9'])
             else:
-                cmds.append( '-xcorr' )
+                cmds.append('-xcorr')
 
             if step is None:
                 step= max( abs( info_sample1['xspace'].step ) ,
@@ -92,9 +92,9 @@ def calculate_similarity(sample1, sample2,
                 ])
 
             if mask is not None:
-                cmds.extend( ['-source_mask', mask])
+                cmds.extend(['-source_mask', mask])
 
-            output=re.search( '^Final objective function value = (\S+)' , m.execute_w_output(cmds, verbose=0), flags=re.MULTILINE).group(1)
+            output = re.search('^Final objective function value = (\S+)' , m.execute_w_output(cmds, verbose=0), flags=re.MULTILINE).group(1)
 
             return float(output)
             

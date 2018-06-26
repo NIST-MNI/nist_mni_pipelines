@@ -31,7 +31,6 @@ from .library          import *
 from .analysis         import *
 
 
-
 def fusion_segment( input_scan,
                     library_description,
                     output_segment,
@@ -215,18 +214,18 @@ def fusion_segment( input_scan,
         
         # get parameters
         model = MriDataset(scan=library_description['model'], 
-                            mask=library_description['model_mask'],
-                            add= library_description.get('model_add',[]) )
+                           mask=library_description['model_mask'],
+                           add= library_description.get('model_add',[]) )
         
         local_model = MriDataset(scan=library_description['local_model'],
-                                mask=library_description['local_model_mask'],
-                                scan_f=library_description.get('local_model_flip',None),
-                                mask_f=library_description.get('local_model_mask_flip',None),
-                                seg=   library_description.get('local_model_seg',None),
-                                seg_f= library_description.get('local_model_seg_flip',None),
-                                add=   library_description.get('local_model_add',[]),
-                                add_f= library_description.get('local_model_add_flip',[]),
-                                )
+                                 mask=library_description['local_model_mask'],
+                                 scan_f=library_description.get('local_model_flip',None),
+                                 mask_f=library_description.get('local_model_mask_flip',None),
+                                 seg=   library_description.get('local_model_seg',None),
+                                 seg_f= library_description.get('local_model_seg_flip',None),
+                                 add=   library_description.get('local_model_add',[]),
+                                 add_f= library_description.get('local_model_add_flip',[]),
+                                 )
 
         library = library_description['library']
         
@@ -245,12 +244,12 @@ def fusion_segment( input_scan,
         bbox_linear_xfm=None
         flipdir=work_dir+os.sep+'flip'
 
-        sample_filtered=MriDataset(prefix=work_dir, name='flt_'+sample.name, add_n=sample_modalities )
+        sample_filtered = MriDataset(prefix=work_dir, name='flt_'+sample.name, add_n=sample_modalities )
 
         # QC file
         # TODO: allow for alternative location, extension
         #sample_qc=work_dir+os.sep+'qc_'+sample.name+'_'+out_variant+'.jpg'
-        sample_qc=output_segment+'_qc.jpg'
+        sample_qc = output_segment+'_qc.jpg'
 
         if run_in_bbox:
             segment_symmetric=False # that would depend ?
@@ -309,33 +308,33 @@ def fusion_segment( input_scan,
             
             if inital_reg_type=='elx' or inital_reg_type=='elastix' :
                 elastix_registration( sample, 
-                    model, initial_xfm,
-                    symmetric=segment_symmetric,
-                    parameters=inital_reg_options,
-                    nl=False,
-                    use_mask=inital_reg_use_mask,
-                    downsample=inital_reg_downsample
-                    )
+                                    model, initial_xfm,
+                                    symmetric=segment_symmetric,
+                                    parameters=inital_reg_options,
+                                    nl=False,
+                                    use_mask=inital_reg_use_mask,
+                                    downsample=inital_reg_downsample
+                                    )
             elif inital_reg_type=='ants' or inital_reg_ants:
                 linear_registration( sample, 
-                    model, initial_xfm,
-                    symmetric=segment_symmetric, 
-                    reg_type=inital_reg_type,
-                    linreg=inital_reg_options,
-                    ants=True,
-                    use_mask=inital_reg_use_mask,
-                    downsample=inital_reg_downsample
-                    )
+                                    model, initial_xfm,
+                                    symmetric=segment_symmetric,
+                                    reg_type=inital_reg_type,
+                                    linreg=inital_reg_options,
+                                    ants=True,
+                                    use_mask=inital_reg_use_mask,
+                                    downsample=inital_reg_downsample
+                                    )
             else:
                 linear_registration( sample, 
-                    model, initial_xfm,
-                    symmetric=segment_symmetric, 
-                    reg_type=inital_reg_type,
-                    linreg=inital_reg_options,
-                    downsample=inital_reg_downsample,
-                    use_mask=inital_reg_use_mask,
-                    objective=initial_reg_objective
-                    )
+                                    model, initial_xfm,
+                                    symmetric=segment_symmetric,
+                                    reg_type=inital_reg_type,
+                                    linreg=inital_reg_options,
+                                    downsample=inital_reg_downsample,
+                                    use_mask=inital_reg_use_mask,
+                                    objective=initial_reg_objective
+                                    )
             
             output_info['initial_xfm']=initial_xfm
             
