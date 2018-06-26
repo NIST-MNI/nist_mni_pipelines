@@ -390,6 +390,7 @@ def register_elastix(
     nl          -- flag to show that non-linear version is running
     output_log  -- output log
     iterations  -- run several iterations (restarting elastix), will be done automatically if parameters is a list
+    :rtype:
     """
     with ipl.minc_tools.mincTools() as minc:
         

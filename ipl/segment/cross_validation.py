@@ -164,7 +164,7 @@ def run_segmentation_experiment( input_scan,
         traceback.print_exc( file=sys.stdout )
         raise
 
-    except :
+    except:
         print("Exception in run_segmentation_experiment:{}".format( sys.exc_info()[0]) )
         traceback.print_exc( file=sys.stdout )
         raise
