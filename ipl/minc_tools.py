@@ -1017,6 +1017,7 @@ class mincTools(temp_files):
         operation,
         output,
         datatype=None,
+        labels=False
         ):
         """apply mathematical operation to image(s)"""
 
@@ -1024,7 +1025,8 @@ class mincTools(temp_files):
         
         if datatype:
             cmd.append(datatype)
-
+        if labels:
+            cmd.append('-labels')
         cmd.extend(inputs)
         cmd.append(output)
         
