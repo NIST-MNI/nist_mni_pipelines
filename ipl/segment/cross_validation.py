@@ -302,13 +302,13 @@ def full_cv_fusion_segment(validation_library,
         
     modalities=segmentation_library.get('modalities',1)-1
     
-    for i in range( cv_iterations ):
+    for i in range(cv_iterations):
         #TODO: save this list in a file
-        rem_list=[]
-        ran_file=output+os.sep+ ('random_{}_{}.json'.format(cv_variant,i))
+        rem_list = []
+        ran_file = output+os.sep+ ('random_{}_{}.json'.format(cv_variant, i))
         
         if not os.path.exists( ran_file ):
-            rem_list=random.sample( validation_library_idx, cv_exclude )
+            rem_list=random.sample( validation_library_idx, cv_exclude)
             
             with open( ran_file , 'w') as f:
                 json.dump(rem_list,f)
@@ -317,37 +317,37 @@ def full_cv_fusion_segment(validation_library,
                 rem_list=json.load(f)
                 
         # list of subjects 
-        rem_items=[ validation_library[j] for j in rem_list ]
+        rem_items=[ validation_library[j] for j in rem_list]
         
-        rem_n=[os.path.basename(j[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0] for j in rem_items]
-        rem_lib=[]
-        val_lib=[]
+        rem_n=[os.path.basename(j[0]).rsplit('.gz', 1)[0].rsplit('.mnc', 1)[0] for j in rem_items]
+        rem_lib = []
+        val_lib = []
         
         for j in rem_n:
-            rem_lib.extend( [ k for (k,t) in enumerate( segmentation_library['library'] ) if t[0].find(j)>=0 ] )
-            val_lib.extend( [ k for (k,t) in enumerate( validation_library ) if t[0].find(j)>=0 ] )
+            rem_lib.extend([k for (k, t) in enumerate(segmentation_library['library']) if t[0].find(j) >= 0])
+            val_lib.extend([k for (k, t) in enumerate(validation_library)              if t[0].find(j) >= 0])
             
             
         if debug: print(repr(rem_lib))
-        rem_lib=set(rem_lib)
-        val_lib=set(val_lib)
+        rem_lib = set(rem_lib)
+        val_lib = set(val_lib)
         
         #prepare exclusion list
         experiment_segmentation_library=copy.deepcopy(segmentation_library)
         
-        experiment_segmentation_library['library']=\
-            [ k for j,k in enumerate( segmentation_library['library'] )  if j not in rem_lib ]
+        experiment_segmentation_library['library'] = \
+            [k for j, k in enumerate( segmentation_library['library']) if j not in rem_lib]
         
-        _validation_library=\
-            [ k for j,k in enumerate( validation_library )  if j not in val_lib ]
+        _validation_library = \
+            [k for j, k in enumerate( validation_library ) if j not in val_lib ]
         
-        for j,k in enumerate(rem_items):
+        for j, k in enumerate(rem_items):
             
-            output_experiment=output+os.sep+('{}_{}_{}'.format(i,rem_n[j],cv_variant))
-            work_dir=output+os.sep+('work_{}_{}_{}'.format(i,rem_n[j],fuse_variant))
+            output_experiment = output+os.sep+('{}_{}_{}'.format(i, rem_n[j], cv_variant))
+            work_dir          = output+os.sep+('work_{}_{}_{}'.format(i, rem_n[j], fuse_variant))
             
-            validation_sample=k[0]
-            validation_segment=k[1]
+            validation_sample  = k[0]
+            validation_segment = k[1]
             
             presegment=None
             shift=2

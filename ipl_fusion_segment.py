@@ -111,8 +111,8 @@ if __name__ == '__main__':
        and options.input is not None \
        and options.output is not None:
            
-        library=load_library_info( options.library )
-        segmentation_parameters={}
+        library = load_library_info(options.library )
+        segmentation_parameters = {}
 
         if options.options is not None:
             try:
