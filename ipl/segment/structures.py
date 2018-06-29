@@ -18,26 +18,26 @@ class MriDataset(object):
                  scan_f=None, mask_f=None, seg_f=None, protect=False, 
                  add=[], add_n=None, 
                  add_f=[] ):
-        self.prefix=prefix
-        self.name=name
-        self.scan=scan
-        self.mask=mask
-        self.seg=seg
-        self.protect=protect
-        self.seg_split={}
+        self.prefix = prefix
+        self.name = name
+        self.scan = scan
+        self.mask = mask
+        self.seg = seg
+        self.protect = protect
+        self.seg_split = {}
         
         self.scan_f = scan_f
         self.mask_f = mask_f
         self.seg_f  = seg_f
-        self.seg_f_split={}
+        self.seg_f_split = {}
         self.add    = add
         self.add_f  = add_f
         
         if self.name is None :
             if scan is not None:
-                self.name=os.path.basename(scan).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+                self.name = os.path.basename(scan).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                 if self.prefix is None:
-                    self.prefix=os.path.dirname(self.scan)
+                    self.prefix = os.path.dirname(self.scan)
             else:
                 if self.prefix is None:
                     raise("trying to create dataset without name and prefix")
@@ -141,25 +141,26 @@ class MriTransform(object):
                 if i is not None and os.path.exists(i):
                     os.unlink(i)
 
+
 class MRIEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, MriTransform):
-            return {'name':obj.name,
-                    'xfm' :obj.xfm,
-                    'xfm_f':obj.xfm_f,
-                    'xfm_inv' :obj.xfm_inv,
-                    'xfm_f_inv':obj.xfm_f_inv,
-                    'prefix':obj.prefix
+            return {'name': obj.name,
+                    'xfm': obj.xfm,
+                    'xfm_f': obj.xfm_f,
+                    'xfm_inv': obj.xfm_inv,
+                    'xfm_f_inv': obj.xfm_f_inv,
+                    'prefix': obj.prefix
                    }
         elif isinstance(obj, MriDataset):
-            return {'name':obj.name,
-                    'scan':obj.scan,
-                    'mask':obj.mask,
-                    'scan_f':obj.scan_f,
-                    'mask_f':obj.mask_f,
-                    'prefix':obj.prefix,
-                    'add':obj.add,
-                    'add_f':obj.add_f
+            return {'name': obj.name,
+                    'scan': obj.scan,
+                    'mask': obj.mask,
+                    'scan_f': obj.scan_f,
+                    'mask_f': obj.mask_f,
+                    'prefix': obj.prefix,
+                    'add': obj.add,
+                    'add_f': obj.add_f
                    }
          # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)
