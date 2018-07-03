@@ -264,16 +264,16 @@ def train_ec_loo( segmentation_library,
                     experiment_segmentation_library = copy.deepcopy(segmentation_library)
                     
                     experiment_segmentation_library.library = \
-                        [ k for j, k in enumerate( segmentation_library[ 'library' ] )  if j not in rem_lib ]
+                        [k for j, k in enumerate(segmentation_library['library']) if j not in rem_lib]
                     
-                    for j, k in enumerate( rem_items ):
+                    for j, k in enumerate(rem_items):
                         
                         output_experiment = work_dir+os.sep+'{}_{}_{}'.format(i, rem_n[j], 'ec')
                         ec_work_dir = work_dir+os.sep+'work_{}_{}_{}'.format(i, rem_n[j], fuse_variant)
                         
                         # ???
                         sample = [k[0], k[1]]
-                        presegment=None
+                        presegment = None
 
                         if ext:
                             presegment = k[2]
@@ -283,7 +283,7 @@ def train_ec_loo( segmentation_library,
                         
                         ec_train_library.append(sample)
                         
-                        results.append( futures.submit( 
+                        results.append(futures.submit(
                                 fusion_segment,
                                 k[0], 
                                 experiment_segmentation_library,

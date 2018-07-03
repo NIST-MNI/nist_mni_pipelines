@@ -602,17 +602,17 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         library_description.local_model_sd   = local_model_sd.scan
         
         # library parameters
-        library_description.map=inv_dict(dict(build_remap))
-        library_description.classes_number=classes_number
-        library_description.nl_samples_avail=do_nonlinear_register
-        library_description.modalities=modalities+1
+        library_description.map = inv_dict(dict(build_remap))
+        library_description.classes_number = classes_number
+        library_description.nl_samples_avail = do_nonlinear_register
+        library_description.modalities = modalities+1
         
-        largest_label=max(library_description.map.values(), key=lambda p: int(p))
+        largest_label = max(library_description.map.values(), key=lambda p: int(p))
         
-        library_description.seg_datatype='short'
+        library_description.seg_datatype = 'short'
         
-        if largest_label<=255: 
-            library_description.seg_datatype='byte'
+        if largest_label <= 255:
+            library_description.seg_datatype = 'byte'
 
         library_description.gco_energy=output+os.sep+'gco_energy.csv'
         estimate_gco_energy(final_samples, library_description.gco_energy, classes=classes_number)
@@ -625,12 +625,12 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             library_description.local_model_seg_flip = local_model.seg_f
             library_description.flip_map             = inv_dict(dict(build_flip_remap))
         else:
-            library_description.local_model_flip=None
-            library_description.local_model_add_flip=[]
-            library_description.local_model_mask_flip=None
-            library_description.flip_map={}
+            library_description.local_model_flip = None
+            library_description.local_model_add_flip = []
+            library_description.local_model_mask_flip = None
+            library_description.flip_map = {}
         
-        library_description.library=[]
+        library_description.library = []
         
         for (j, i) in enumerate(final_samples):
             ss = [i.scan, i.seg]
@@ -640,8 +640,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 ss.extend([final_transforms[j].xfm, final_transforms[j].xfm_inv, warped_samples[j].scan, warped_samples[j].seg, bbox_lin_xfm[j].xfm])
             else:
                 ss.extend([bbox_lin_xfm[j].xfm])
-                
-            library_description.library.append(LibEntry(lst=ss,ent_id=i.name))
+
+            library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
             
             if build_symmetric:
                 ss = [i.scan_f, i.seg_f]
@@ -650,9 +650,9 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 if do_nonlinear_register:
                     ss.extend([final_transforms[j].xfm_f, final_transforms[j].xfm_f_inv, warped_samples[j].scan_f, warped_samples[j].seg_f, bbox_lin_xfm[j].xfm_f ])
                 else:
-                    ss.extend([bbox_lin_xfm[j].xfm_f ])
+                    ss.extend([bbox_lin_xfm[j].xfm_f])
 
-                library_description.library.append(LibEntry(lst=ss, ent_id=i.name))
+                library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
 
         #save_library_info( library_description, output)
         library_description.save(output)

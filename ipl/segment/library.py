@@ -26,8 +26,12 @@ class LibEntry(yaml.YAMLObject):
     """
     yaml_tag = '!Entry'
 
-    def __init__(self, lst=None, prefix='.', ent_id=None):
-        self.lst = lst
+    def __init__(self, lst=None, prefix='.', ent_id=None, relpath=None):
+        if relpath is None:
+            self.lst = lst
+        else:# make relative paths
+            self.lst = [os.path.relpath(i, relpath) for i in lst]
+
         self.ent_id = ent_id
 
         if ent_id is None and lst is not None and len(lst)>0:
@@ -39,7 +43,11 @@ class LibEntry(yaml.YAMLObject):
         """
         compatibility interface
         """
-        return self.prefix + os.sep + self.lst[item]
+        if isinstance(item, slice):
+            # it's a slice
+            return [self.prefix + os.sep + i for i in self.lst[item] ]
+        else:
+            return self.prefix + os.sep + self.lst[item]
 
     @classmethod
     def from_yaml(cls, loader, node):
@@ -62,9 +70,11 @@ class SegLibrary(yaml.YAMLObject):
                   'local_model_flip',
                   'local_model_mask_flip',
                   'local_model_seg',
+                  'local_model_seg_flip',
                   'gco_energy'}
 
-    _abs_paths = {'model','model_mask'
+    _abs_paths = {'model',
+                  'model_mask'
                   'model_add'}
 
     _abs_paths_lst = {'local_model_add', 'local_model_add_flip', 'model_add'}
@@ -79,6 +89,7 @@ class SegLibrary(yaml.YAMLObject):
         self.local_model_flip = None,
         self.local_model_mask_flip = None,
         self.local_model_seg = None
+        self.local_model_seg_flip = None
         self.local_model_sd  = None
         self.local_model_avg = None
         self.local_model_ovl = None
@@ -92,7 +103,9 @@ class SegLibrary(yaml.YAMLObject):
         self.gco_energy = None
         self.library = []
         self.modalities = 1
-
+        self.classes_number = 2
+        self.nl_samples_avail = False
+        self.seg_datatype = 'byte'
         # from file:
         self.prefix = None
         if path is not None:
@@ -116,7 +129,7 @@ class SegLibrary(yaml.YAMLObject):
         # remember the prefix for the library
         self.prefix = path
         # Fix prefixes for all lib entries, as it is not laoded correctly
-        for i,_ in enumerate(self.library):
+        for i, _ in enumerate(self.library):
             self.library[i].prefix = self.prefix
 
     def save(self, path, name='library.yaml'):
@@ -169,12 +182,12 @@ class SegLibrary(yaml.YAMLObject):
 
     def get(self, item, default=None):
         if item in self.__dict__:
-            if item in SegLibrary._rel_paths :
-                return self.prefix + os.sep + self.__dict__[item]
+            if item in SegLibrary._rel_paths:
+                return self.prefix + os.sep + self.__dict__[item] if self.__dict__[item] else default
             elif item in SegLibrary._abs_paths:
-                return self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item]
+                return (self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item] ) if self.__dict__[item] else default
             elif item in SegLibrary._abs_paths_lst:
-                return ((self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item])
+                return [(self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
             else:
                 return self.__dict__[item]
         else:

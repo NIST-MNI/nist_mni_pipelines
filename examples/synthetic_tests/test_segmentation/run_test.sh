@@ -44,7 +44,7 @@ END
 
 if [ ! -e test_lib/library.yaml ];then
 # create the library
-python3 -m scoop -n $PARALLEL $PREFIX/ipl_segmentation_library_prepare.py  \
+python3 -m scoop -n 4 $PREFIX/ipl_segmentation_library_prepare.py  \
   --create library_description.yaml --output test_lib --debug
 fi
 
