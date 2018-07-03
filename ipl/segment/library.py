@@ -33,18 +33,18 @@ class LibEntry(yaml.YAMLObject):
         if ent_id is None and lst is not None and len(lst)>0:
             self.ent_id = lst[0].rsplit('.mnc',1)[0]
 
-        self._prefix = prefix
+        self.prefix = prefix
 
     def __getitem__(self, item):
         """
         compatibility interface
         """
-        return self._prefix + os.sep + self.lst[item]
+        return self.prefix + os.sep + self.lst[item]
 
     @classmethod
     def from_yaml(cls, loader, node):
         dat = loader.construct_mapping(node)
-        return LibEntry(lst=dat['lst'], ent_id=dat['id'])
+        return LibEntry(lst=dat['lst'], ent_id=dat['id'], prefix=None)
 
     @classmethod
     def to_yaml(cls, dumper, data):
@@ -91,6 +91,7 @@ class SegLibrary(yaml.YAMLObject):
         self.map = {}
         self.gco_energy = None
         self.library = []
+        self.modalities = 1
 
         # from file:
         self.prefix = None
@@ -112,6 +113,11 @@ class SegLibrary(yaml.YAMLObject):
                 self._load_legacy(tmp)
             else:
                 self.__dict__.update(tmp.__dict__)
+        # remember the prefix for the library
+        self.prefix = path
+        # Fix prefixes for all lib entries, as it is not laoded correctly
+        for i,_ in enumerate(self.library):
+            self.library[i].prefix = self.prefix
 
     def save(self, path, name='library.yaml'):
         with open(path + os.sep + name, 'w') as f:

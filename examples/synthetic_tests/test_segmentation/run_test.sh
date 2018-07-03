@@ -42,13 +42,12 @@ resample_baa: true
 END
 
 
-if [ ! -e test_lib/library.json ];then
+if [ ! -e test_lib/library.yaml ];then
 # create the library
 python3 -m scoop -n $PARALLEL $PREFIX/ipl_segmentation_library_prepare.py  \
   --create library_description.yaml --output test_lib --debug
 fi
 
-exit
 
 # run cross-validation
 
@@ -85,7 +84,7 @@ fuse_options:
   gco: false
 END
 
-cat - > ec_train.json <<END
+cat - > ec_train.yaml <<END
 ---
 method: AdaBoost
 method_n: 100
@@ -99,10 +98,10 @@ END
 
 mkdir -p test_cv
 python3 -m scoop -n $PARALLEL -vvv \
-  $PREFIX/ipl_fusion_segment.py \
+  $PREFIX/ipl_segmentation_library_prepare.py \
    --output test_cv \
    --debug  \
-   --segment test_lib \
-   --cv cv.json \
-   --options segment.json \
-   --train-ec ec_train.json
+   --library test_lib \
+   --cv cv.yaml \
+   --options segment.yaml \
+   --train-ec ec_train.yaml

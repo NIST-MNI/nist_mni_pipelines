@@ -219,11 +219,10 @@ def loo_cv_fusion_segment(validation_library,
         _validation_library=validation_library[0:i]
         _validation_library.extend(validation_library[i+1:len(validation_library)])
         
-        
-        experiment_segmentation_library=copy.deepcopy(segmentation_library)
+        experiment_segmentation_library = copy.deepcopy(segmentation_library)
 
         # remove sample
-        experiment_segmentation_library['library']=[ _i for _i in segmentation_library['library'] if _i[0].find(n)<0 ]
+        experiment_segmentation_library.library=[ _i for _i in segmentation_library.library if _i[0].find(n)<0 ]
         
         if (cv_iter is None) or (i == cv_iter):
             results.append( futures.submit( 
@@ -300,32 +299,32 @@ def full_cv_fusion_segment(validation_library,
         except:
             pass # assume directory was created by competing process
         
-    modalities=segmentation_library.get('modalities',1)-1
+    modalities = segmentation_library.modalities-1
     
-    for i in range(cv_iterations):
+    for i in range( cv_iterations ):
         #TODO: save this list in a file
         rem_list = []
         ran_file = output+os.sep+ ('random_{}_{}.json'.format(cv_variant, i))
         
         if not os.path.exists( ran_file ):
-            rem_list=random.sample( validation_library_idx, cv_exclude)
+            rem_list = random.sample(validation_library_idx, cv_exclude)
             
             with open( ran_file , 'w') as f:
                 json.dump(rem_list,f)
         else:
             with open( ran_file ,'r') as f:
-                rem_list=json.load(f)
+                rem_list = json.load(f)
                 
         # list of subjects 
-        rem_items=[ validation_library[j] for j in rem_list]
+        rem_items = [validation_library[j] for j in rem_list]
         
-        rem_n=[os.path.basename(j[0]).rsplit('.gz', 1)[0].rsplit('.mnc', 1)[0] for j in rem_items]
+        rem_n = [os.path.basename(j[0]).rsplit('.gz', 1)[0].rsplit('.mnc', 1)[0] for j in rem_items]
         rem_lib = []
         val_lib = []
         
         for j in rem_n:
-            rem_lib.extend([k for (k, t) in enumerate(segmentation_library['library']) if t[0].find(j) >= 0])
-            val_lib.extend([k for (k, t) in enumerate(validation_library)              if t[0].find(j) >= 0])
+            rem_lib.extend([k for (k, t) in enumerate(segmentation_library.library) if t[0].find(j) >= 0])
+            val_lib.extend([k for (k, t) in enumerate(validation_library)           if t[0].find(j) >= 0])
             
             
         if debug: print(repr(rem_lib))
@@ -333,10 +332,10 @@ def full_cv_fusion_segment(validation_library,
         val_lib = set(val_lib)
         
         #prepare exclusion list
-        experiment_segmentation_library=copy.deepcopy(segmentation_library)
+        experiment_segmentation_library = copy.deepcopy(segmentation_library)
         
-        experiment_segmentation_library['library'] = \
-            [k for j, k in enumerate( segmentation_library['library']) if j not in rem_lib]
+        experiment_segmentation_library.library = \
+            [k for j, k in enumerate(segmentation_library.library) if j not in rem_lib]
         
         _validation_library = \
             [k for j, k in enumerate( validation_library ) if j not in val_lib ]
@@ -349,12 +348,12 @@ def full_cv_fusion_segment(validation_library,
             validation_sample  = k[0]
             validation_segment = k[1]
             
-            presegment=None
-            shift=2
+            presegment = None
+            shift = 2
             
             if ext:
-                presegment=k[2]
-                shift=3
+                presegment = k[2]
+                shift = 3
             
             results.append( futures.submit( 
                 run_segmentation_experiment, validation_sample, validation_segment, 
@@ -396,50 +395,48 @@ def cv_fusion_segment( cv_parameters,
     '''
     
     # TODO: implement more realistic, random schemes
-    validation_library=cv_parameters['validation_library']
+    validation_library = cv_parameters['validation_library']
     
     # maximum number of iterations
-    cv_iterations=cv_parameters.get('iterations',-1)
+    cv_iterations = cv_parameters.get('iterations',-1)
     
     # number of samples to exclude
-    cv_exclude=cv_parameters.get('cv',1)
+    cv_exclude = cv_parameters.get('cv',1)
 
     # use to distinguish different versions of error correction
-    ec_variant=cv_parameters.get('ec_variant','ec')
+    ec_variant = cv_parameters.get('ec_variant','ec')
     
     # use to distinguish different versions of label fusion
-    fuse_variant=cv_parameters.get('fuse_variant','fuse')
+    fuse_variant = cv_parameters.get('fuse_variant','fuse')
 
     # use to distinguish different versions of cross-validation
-    cv_variant=cv_parameters.get('cv_variant','cv')
+    cv_variant = cv_parameters.get('cv_variant','cv')
     
     # different version of label regularization
     regularize_variant=cv_parameters.get('regularize_variant','gc')
     
-    cv_output=output+os.sep+cv_variant+'_stats.json'
-    res_output=output+os.sep+cv_variant+'_res.json'
+    cv_output = output+os.sep+cv_variant+'_stats.json'
+    res_output = output+os.sep+cv_variant+'_res.json'
     
     if extlib is not None:
-        validation_library=extlib
+        validation_library = extlib
     
     if validation_library is not list:
         with open(validation_library,'r') as f:
-            validation_library=list(csv.reader(f))
+            validation_library = list(csv.reader(f))
         
     if cv_iter is not None:
         cv_iter=int(cv_iter)
 
-    stat_results=None
-    output_results=None
-    
-    
+    stat_results = None
+    output_results = None
+
     if ext:
         # TODO: move pre-rpcessing here?
         # pre-process presegmented scans here!
         # we only neeed to re-create left-right flipped segmentation
         pass
-    
-    
+
     if cv_iterations==-1 and cv_exclude==1: # simle LOO cross-validation
         (stat_results, output_results) = loo_cv_fusion_segment(validation_library, 
                                              segmentation_library,
@@ -470,14 +467,14 @@ def cv_fusion_segment( cv_parameters,
 
     # average error maps
     
-    if cv_iter is None or cv_iter==-1:
+    if cv_iter is None or cv_iter == -1:
         results=[]
         output_results_all={'results':output_results}
         output_results_all['cv_stats']=cv_output
         output_results_all['error_maps']={}
         all_error_maps=[]
         
-        for (i,j) in enumerate(output_results[0]['error_maps']):
+        for (i, j) in enumerate(output_results[0]['error_maps']):
             out_avg=output+os.sep+cv_variant+'_error_{:03d}.mnc'.format(i)
             output_results_all['error_maps'][i]=out_avg
             all_error_maps.append(out_avg)
@@ -490,10 +487,10 @@ def cv_fusion_segment( cv_parameters,
         output_results_all['max_error']=output+os.sep+cv_variant+'_max_error.mnc'.format(i)
         max_error_maps(all_error_maps,output_results_all['max_error'])
         
-        with open(cv_output,'w') as f:
+        with open(cv_output, 'w') as f:
             json.dump(stat_results, f, indent=1 )
 
-        with open(res_output,'w') as f:
+        with open(res_output, 'w') as f:
             json.dump(output_results_all, f, indent=1, cls=MRIEncoder)
 
         return stat_results

@@ -587,50 +587,50 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         #with mincTools() as m:
             #classes_number=int(m.execute_w_output(['mincstats', '-q', '-max',local_model.seg ]).rstrip("\n"))+1
 
-        library_description={}
+        library_description = SegLibrary()
         # library models
-        library_description['model']          = model.scan
-        library_description['model_mask']     = model.mask
-        library_description['model_add']      = model.add
+        library_description.model          = model.scan
+        library_description.model_mask     = model.mask
+        library_description.model_add      = model.add
         
-        library_description['local_model']      = local_model.scan
-        library_description['local_model_add']  = local_model.add
-        library_description['local_model_mask'] = local_model.mask
-        library_description['local_model_seg']  = local_model.seg
-        library_description['local_model_avg']  = local_model_avg.scan
-        library_description['local_model_ovl']  = local_model_ovl.scan 
-        library_description['local_model_sd']   = local_model_sd.scan 
+        library_description.local_model      = local_model.scan
+        library_description.local_model_add  = local_model.add
+        library_description.local_model_mask = local_model.mask
+        library_description.local_model_seg  = local_model.seg
+        library_description.local_model_avg  = local_model_avg.scan
+        library_description.local_model_ovl  = local_model_ovl.scan
+        library_description.local_model_sd   = local_model_sd.scan
         
         # library parameters
-        library_description['map']=inv_dict(dict(build_remap))
-        library_description['classes_number']=classes_number
-        library_description['nl_samples_avail']=do_nonlinear_register
-        library_description['modalities']=modalities+1
+        library_description.map=inv_dict(dict(build_remap))
+        library_description.classes_number=classes_number
+        library_description.nl_samples_avail=do_nonlinear_register
+        library_description.modalities=modalities+1
         
-        largest_label=max(library_description['map'].values(), key=lambda p: int(p))
+        largest_label=max(library_description.map.values(), key=lambda p: int(p))
         
-        library_description['seg_datatype']='short'
+        library_description.seg_datatype='short'
         
         if largest_label<=255: 
-            library_description['seg_datatype']='byte'
+            library_description.seg_datatype='byte'
 
-        library_description['gco_energy']=output+os.sep+'gco_energy.csv'
-        estimate_gco_energy(final_samples, library_description['gco_energy'], classes=classes_number)
-        library_description['label_map'] = label_map
+        library_description.gco_energy=output+os.sep+'gco_energy.csv'
+        estimate_gco_energy(final_samples, library_description.gco_energy, classes=classes_number)
+        library_description.label_map = label_map
         
         if build_symmetric and build_symmetric_flip:
-            library_description['local_model_flip']     = local_model.scan_f
-            library_description['local_model_add_flip'] = local_model.add_f
-            library_description['local_model_mask_flip']= local_model.mask_f
-            library_description['local_model_seg_flip'] = local_model.seg_f
-            library_description['flip_map']             = inv_dict(dict(build_flip_remap))
+            library_description.local_model_flip     = local_model.scan_f
+            library_description.local_model_add_flip = local_model.add_f
+            library_description.local_model_mask_flip= local_model.mask_f
+            library_description.local_model_seg_flip = local_model.seg_f
+            library_description.flip_map             = inv_dict(dict(build_flip_remap))
         else:
-            library_description['local_model_flip']=None
-            library_description['local_model_add_flip']=[]
-            library_description['local_model_mask_flip']=None
-            library_description['flip_map']={}
+            library_description.local_model_flip=None
+            library_description.local_model_add_flip=[]
+            library_description.local_model_mask_flip=None
+            library_description.flip_map={}
         
-        library_description['library']=[]
+        library_description.library=[]
         
         for (j, i) in enumerate(final_samples):
             ss = [i.scan, i.seg]
@@ -641,7 +641,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             else:
                 ss.extend([bbox_lin_xfm[j].xfm])
                 
-            library_description['library'].append(ss)
+            library_description.library.append(LibEntry(lst=ss,ent_id=i.name))
             
             if build_symmetric:
                 ss = [i.scan_f, i.seg_f]
@@ -652,9 +652,10 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 else:
                     ss.extend([bbox_lin_xfm[j].xfm_f ])
 
-                library_description['library'].append(ss)
+                library_description.library.append(LibEntry(lst=ss, ent_id=i.name))
 
-        save_library_info( library_description, output)
+        #save_library_info( library_description, output)
+        library_description.save(output)
         # cleanup
         if cleanup:
             shutil.rmtree(work_dir)
