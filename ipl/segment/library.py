@@ -100,7 +100,7 @@ class SegLibrary(yaml.YAMLObject):
     def load(self, path, name=None):
         if name is None:
             if os.path.exists(path + os.sep + 'library.yaml'):
-                name='library.yaml'
+                name = 'library.yaml'
             else:
                 name = 'library.json'
 
@@ -188,7 +188,7 @@ class SegLibrary(yaml.YAMLObject):
         )
 
 
-def save_library_info(library_description, output, name='library.json' ):
+def save_library_info(library_description, output, name='library.json'):
     """Save library information into directory, using predfined file structure
     Arguments:
     library_description -- dictionary with library description
@@ -231,6 +231,7 @@ def save_library_info(library_description, output, name='library.json' ):
 
         with open(output+os.sep+name, 'w') as f:
             json.dump(tmp_library_description, f, indent=1)
+            #TODO: convert to YAML
     except:
         print("Error saving library information into:{} {}".format(output,sys.exc_info()[0]))
         traceback.print_exc(file=sys.stderr)
@@ -248,7 +249,7 @@ def load_library_info(prefix, name='library.json'):
     try:
         library_description={}
         with open(prefix+os.sep+name, 'r') as f:
-            library_description=json.load(f)
+            library_description = yaml.load(f)
 
         library_description['prefix'] = prefix
 

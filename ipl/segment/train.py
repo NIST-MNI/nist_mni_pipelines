@@ -13,7 +13,7 @@ import csv
 import copy
 
 # MINC stuff
-# from ipl.minc_tools import mincTools,mincError
+from ipl.minc_tools import mincTools, mincError
 
 # scoop parallel execution
 from scoop import futures, shared
@@ -198,7 +198,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         patch_norm_idx = output + os.sep + 'patch_norm.idx'
         
         # identity xfm
-        identity_xfm = MriTransform(prefix=work_dir,   name='identity' )
+        identity_xfm = MriTransform(prefix=work_dir,   name='identity')
         with mincTools() as m:
             m.param2xfm(identity_xfm.xfm)
             m.param2xfm(identity_xfm.xfm_f)

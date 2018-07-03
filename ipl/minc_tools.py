@@ -223,7 +223,7 @@ class mincTools(temp_files):
     """minc toolkit interface , mostly basic tools """
 
     def __init__(self, tempdir=None, resample=None, verbose=0, prefix=None):
-        super(mincTools,self).__init__(tempdir=tempdir,prefix=prefix)
+        super(mincTools, self).__init__(tempdir=tempdir,prefix=prefix)
         # TODO: add some options?
         self.resample = resample
         self.verbose  = verbose
