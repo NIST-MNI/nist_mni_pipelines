@@ -103,7 +103,7 @@ class SegLibrary(yaml.YAMLObject):
                 name='library.yaml'
             else:
                 name = 'library.json'
-                
+
         with open(path + os.sep + name, 'r') as f:
             tmp = yaml.load(f)
             self.prefix = path
