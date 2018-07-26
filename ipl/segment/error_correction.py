@@ -142,8 +142,8 @@ def pad_data(img, shape, partition, part, border):
     if partition is None or part is None :
         return img
     else:
-        out=np.zeros(shape,dtype=img.dtype)
-        strip=shape[2]//partition
+        out = np.zeros(shape, dtype=img.dtype)
+        strip = shape[2]//partition
         
         beg=strip*part
         end=strip*(part+1)
@@ -533,7 +533,7 @@ def errorCorrectionApply(input_images,
             print( clf2 )
             print( "Loading input images..." )
 
-        input_data=[ minc2_file(k).load_complete_volume(np.float32) for k in input_images ]
+        input_data=[ minc2_file(k).load_complete_volume('float32') for k in input_images ]
         shape=input_data[0].shape
         
         #features = [ extract_part( minc.Image(k, dtype=np.float32).data, partition, part, border) for k in inp[0:-3] ]
@@ -596,9 +596,9 @@ def errorCorrectionApply(input_images,
                 else:
                     out_dbg = pred
                     
-                out_dbg=minc2_file()
-                out_dbg.imitate(input_images[0],path=debug_files[0])
-                out_dbg.data=pad_data(out_dbg, shape, partition, part, border)
+                out_dbg_m = minc2_file()
+                out_dbg_m.imitate(input_images[0], path=debug_files[0])
+                out_dbg_m.data = pad_data(out_dbg, shape, partition, part, border)
             
             if mask is not None:
                 out_corr[ mask > 0 ] = pred
@@ -629,7 +629,7 @@ def errorCorrectionApply(input_images,
                     xg_predict = xgb.DMatrix(test_x)
                     pred = np.array( clf2.predict( xg_predict ), dtype=np.int32 )
                 
-                out_cls[ mask > 0 ] = pred
+                out_cls[mask > 0] = pred
                 
                 if debug_files is not None:
                     out_dbg = np.zeros( shape, dtype=np.int32 )
@@ -637,10 +637,10 @@ def errorCorrectionApply(input_images,
                         out_dbg[ mask > 0 ] = pred
                     else:
                         out_dbg = pred
-                    
-                    out_dbg=minc2_file(  )
-                    out_dbg.imitate(input_images[0],path=debug_files[1])
-                    out_dbg.data=data=pad_data(out_dbg, shape, partition, part, border)
+
+                    out_dbg_m = minc2_file()
+                    out_dbg_m.imitate(input_images[0], path=debug_files[1])
+                    out_dbg_m.data = pad_data(out_dbg, shape, partition, part, border)
                 
                 
             else:
@@ -652,16 +652,16 @@ def errorCorrectionApply(input_images,
         if debug:
             print("Saving output...")
 
-        out=minc2_file()
-        out.imitate(input_images[0],path=output)
-        out.data=pad_data(out_cls, shape, partition, part, border)
+        out = minc2_file()
+        out.imitate(input_images[0], path=output)
+        out.data = pad_data(out_cls, shape, partition, part, border)
 
     except mincError as e:
-        print("Exception in linear_registration:{}".format(str(e)))
+        print("Exception in errorCorrectionApply:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in linear_registration:{}".format(sys.exc_info()[0]))
+        print("Exception in errorCorrectionApply:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 

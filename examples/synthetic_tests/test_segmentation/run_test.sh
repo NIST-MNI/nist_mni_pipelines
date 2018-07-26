@@ -4,7 +4,7 @@
 PREFIX=$(pwd)/../../../
 
 if [ -z $PARALLEL ];then
-PARALLEL=1
+PARALLEL=4
 fi
 
 export PYTHONPATH=$PREFIX:$PYTHONPATH

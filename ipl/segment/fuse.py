@@ -13,6 +13,7 @@ import re
 import json
 import traceback
 
+import yaml
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
@@ -413,8 +414,8 @@ def fusion_segment( input_scan,
                     )
         
         if sample.seg is not None:
-            _lut=None
-            _flip_lut=None
+            _lut = None
+            _flip_lut = None
             if not run_in_bbox: # assume that labels are already renamed
                 _lut=invert_lut(library_description.get("map",None))
                 _flip_lut=invert_lut(library_description.get("flip_map",None))
@@ -488,51 +489,53 @@ def fusion_segment( input_scan,
                         filters=post_filters,
                         )
             
-            warp_model_mask(local_model,bbox_sample_mask,
+            warp_model_mask(local_model, bbox_sample_mask,
                         transform=nonlinear_xfm,
                         symmetric=segment_symmetric,
                         resample_order=resample_order)
             
-            bbox_sample.mask=bbox_sample_mask.mask
-            bbox_sample.mask_f=bbox_sample_mask.mask_f
+            bbox_sample.mask = bbox_sample_mask.mask
+            bbox_sample.mask_f = bbox_sample_mask.mask_f
             
-            output_info['bbox_sample']=bbox_sample
-            output_info['nl_sample']=nl_sample
+            output_info['bbox_sample'] = bbox_sample
+            output_info['nl_sample'] = nl_sample
         else:
             nl_sample=bbox_sample
             # use mask from the model directly?
-            bbox_sample.mask=local_model.mask
-            bbox_sample.mask_f=local_model.mask
+            bbox_sample.mask = local_model.mask
+            bbox_sample.mask_f = local_model.mask
             
         output_info['nonlinear_xfm']=nonlinear_xfm
 
         if generate_library:
             # remove excluded samples TODO: use regular expressions for matching?
-            selected_library=[i for i in library if i[0] not in exclude]
-            selected_library_f=[]
+            selected_library = [i for i in library if i[0] not in exclude]
+            selected_library_f = []
             
             if segment_symmetric: # fill up with all entries
-                selected_library_f=copy.deepcopy(selected_library)
+                selected_library_f = copy.deepcopy(selected_library)
 
             # library pre-selection if needed
             # TODO: skip if sample presegmented
             if library_preselect>0 and library_preselect < len(selected_library):
-                loaded=False
-                loaded_f=False
+                loaded = False
+                loaded_f = False
                 
-                if os.path.exists(work_lib_dir+os.sep+'sel_library.json'):
-                    with open(work_lib_dir+os.sep+'sel_library.json','r') as f:
-                        selected_library=json.load(f)
-                    loaded=True
+                if os.path.exists(work_lib_dir+os.sep+'sel_library.yaml'):
+                    with open(work_lib_dir+os.sep+'sel_library.yaml','r') as f:
+                        selected_library = yaml.load(f)
+                        # TODO: fix prefixes of the seg entries
+                    loaded = True
 
-                if segment_symmetric and os.path.exists(work_lib_dir_f+os.sep+'sel_library.json'):
-                    with open(work_lib_dir_f+os.sep+'sel_library.json','r') as f:
-                        selected_library_f=json.load(f)
-                    loaded_f=True
+                if segment_symmetric and os.path.exists(work_lib_dir_f+os.sep+'sel_library.yaml'):
+                    with open(work_lib_dir_f+os.sep+'sel_library.yaml','r') as f:
+                        selected_library_f = yaml.load(f)
+                        # TODO: fix prefixes of the seg entries
+                    loaded_f = True
                 
                 if do_nonlinear_register:
                     if not loaded:
-                        selected_library=preselect(nl_sample,
+                        selected_library = preselect(nl_sample,
                                             selected_library, 
                                             method=library_preselect_method, 
                                             number=library_preselect,
@@ -541,7 +544,7 @@ def fusion_segment( input_scan,
                                             lib_add_n=library_modalities) 
                     if segment_symmetric:
                         if not loaded_f:
-                            selected_library_f=preselect(nl_sample,
+                            selected_library_f = preselect(nl_sample,
                                                     selected_library_f, 
                                                     method=library_preselect_method,
                                                     number=library_preselect,
@@ -551,7 +554,7 @@ def fusion_segment( input_scan,
                                                     lib_add_n=library_modalities)
                 else:
                     if not loaded:
-                        selected_library=preselect(bbox_sample,
+                        selected_library = preselect(bbox_sample,
                                             selected_library,
                                             method=library_preselect_method,
                                             number=library_preselect,
@@ -560,7 +563,7 @@ def fusion_segment( input_scan,
                                             lib_add_n=library_modalities)
                     if segment_symmetric:
                         if not loaded_f:
-                            selected_library_f=preselect(bbox_sample, 
+                            selected_library_f = preselect(bbox_sample,
                                                     selected_library_f,
                                                     method=library_preselect_method,
                                                     number=library_preselect,
@@ -569,13 +572,13 @@ def fusion_segment( input_scan,
                                                     lib_add_n=library_modalities)
 
                 if not loaded:
-                    with open(work_lib_dir+os.sep+'sel_library.json','w') as f:
-                        json.dump(selected_library,f)
+                    with open(work_lib_dir+os.sep+'sel_library.yaml','w') as f:
+                        f.write(yaml.dump(selected_library))
 
                 if not loaded_f:
                     if segment_symmetric:
-                        with open(work_lib_dir_f+os.sep+'sel_library.json','w') as f:
-                            json.dump(selected_library_f,f)
+                        with open(work_lib_dir_f+os.sep+'sel_library.yaml','w') as f:
+                            f.write(yaml.dump(selected_library_f))
                             
                 output_info['selected_library']=selected_library
                 if segment_symmetric:
@@ -684,7 +687,7 @@ def fusion_segment( input_scan,
                     for (i,j) in enumerate(selected_library_f):
                         # TODO: make clever usage of precomputed transform if available
                         
-                        if pairwise_register_type=='elx' or pairwise_register_type=='elastix' :
+                        if pairwise_register_type == 'elx' or pairwise_register_type == 'elastix':
                             results.append( futures.submit(
                                 elastix_registration, 
                                 bbox_sample,
@@ -894,7 +897,7 @@ def fusion_segment( input_scan,
                                             output_segment+'_vol.json', 
                                             label_map=library_description.label_map)
             
-            output_info['output_volumes_json']=output_segment+'_vol.json'
+            output_info['output_volumes_json'] = output_segment+'_vol.json'
 
             # TODO: cleanup more here (?)
             
