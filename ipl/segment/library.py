@@ -84,7 +84,6 @@ class SegLibrary(yaml.YAMLObject):
     def __init__(self, path=None ):
         # compatibility info
         self.local_model = None
-        self.local_model = None
         self.local_model_mask = None
         self.local_model_flip = None,
         self.local_model_mask_flip = None,
@@ -141,7 +140,6 @@ class SegLibrary(yaml.YAMLObject):
 
     def _load_legacy(self, library_description):
         try:
-
             for i in {'local_model',
                       'local_model_mask',
                       'local_model_flip',
@@ -186,9 +184,9 @@ class SegLibrary(yaml.YAMLObject):
     def get(self, item, default=None):
         if item in self.__dict__:
             if item in SegLibrary._rel_paths:
-                return self.prefix + os.sep + self.__dict__[item] if self.__dict__[item] else default
+                return self.prefix + os.sep + self.__dict__[item]  if self.__dict__[item] is not None else default
             elif item in SegLibrary._abs_paths:
-                return (self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item] ) if self.__dict__[item] else default
+                return (self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item] ) if self.__dict__[item] is not None else default
             elif item in SegLibrary._abs_paths_lst:
                 return [(self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
             else:

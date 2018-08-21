@@ -113,7 +113,7 @@ if __name__ == '__main__':
        and options.input is not None \
        and options.output is not None:
 
-        library = SegLibrary(options.segment)
+        library = SegLibrary(options.library)
         segmentation_parameters = {}
 
         if options.options is not None:

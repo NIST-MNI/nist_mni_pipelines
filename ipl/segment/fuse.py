@@ -200,9 +200,9 @@ def fusion_segment( input_scan,
         # mask output
         mask_output         = parameters.get('mask_output', True)
         
-        classes_number      = library_description.classes_number
-        seg_datatype        = library_description.seg_datatype
-        gco_energy          = library_description.gco_energy
+        classes_number      = library_description["classes_number"]
+        seg_datatype        = library_description["seg_datatype"]
+        gco_energy          = library_description["gco_energy"]
         
         
         output_info         = {}
@@ -214,21 +214,21 @@ def fusion_segment( input_scan,
         sample              = input_sample
         
         # get parameters
-        model = MriDataset(scan=library_description.model,
-                           mask=library_description.model_mask,
-                           add= library_description.model_add)
+        model = MriDataset(scan=library_description["model"],
+                           mask=library_description["model_mask"],
+                           add= library_description["model_add"])
         
-        local_model = MriDataset(scan=  library_description.local_model,
-                                 mask=  library_description.local_model_mask,
-                                 scan_f=library_description.local_model_flip,
-                                 mask_f=library_description.local_model_mask_flip,
-                                 seg=   library_description.local_model_seg,
-                                 seg_f= library_description.local_model_seg_flip,
-                                 add=   library_description.local_model_add,
-                                 add_f= library_description.local_model_add_flip,
+        local_model = MriDataset(scan=  library_description["local_model"],
+                                 mask=  library_description["local_model_mask"],
+                                 scan_f=library_description["local_model_flip"],
+                                 mask_f=library_description["local_model_mask_flip"],
+                                 seg=   library_description["local_model_seg"],
+                                 seg_f= library_description["local_model_seg_flip"],
+                                 add=   library_description["local_model_add"],
+                                 add_f= library_description["local_model_add_flip"],
                                  )
 
-        library = library_description.library
+        library = library_description["library"]
         
         sample_modalities = len(add)
         
@@ -838,7 +838,7 @@ def fusion_segment( input_scan,
                                     options=qc_options,
                                     model=local_model,
                                     symmetric=segment_symmetric,
-                                    labels=library_description.classes_number)
+                                    labels=library_description["classes_number"])
         # cleanup if need
         if cleanup:
             shutil.rmtree(work_lib_dir)
@@ -865,11 +865,11 @@ def fusion_segment( input_scan,
             
             warp_rename_seg(sample_seg, input_sample, sample_seg_native, 
                             transform=bbox_linear_xfm, invert_transform=True, 
-                            lut=library_description.map ,
+                            lut=library_description["map"] ,
                             symmetric=segment_symmetric,
                             symmetric_flip=segment_symmetric,
                             use_flipped=segment_symmetric,  # needed to flip .seg_f back to right orientation
-                            flip_lut=library_description.flip_map,
+                            flip_lut=library_description["flip_map"],
                             resample_baa=resample_baa, 
                             resample_order=resample_order,
                             datatype=seg_datatype )
@@ -895,7 +895,7 @@ def fusion_segment( input_scan,
             output_info['output_segment'] = _output_segment
             output_info['output_volumes'] = seg_to_volumes(_output_segment, 
                                             output_segment+'_vol.json', 
-                                            label_map=library_description.label_map)
+                                            label_map=library_description["label_map"])
             
             output_info['output_volumes_json'] = output_segment+'_vol.json'
 
