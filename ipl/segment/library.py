@@ -124,8 +124,11 @@ class SegLibrary(yaml.YAMLObject):
 
             if type(tmp) is dict:
                 self._load_legacy(tmp)
-            else:
+            elif tmp is not None:
                 self.__dict__.update(tmp.__dict__)
+            else:
+                raise Exception("Can't load yaml from:{}".format(path + os.sep + name))
+
         # remember the prefix for the library
         self.prefix = path
         # Fix prefixes for all lib entries, as it is not laoded correctly

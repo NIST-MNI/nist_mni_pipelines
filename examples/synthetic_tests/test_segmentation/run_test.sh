@@ -42,9 +42,9 @@ resample_baa: true
 END
 
 
-if [ ! -e test_lib/library.yaml ];then
+if [ ! -e test_lib/library.yaml ] && [ ! -e test_lib/library.json ] ;then
 # create the library
-python3 -m scoop -n 4 $PREFIX/ipl_segmentation_library_prepare.py  \
+python -m scoop -n 4 $PREFIX/ipl_segmentation_library_prepare.py  \
   --create library_description.yaml --output test_lib --debug
 fi
 
@@ -97,7 +97,7 @@ train_cv: 2
 END
 
 mkdir -p test_cv
-python3 -m scoop -n $PARALLEL -vvv \
+python -m scoop -n $PARALLEL -vvv \
   $PREFIX/ipl_segmentation_library_prepare.py \
    --output test_cv \
    --debug  \
