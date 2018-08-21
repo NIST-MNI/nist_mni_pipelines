@@ -865,7 +865,7 @@ def fusion_segment( input_scan,
             
             warp_rename_seg(sample_seg, input_sample, sample_seg_native, 
                             transform=bbox_linear_xfm, invert_transform=True, 
-                            lut=library_description["map"] ,
+                            lut=library_description["map"],
                             symmetric=segment_symmetric,
                             symmetric_flip=segment_symmetric,
                             use_flipped=segment_symmetric,  # needed to flip .seg_f back to right orientation
@@ -888,7 +888,7 @@ def fusion_segment( input_scan,
             if mask_output and input_mask is not None:
                 #
                 with mincTools() as minc:
-                    minc.calc([sample_seg_native2.seg,input_mask],'A[1]>0.5?A[0]:0',_output_segment,labels=True)
+                    minc.calc([sample_seg_native2.seg, input_mask],'A[1]>0.5?A[0]:0',_output_segment,labels=True)
             else:
                 shutil.copyfile(sample_seg_native2.seg, _output_segment)
                 

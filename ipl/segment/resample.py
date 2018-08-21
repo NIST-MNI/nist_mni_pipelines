@@ -91,7 +91,7 @@ def warp_rename_seg( sample, model, output,
                     op_mask=None):
     #TODO: should i warp mask if present too?
     try:
-        print("warp_rename_seg sampl={} output={}".format(repr(sample),repr(output)))
+        print("warp_rename_seg sampl={} output={} lut={} flip_lut={}".format(repr(sample),repr(output),repr(lut),repr(flip_lut)))
         with mincTools() as m:
             xfm=None
             if transform is not None:

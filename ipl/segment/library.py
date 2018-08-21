@@ -74,8 +74,7 @@ class SegLibrary(yaml.YAMLObject):
                   'gco_energy'}
 
     _abs_paths = {'model',
-                  'model_mask'
-                  'model_add'}
+                  'model_mask' }
 
     _abs_paths_lst = {'local_model_add', 'local_model_add_flip', 'model_add'}
 
@@ -105,6 +104,8 @@ class SegLibrary(yaml.YAMLObject):
         self.classes_number = 2
         self.nl_samples_avail = False
         self.seg_datatype = 'byte'
+        self.label_map={}
+
         # from file:
         self.prefix = None
         if path is not None:
@@ -170,6 +171,10 @@ class SegLibrary(yaml.YAMLObject):
             # convert samples paths to absolute
             self.library = [LibEntry(i, self.prefix) for i in library_description['library']]
 
+            for i in ['flip_map', 'map','label_map','nl_samples_avail','seg_datatype','modalities']:
+                self.__dict__[i] = library_description.get(i, self.__dict__[i])
+
+
         except:
             print("Error loading library information from:{} {}".format(prefix, sys.exc_info()[0]))
             traceback.print_exc(file=sys.stderr)
@@ -188,7 +193,7 @@ class SegLibrary(yaml.YAMLObject):
             elif item in SegLibrary._abs_paths:
                 return (self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item] ) if self.__dict__[item] is not None else default
             elif item in SegLibrary._abs_paths_lst:
-                return [(self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
+                return [ (self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
             else:
                 return self.__dict__[item]
         else:
