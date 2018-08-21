@@ -20,8 +20,7 @@ import sys
 import json
 import csv
 # minc
-#import minc
-from minc2_simple import minc2_xfm,minc2_file
+from minc2_simple import minc2_xfm, minc2_file
  
 
 # numpy
@@ -143,8 +142,8 @@ def pad_data(img, shape, partition, part, border):
     if partition is None or part is None :
         return img
     else:
-        out=np.zeros(shape,dtype=img.dtype)
-        strip=shape[2]//partition
+        out = np.zeros(shape, dtype=img.dtype)
+        strip = shape[2]//partition
         
         beg=strip*part
         end=strip*(part+1)
@@ -170,22 +169,22 @@ def merge_segmentations(inputs, output, partition, parameters):
     out=None
     strip=None
     for i in range(len(inputs)):
-        d=minc.Label( inputs[i] ).data
-        
+        d = minc2_file(inputs[i]).data
         if out is None:
-            out=np.zeros(d.shape,dtype=np.int32)
-            strip=d.shape[2]/partition
+            out = np.zeros(d.shape,dtype=np.int32)
+            strip = d.shape[2]/partition
             
-        beg=strip*i
-        end=strip*(i+1)
+        beg = strip*i
+        end = strip*(i+1)
         
         if i==(partition-1):
             end=d.shape[2]
             
         out[:,:,beg:end]=d[:,:,beg:end]
         
-    out_i=minc.Label( data=out )
-    out_i.save( name=output, imitate=inputs[0])
+    out_i = minc2_file()
+    out_i.imitate(inputs[0], path=output)
+    out_i.data = out
 
 
 def errorCorrectionTrain(input_images, 
@@ -225,20 +224,20 @@ def errorCorrectionTrain(input_images,
             print("errorCorrectionTrain use_coord={} use_joint={} patch_size={} normalize_input={} method={} output={} partition={} part={}".\
                     format(repr(use_coord),repr(use_joint),repr(patch_size),repr(normalize_input),method,output,partition,part))
 
-        coords=None
-        total_mask_size=0
-        total_diff_mask_size=0
+        coords = None
+        total_mask_size = 0
+        total_diff_mask_size = 0
         
         for (i,inp) in enumerate(input_images):
-            mask=None
-            diff=None
-            mask_diff=None
+            mask = None
+            diff = None
+            mask_diff = None
             
             if inp[-2] is not None:
-                mask=extract_part(minc.Label( inp[-2] ).data, partition, part, border)
+                mask = extract_part(minc2_file(inp[-2]).data, partition, part, border)
             
-            ground_data  = minc.Label( inp[-1] ).data
-            auto_data    = minc.Label( inp[-3] ).data
+            ground_data  = minc2_file(inp[-1]).data
+            auto_data    = minc2_file(inp[-3]).data
             
             ground_shape = ground_data.shape
             ground = extract_part(ground_data, partition, part, border)
@@ -249,7 +248,7 @@ def errorCorrectionTrain(input_images,
                 c = np.mgrid[ 0:shape[0], 0:shape[1], 0: shape[2] ]
                 coords = [ extract_part( (c[j]-shape[j]/2.0)/(shape[j]/2.0),   partition, part, border ) for j in range(3) ]
             
-            features   = [ extract_part( minc.Image(k, dtype=np.float32).data, partition, part, border ) for k in inp[0:-3] ]
+            features   = [ extract_part( minc2_file(k).data, partition, part, border ) for k in inp[0:-3] ]
 
             mask_size = shape[0] * shape[1] * shape[2]
             
@@ -321,9 +320,10 @@ def errorCorrectionTrain(input_images,
                 for (j,k) in enumerate( training_images[-1] ):
                     test=np.zeros_like( images[0] )
                     test[ mask>0 ]=k
-                    out=minc.Image( data=test )
-                    out.save( name="dump_{}.mnc".format(j), imitate=inp[0] )
-                    
+                    out = minc2_file()
+                    out.imitate(inp[0], path="dump_{}.mnc".format(j))
+                    out.data = test
+
         # calculate normalization coeffecients
         
         if debug: print("Done")
@@ -471,7 +471,7 @@ def errorCorrectionTrain(input_images,
             clf2.save_model(output+'_2')
         else:
             with open(output,'wb') as f:
-                cPickle.dump( [clf, clf2] , f, -1)
+                pickle.dump( [clf, clf2] , f, -1)
     
     except mincError as e:
         print("Exception in linear_registration:{}".format(str(e)))
@@ -524,7 +524,7 @@ def errorCorrectionApply(input_images,
                 clf2 = xgb.Booster(model_file=_training+'_2')
         else:
             with open(training, 'rb') as f:
-                c    = cPickle.load(f)
+                c    = pickle.load(f)
                 clf  = c[0]
                 clf2 = c[1]
 
@@ -533,7 +533,7 @@ def errorCorrectionApply(input_images,
             print( clf2 )
             print( "Loading input images..." )
 
-        input_data=[ minc.Image(k, dtype=np.float32).data for k in input_images ]
+        input_data=[ minc2_file(k).load_complete_volume('float32') for k in input_images ]
         shape=input_data[0].shape
         
         #features = [ extract_part( minc.Image(k, dtype=np.float32).data, partition, part, border) for k in inp[0:-3] ]
@@ -556,7 +556,7 @@ def errorCorrectionApply(input_images,
         mask_size=shape[0]*shape[1]*shape[2]
         
         if input_mask is not None:
-            mask=extract_part( minc.Label( input_mask ).data, partition, part, border )
+            mask=extract_part( minc2_file(input_mask).data, partition, part, border )
             mask_size=np.sum( mask )
 
         out_cls  = None
@@ -573,8 +573,8 @@ def errorCorrectionApply(input_images,
                                   ] )
 
         if input_auto is not None:
-            out_corr = np.copy( extract_part( minc.Label( input_auto ).data, partition, part, border) ) # use input data
-            out_cls  = np.copy( extract_part( minc.Label( input_auto ).data, partition, part, border) ) # use input data
+            out_corr = np.copy( extract_part( minc2_file( input_auto ).data, partition, part, border) ) # use input data
+            out_cls  = np.copy( extract_part( minc2_file( input_auto ).data, partition, part, border) ) # use input data
         else:
             out_corr = np.zeros( shape, dtype=np.int32 )
             out_cls  = np.zeros( shape, dtype=np.int32 )
@@ -596,9 +596,9 @@ def errorCorrectionApply(input_images,
                 else:
                     out_dbg = pred
                     
-                out_dbg=minc.Label( data=pad_data(out_dbg, shape, partition, part, border) )
-                out_dbg.save(name=debug_files[0], imitate=input_images[0], history=history)
-                
+                out_dbg_m = minc2_file()
+                out_dbg_m.imitate(input_images[0], path=debug_files[0])
+                out_dbg_m.data = pad_data(out_dbg, shape, partition, part, border)
             
             if mask is not None:
                 out_corr[ mask > 0 ] = pred
@@ -629,7 +629,7 @@ def errorCorrectionApply(input_images,
                     xg_predict = xgb.DMatrix(test_x)
                     pred = np.array( clf2.predict( xg_predict ), dtype=np.int32 )
                 
-                out_cls[ mask > 0 ] = pred
+                out_cls[mask > 0] = pred
                 
                 if debug_files is not None:
                     out_dbg = np.zeros( shape, dtype=np.int32 )
@@ -637,9 +637,10 @@ def errorCorrectionApply(input_images,
                         out_dbg[ mask > 0 ] = pred
                     else:
                         out_dbg = pred
-                    
-                    out_dbg=minc.Label( data=pad_data(out_dbg, shape, partition, part, border) )
-                    out_dbg.save(name=debug_files[1], imitate=input_images[0], history=history)
+
+                    out_dbg_m = minc2_file()
+                    out_dbg_m.imitate(input_images[0], path=debug_files[1])
+                    out_dbg_m.data = pad_data(out_dbg, shape, partition, part, border)
                 
                 
             else:
@@ -651,15 +652,16 @@ def errorCorrectionApply(input_images,
         if debug:
             print("Saving output...")
 
-        out=minc.Label( data=pad_data(out_cls, shape, partition, part, border) )
+        out = minc2_file()
+        out.imitate(input_images[0], path=output)
+        out.data = pad_data(out_cls, shape, partition, part, border)
 
-        out.save(name=output, imitate=input_images[0], history=history)
     except mincError as e:
-        print("Exception in linear_registration:{}".format(str(e)))
+        print("Exception in errorCorrectionApply:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in linear_registration:{}".format(sys.exc_info()[0]))
+        print("Exception in errorCorrectionApply:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 

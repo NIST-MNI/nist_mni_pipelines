@@ -13,7 +13,7 @@ import csv
 import copy
 
 # MINC stuff
-# from ipl.minc_tools import mincTools,mincError
+from ipl.minc_tools import mincTools, mincError
 
 # scoop parallel execution
 from scoop import futures, shared
@@ -198,7 +198,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         patch_norm_idx = output + os.sep + 'patch_norm.idx'
         
         # identity xfm
-        identity_xfm = MriTransform(prefix=work_dir,   name='identity' )
+        identity_xfm = MriTransform(prefix=work_dir,   name='identity')
         with mincTools() as m:
             m.param2xfm(identity_xfm.xfm)
             m.param2xfm(identity_xfm.xfm_f)
@@ -332,7 +332,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         
         if reference_local_model is None  :
             local_model     = MriDataset( prefix=output, name='local_model',     add_n=modalities    )
-            local_model_ovl = MriDataset( prefix=output, name='local_model_ovl' )
+            local_model_ovl = MriDataset( prefix=output, name='local_model_ovl')
             local_model_avg = MriDataset( prefix=output, name='local_model_avg', add_n=modalities )
             local_model_sd  = MriDataset( prefix=output, name='local_model_sd',  add_n=modalities  )
             
@@ -587,74 +587,75 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         #with mincTools() as m:
             #classes_number=int(m.execute_w_output(['mincstats', '-q', '-max',local_model.seg ]).rstrip("\n"))+1
 
-        library_description={}
+        library_description = SegLibrary()
         # library models
-        library_description['model']          = model.scan
-        library_description['model_mask']     = model.mask
-        library_description['model_add']      = model.add
+        library_description.model          = model.scan
+        library_description.model_mask     = model.mask
+        library_description.model_add      = model.add
         
-        library_description['local_model']      = local_model.scan
-        library_description['local_model_add']  = local_model.add
-        library_description['local_model_mask'] = local_model.mask
-        library_description['local_model_seg']  = local_model.seg
-        library_description['local_model_avg']  = local_model_avg.scan
-        library_description['local_model_ovl']  = local_model_ovl.scan 
-        library_description['local_model_sd']   = local_model_sd.scan 
+        library_description.local_model      = local_model.scan
+        library_description.local_model_add  = local_model.add
+        library_description.local_model_mask = local_model.mask
+        library_description.local_model_seg  = local_model.seg
+        library_description.local_model_avg  = local_model_avg.scan
+        library_description.local_model_ovl  = local_model_ovl.scan
+        library_description.local_model_sd   = local_model_sd.scan
         
         # library parameters
-        library_description['map']=inv_dict(dict(build_remap))
-        library_description['classes_number']=classes_number
-        library_description['nl_samples_avail']=do_nonlinear_register
-        library_description['modalities']=modalities+1
+        library_description.map = inv_dict(dict(build_remap))
+        library_description.classes_number = classes_number
+        library_description.nl_samples_avail = do_nonlinear_register
+        library_description.modalities = modalities+1
         
-        largest_label=max(library_description['map'].values(), key=lambda p: int(p))
+        largest_label = max(library_description.map.values(), key=lambda p: int(p))
         
-        library_description['seg_datatype']='short'
+        library_description.seg_datatype = 'short'
         
-        if largest_label<=255: 
-            library_description['seg_datatype']='byte'
+        if largest_label <= 255:
+            library_description.seg_datatype = 'byte'
 
-        library_description['gco_energy']=output+os.sep+'gco_energy.csv'
-        estimate_gco_energy(final_samples, library_description['gco_energy'], classes=classes_number)
-        library_description['label_map'] = label_map
+        library_description.gco_energy=output+os.sep+'gco_energy.csv'
+        estimate_gco_energy(final_samples, library_description.gco_energy, classes=classes_number)
+        library_description.label_map = label_map
         
         if build_symmetric and build_symmetric_flip:
-            library_description['local_model_flip']     =local_model.scan_f
-            library_description['local_model_add_flip'] =local_model.add_f
-            library_description['local_model_mask_flip']=local_model.mask_f
-            library_description['local_model_seg_flip'] =local_model.seg_f
-            library_description['flip_map']=inv_dict(dict(build_flip_remap))
+            library_description.local_model_flip     = local_model.scan_f
+            library_description.local_model_add_flip = local_model.add_f
+            library_description.local_model_mask_flip= local_model.mask_f
+            library_description.local_model_seg_flip = local_model.seg_f
+            library_description.flip_map             = inv_dict(dict(build_flip_remap))
         else:
-            library_description['local_model_flip']=None
-            library_description['local_model_add_flip']=[]
-            library_description['local_model_mask_flip']=None
-            library_description['flip_map']={}
+            library_description.local_model_flip = None
+            library_description.local_model_add_flip = []
+            library_description.local_model_mask_flip = None
+            library_description.flip_map = {}
         
-        library_description['library']=[]
+        library_description.library = []
         
         for (j, i) in enumerate(final_samples):
-            ss=[i.scan, i.seg ]
+            ss = [i.scan, i.seg]
             ss.extend(i.add)
             
             if do_nonlinear_register:
-                ss.extend( [ final_transforms[j].xfm, final_transforms[j].xfm_inv, warped_samples[j].scan, warped_samples[j].seg, bbox_lin_xfm[j].xfm  ])
+                ss.extend([final_transforms[j].xfm, final_transforms[j].xfm_inv, warped_samples[j].scan, warped_samples[j].seg, bbox_lin_xfm[j].xfm])
             else:
-                ss.extend( [ bbox_lin_xfm[j].xfm ])
-                
-            library_description['library'].append(ss)
+                ss.extend([bbox_lin_xfm[j].xfm])
+
+            library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
             
             if build_symmetric:
-                ss=[i.scan_f, i.seg_f  ]
+                ss = [i.scan_f, i.seg_f]
                 ss.extend(i.add_f)
                 
                 if do_nonlinear_register:
-                    ss.extend( [ final_transforms[j].xfm_f, final_transforms[j].xfm_f_inv, warped_samples[j].scan_f, warped_samples[j].seg_f, bbox_lin_xfm[j].xfm_f ])
+                    ss.extend([final_transforms[j].xfm_f, final_transforms[j].xfm_f_inv, warped_samples[j].scan_f, warped_samples[j].seg_f, bbox_lin_xfm[j].xfm_f ])
                 else:
-                    ss.extend( [ bbox_lin_xfm[j].xfm_f ])
+                    ss.extend([bbox_lin_xfm[j].xfm_f])
 
-                library_description['library'].append(ss)
+                library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
 
-        save_library_info( library_description, output)
+        #save_library_info( library_description, output)
+        library_description.save(output)
         # cleanup
         if cleanup:
             shutil.rmtree(work_dir)
@@ -671,11 +672,11 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
 
 def estimate_gco_energy(samples,output,classes=2):
     with mincTools() as m:
-        files=[f.seg for f in samples]
-        cmd=['label_interaction_estimate']
+        files = [f.seg for f in samples]
+        cmd = ['label_interaction_estimate']
         cmd.extend(files)
         cmd.append(output)
         cmd.extend(['--classes', str(classes)])
-        m.command(cmd,inputs=files,outputs=[output])
+        m.command(cmd, inputs=files, outputs=[output])
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

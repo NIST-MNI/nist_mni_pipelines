@@ -26,6 +26,8 @@ from .filter           import make_border_mask
 from .filter           import generate_flip_sample
 from .library          import save_library_info
 from .library          import load_library_info
+from .library          import LibEntry
+from .library          import SegLibrary
 from .train            import generate_library
 from .fuse             import fusion_segment
 from .train_ec         import train_ec_loo
@@ -44,6 +46,7 @@ __all__= ['generate_library',
           'train_ec_loo',
           'volume_measure',
           'seg_to_volumes',
-          'save_library_info']
+          'save_library_info',
+          'LibEntry', 'SegLibrary']
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

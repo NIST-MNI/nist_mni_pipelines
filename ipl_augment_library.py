@@ -34,22 +34,36 @@ from scoop import futures, shared
 # 
 import numpy as np
 
-
-def load_pca_lib(loc):
-    pca_lib_dir=os.path.dirname(loc)
+class pca_lib:
+  def __init__(self,loc=None):
+    self.pca_lib_dir=None
+    self.lib=[]
+    self.var=[]
+    if loc is not None:
+      self.load(loc)
     
-    pca_lib=[]
+  def load(self, loc):
+    self.pca_lib_dir=os.path.dirname(loc)
     
+    self.lib=[]
+    self.var=[]
     with open(loc,'r') as f:
         for l in f:
             l=l.rstrip("\n")
-            pca_lib.append(pca_lib_dir+os.sep+l.split(',')[1])
-    
+            (_v,_f)=l.split(',')
+            self.var.append(float(_v))
+            self.lib.append(self.pca_lib_dir+os.sep+_f)
+            
     # remove mean
-    pca_lib.pop(0)
-    return pca_lib
+    self.lib.pop(0)
+    self.var.pop(0)
+    return self.lib
     
-    
+  def __len__(self):
+    return len(self.lib)
+  
+  def __getitem__(self,key):
+    return self.lib[key]
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -96,14 +110,21 @@ def parse_options():
     
     parser.add_argument('--intpca',
                     help="Apply intensity variance using PCA library of log fields")
+                    
+    parser.add_argument('--gridpca',
+                    help="Apply nonlinar tranformation variance using PCA library of log fields")
     
     parser.add_argument('--intvar',
-                    default=0.1,
+                    default=0.1,type=float,
                     help="Intensity variance (log space)")
     
     parser.add_argument('--int_n',
-                    default=3,
-                    help="Number of PCA components (log space)")
+                    default=3,type=int,
+                    help="Number of Intensity PCA components (log space)")
+                    
+    parser.add_argument('--grid_n',
+                    default=10,type=int,
+                    help="Number of grid PCA components to use")
     ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
                         #default=None,
@@ -118,7 +139,7 @@ def parse_options():
     return options
 
 
-def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, pca_lib=None):
+def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, pca_int=None, pca_grid=None):
   try:
     with mincTools() as m:
         
@@ -187,18 +208,33 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 # apply random linear xfm
                 ran_xfm=m.tmp('random_{}.xfm'.format(r))
                 
-                m.param2xfm(ran_xfm,
-                            scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
-                            translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
-                            rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
+                if pca_grid is None:
+                  m.param2xfm(ran_xfm,
+                              scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
+                              translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
+                              rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
+                else:
+                  # create a random transform
+                  ran_grid=ran_xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
                 
+                  _files=[]
+                  cmd=[]
+                  _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.shift)).tolist()
+                  # resample fields first
+                  for i in range(options.grid_n):
+                      _files.append(pca_grid[i])
+                      cmd.append('A[{}]*{}'.format(i,_par[i]))
+                  cmd='+'.join(cmd)
+                  # apply to the output
+                  m.calc(_files,cmd,ran_grid)
+                  with open(ran_xfm,'w') as f:
+                    f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
+                      format(os.path.basename(ran_grid)))
                 if flip:
                     m.xfmconcat([lib_sample[-1], m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
                 else:
                     m.xfmconcat([lib_sample[-1], ran_xfm], out_xfm)
-                
-                # TODO: add nonlinear XFM
-                
+                                
                 if mask is not None:
                     m.resample_labels(mask, out_mask, 
                                     transform=out_xfm, like=model)
@@ -208,10 +244,6 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 m.resample_labels(filtered_dataset.seg, out_seg, 
                                 transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
 
-                #if post_filters is not None:
-                    #output_scan=m.tmp('scan_{}.mnc'.format(r))
-                #else:
-                    #output_scan=out_vol
                 output_scan=m.tmp('scan_{}.mnc'.format(r))
                     
                 # create a file in temp dir first
@@ -228,7 +260,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     output_scan=output_scan2
                 
                 # apply itensity variance
-                if pca_lib is not None and options.int_n>0:
+                if pca_int is not None and options.int_n>0:
                     output_scan2=m.tmp('scan3_{}.mnc'.format(r))
                     
                     _files=[output_scan]
@@ -237,7 +269,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     # resample fields first
                     for i in range(options.int_n):
                         fld=m.tmp('field_{}_{}.mnc'.format(r,i))
-                        m.resample_smooth(pca_lib[i], fld, order=1, transform=out_xfm,like=model)
+                        m.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm,like=model)
                         _files.append(fld)
                         cmd+='*exp(A[{}]*{})'.format(i+1,_par[i])
                     # apply to the output
@@ -289,21 +321,27 @@ if __name__ == '__main__':
         if not os.path.exists(options.output):
             os.makedirs(options.output)
         
-        pca_lib=None
+        pca_int=None
+        pca_grid=None
+        
         if options.intpca is not None:
-            pca_lib=load_pca_lib(options.intpca)
+            pca_int=pca_lib(options.intpca)
+            
+        if options.gridpca is not None:
+            pca_grid=pca_lib(options.gridpca)
         
         
         outputs=[]
         print(repr(samples))
+        print(repr(pca_grid.lib))
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
-                gen_sample, library, options, source_parameters, j , idx=i,pca_lib=pca_lib ) )
+                gen_sample, library, options, source_parameters, j , idx=i,pca_grid=pca_grid,pca_int=pca_int ) )
             # flipped (?)
             if build_symmetric:
                 outputs.append( futures.submit( 
-                    gen_sample, library, options, source_parameters, j , idx=i , flip=True,pca_lib=pca_lib) )
+                    gen_sample, library, options, source_parameters, j , idx=i , flip=True,pca_grid=pca_grid,pca_int=pca_int) )
                     
         #
         futures.wait(outputs, return_when=futures.ALL_COMPLETED)

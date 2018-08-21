@@ -40,7 +40,7 @@ def train_ec_loo( segmentation_library,
     
     try:
         ec_variant = ec_parameters.get( 'variant'  , ec_variant)
-        work_dir   = ec_parameters.get( 'work_dir' , segmentation_library['prefix'] + os.sep + fuse_variant )
+        work_dir   = ec_parameters.get( 'work_dir' , segmentation_library.prefix + os.sep + fuse_variant )
         ec_output  = ec_parameters.get( 'output'   , work_dir + os.sep + ec_variant + '.pickle' )
             
         ec_border_mask          = ec_parameters.get( 'border_mask' , True )
@@ -56,7 +56,7 @@ def train_ec_loo( segmentation_library,
         ec_train_cv             = ec_parameters.get( 'train_cv', 1 )
         ec_sample_pick_strategy = ec_parameters.get( 'train_pick', 'random' )
         ec_max_samples          = ec_parameters.get( 'max_samples', -1 )
-        modalities              = ec_parameters.get( 'train_modalities', segmentation_library.get('modalities',1) ) - 1 
+        modalities              = ec_parameters.get( 'train_modalities', segmentation_library.modalities ) - 1
         
         print("\n\n")
         print("EC modalities:{}".format(modalities))
@@ -79,27 +79,27 @@ def train_ec_loo( segmentation_library,
             os.makedirs(work_dir)
         
         # setup parameters to stop early
-        local_model_mask=segmentation_library['local_model_mask']
+        local_model_mask=segmentation_library.local_model_mask
         
         # disable EC options if present
         segmentation_parameters['ec_options']=None
         
-        ec_train=[]
+        ec_train = []
         ec_train_file = work_dir+os.sep+'train_ec_'+ec_variant+'.json'
-        #ec_train_library = segmentation_library['library']
+        #ec_train_library = segmentation_library.library
         ec_work_dirs=[]
         
         
         if not os.path.exists( ec_train_file ):
             results=[]
             
-            _train_list=[]
+            _train_list = []
             # if we have pre-segmented scans, then we should pre-process training library again (!) and train on pre-segmented scans
             if ext and train_list :
-                results2=[]
+                results2 = []
                 
                 for (i,j) in enumerate( train_list ):
-                    n=os.path.basename( j[0] ).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+                    n = os.path.basename( j[0] ).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                     
                     output_pre_seg =work_dir+os.sep+'pre_'+n
                     ec_work_dir = work_dir+os.sep+'work_pre_'+n
@@ -141,37 +141,37 @@ def train_ec_loo( segmentation_library,
                 #train_list=range()
                 
                 # now pre-fill training library with freshly pre-processed samples
-                for (_i,_j) in enumerate(results2):
+                for (_i, _j) in enumerate(results2):
                     print("{} - done ".format(_j.result()[1]['bbox_sample'].seg))
                     # raise("Not FINISHED!")
-                    sample_id=os.path.basename(train_list[_i][0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+                    sample_id = os.path.basename(train_list[_i][0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                     # include into the training list
-                    train_list_i=[ i for i,j in enumerate(segmentation_library['library']) if j[0].find(sample_id)>=0 ]
+                    train_list_i = [i for i, j in enumerate(segmentation_library.library) if j[0].find(sample_id) >= 0]
                     # the output should be either one or two samples, if symmetrized version is used 
                     
-                    if len(train_list_i)==1:
+                    if len(train_list_i) == 1:
                         # we have a single match!
-                        match=segmentation_library['library'][train_list_i[0]]
+                        match = segmentation_library.library[train_list_i[0]]
                         
-                        train=match[0:2]
+                        train = match[0:2]
                         train.append(_j.result()[1]['bbox_sample'].seg)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
-                    elif len(train_list_i)==2:
+                    elif len(train_list_i) == 2:
                         # we have left and right samples
                         # we assume that straight is first and flipped is second
+
+                        match = segmentation_library.library[train_list_i[0]]
                         
-                        match=segmentation_library['library'][train_list_i[0]]
-                        
-                        train=match[0:2]
+                        train = match[0:2]
                         train.append(_j.result()[1]['bbox_sample'].seg)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                         
                         # flipped version
-                        match=segmentation_library['library'][train_list_i[1]]
+                        match = segmentation_library.library[train_list_i[1]]
                         
-                        train=match[0:2]
+                        train = match[0:2]
                         train.append(_j.result()[1]['bbox_sample'].seg_f)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
@@ -179,45 +179,43 @@ def train_ec_loo( segmentation_library,
                         raise "Unexpected number of matches encountered!"
                     
             else:
-                _train_list=segmentation_library['library']
-            
-            
+                _train_list = segmentation_library.library
             
             segmentation_parameters['run_in_bbox']=True
-            if ec_train_cv == 1 :
+            if ec_train_cv == 1:
                 print("_train_list={}".format(repr(_train_list)))
-                if  ec_train_rounds > 0 and \
-                    ec_train_rounds < len( _train_list ):
+                if ec_train_rounds > 0 and ec_train_rounds < len(_train_list):
 
                     if ec_sample_pick_strategy=='random' and ec_max_samples>0:
-                        ec_train_library=random.sample(_train_list,ec_max_samples)
+                        ec_train_library = random.sample(_train_list, ec_max_samples)
                     else:
-                        ec_train_library=_train_list[0:ec_max_samples]
+                        ec_train_library = _train_list[0:ec_max_samples]
                 else:
-                    ec_train_library=_train_list
+                    ec_train_library = _train_list
                     
-                for (_i, _j) in enumerate( ec_train_library ):
-                    n=os.path.basename( _j[0] ).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
+                for (_i, _j) in enumerate(ec_train_library):
+                    n = os.path.basename(_j[0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                     
                     output_loo_seg=work_dir+os.sep+n
                     ec_work_dir=work_dir+os.sep+'work_ec_'+n
                     
                     #TODO: find out how to select appropriate segmentation
-                    train_sample=_j[0]
-                    train_segment=_j[1]
-                    train_add=[]
+                    train_sample = _j[0]
+                    train_segment = _j[1]
+                    train_add = []
                     
-                    train_presegment=None
-                    
+                    train_presegment = None
+                    print(train_sample)
+
                     if ext:
                         train_presegment=_j[2]
-                        train_add=_j[3:3+modalities]
+                        train_add = _j[3:3+modalities]
                     else:
-                        train_add=_j[2:2+modalities]
+                        train_add = _j[2:2+modalities]
                     
                     experiment_segmentation_library = copy.deepcopy(segmentation_library)
                     # remove sample
-                    experiment_segmentation_library['library'] = [ i for i in segmentation_library['library'] if i[0].find(n)<0 ]
+                    experiment_segmentation_library.library = [ i for i in segmentation_library.library if i[0].find(n)<0 ]
                     
                     results.append( futures.submit( 
                             fusion_segment,
@@ -263,28 +261,29 @@ def train_ec_loo( segmentation_library,
                     if debug: print(repr(rem_lib))
                     rem_lib=set(rem_lib)
                     #prepare exclusion list
-                    experiment_segmentation_library=copy.deepcopy(segmentation_library)
+                    experiment_segmentation_library = copy.deepcopy(segmentation_library)
                     
-                    experiment_segmentation_library[ 'library' ]=\
-                        [ k for j,k in enumerate( segmentation_library[ 'library' ] )  if j not in rem_lib ]
+                    experiment_segmentation_library.library = \
+                        [k for j, k in enumerate(segmentation_library['library']) if j not in rem_lib]
                     
-                    for j,k in enumerate( rem_items ):
+                    for j, k in enumerate(rem_items):
                         
-                        output_experiment=work_dir+os.sep+'{}_{}_{}'.format(i,rem_n[j],'ec')
-                        ec_work_dir=work_dir+os.sep+'work_{}_{}_{}'.format(i,rem_n[j],fuse_variant)
+                        output_experiment = work_dir+os.sep+'{}_{}_{}'.format(i, rem_n[j], 'ec')
+                        ec_work_dir = work_dir+os.sep+'work_{}_{}_{}'.format(i, rem_n[j], fuse_variant)
                         
                         # ???
-                        sample=[k[0],k[1]]
-                        presegment=None
+                        sample = [k[0], k[1]]
+                        presegment = None
+
                         if ext:
-                            presegment=k[2]
+                            presegment = k[2]
                             sample.extend(k[3:3+modalities])
                         else:
                             sample.extend(k[2:2+modalities])
                         
                         ec_train_library.append(sample)
                         
-                        results.append( futures.submit( 
+                        results.append(futures.submit(
                                 fusion_segment,
                                 k[0], 
                                 experiment_segmentation_library,
@@ -330,7 +329,7 @@ def train_ec_loo( segmentation_library,
                     labels_prefix=auto_segment.rsplit('.mnc', 1)[0]
 
                     results3.append( futures.submit( split_labels, auto_segment, 
-                                                    experiment_segmentation_library['classes_number'], 
+                                                    experiment_segmentation_library.classes_number,
                                                     labels_prefix,
                                                     antialias=ec_antialias_labels,
                                                     blur=ec_blur_labels,
@@ -340,7 +339,7 @@ def train_ec_loo( segmentation_library,
                     ec_input=[ train_sample ]
                     ec_input.extend(train_add)
 
-                    ec_input.extend(['{}_{:02d}.mnc'.format(labels_prefix,i) for i in range(experiment_segmentation_library['classes_number']) ])
+                    ec_input.extend(['{}_{:02d}.mnc'.format(labels_prefix,i) for i in range(experiment_segmentation_library.classes_number) ])
                     ec_input.extend([ auto_segment, train_mask, train_segment ])
                     ec_train.append( ec_input )
 
@@ -353,7 +352,7 @@ def train_ec_loo( segmentation_library,
             if ec_border_mask:
                 futures.wait(results2, return_when=futures.ALL_COMPLETED)
 
-            if experiment_segmentation_library['classes_number']>2 :
+            if experiment_segmentation_library.classes_number>2 :
                 futures.wait(results3, return_when=futures.ALL_COMPLETED)
 
             # TODO run Error correction here
@@ -361,7 +360,7 @@ def train_ec_loo( segmentation_library,
                 json.dump(ec_train, f ,indent=1)
         else:
             with open(ec_train_file,'r') as r:
-                ec_train=json.load(r)
+                ec_train = json.load(r)
 
         if ec_split is None :
             if not os.path.exists( ec_output ) :

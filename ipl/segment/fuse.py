@@ -13,6 +13,7 @@ import re
 import json
 import traceback
 
+import yaml
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
@@ -29,7 +30,6 @@ from .qc               import *
 from .fuse_segmentations import *
 from .library          import *
 from .analysis         import *
-
 
 
 def fusion_segment( input_scan,
@@ -71,8 +71,8 @@ def fusion_segment( input_scan,
         if not os.path.exists(work_dir):
             os.makedirs(work_dir)
 
-        work_lib_dir=  work_dir+os.sep+'library'
-        work_lib_dir_f=work_dir+os.sep+'library_f'
+        work_lib_dir =   work_dir+os.sep+'library'
+        work_lib_dir_f = work_dir+os.sep+'library_f'
 
         if not os.path.exists(work_lib_dir):
             os.makedirs(work_lib_dir)
@@ -200,9 +200,9 @@ def fusion_segment( input_scan,
         # mask output
         mask_output         = parameters.get('mask_output', True)
         
-        classes_number      = library_description['classes_number']
-        seg_datatype        = library_description['seg_datatype']
-        gco_energy          = library_description['gco_energy']
+        classes_number      = library_description.classes_number
+        seg_datatype        = library_description.seg_datatype
+        gco_energy          = library_description.gco_energy
         
         
         output_info         = {}
@@ -214,26 +214,26 @@ def fusion_segment( input_scan,
         sample              = input_sample
         
         # get parameters
-        model = MriDataset(scan=library_description['model'], 
-                            mask=library_description['model_mask'],
-                            add= library_description.get('model_add',[]) )
+        model = MriDataset(scan=library_description.model,
+                           mask=library_description.model_mask,
+                           add= library_description.model_add)
         
-        local_model = MriDataset(scan=library_description['local_model'],
-                                mask=library_description['local_model_mask'],
-                                scan_f=library_description.get('local_model_flip',None),
-                                mask_f=library_description.get('local_model_mask_flip',None),
-                                seg=   library_description.get('local_model_seg',None),
-                                seg_f= library_description.get('local_model_seg_flip',None),
-                                add=   library_description.get('local_model_add',[]),
-                                add_f= library_description.get('local_model_add_flip',[]),
-                                )
+        local_model = MriDataset(scan=  library_description.local_model,
+                                 mask=  library_description.local_model_mask,
+                                 scan_f=library_description.local_model_flip,
+                                 mask_f=library_description.local_model_mask_flip,
+                                 seg=   library_description.local_model_seg,
+                                 seg_f= library_description.local_model_seg_flip,
+                                 add=   library_description.local_model_add,
+                                 add_f= library_description.local_model_add_flip,
+                                 )
 
-        library = library_description['library']
+        library = library_description.library
         
-        sample_modalities=len(add)
+        sample_modalities = len(add)
         
         print("\n\n")
-        print("Sample modalities:{}".format(sample_modalities))
+        print("Additional sample modalities:{}".format(sample_modalities))
         print("\n\n")
         # apply the same steps as used in library creation to perform segmentation:
 
@@ -243,39 +243,40 @@ def fusion_segment( input_scan,
         bbox_sample=None
         nl_sample=None
         bbox_linear_xfm=None
-        flipdir=work_dir+os.sep+'flip'
+        flipdir = work_dir+os.sep+'flip'
 
-        sample_filtered=MriDataset(prefix=work_dir, name='flt_'+sample.name, add_n=sample_modalities )
+        sample_filtered = MriDataset(prefix=work_dir, name='flt_'+sample.name, add_n=sample_modalities )
 
         # QC file
         # TODO: allow for alternative location, extension
         #sample_qc=work_dir+os.sep+'qc_'+sample.name+'_'+out_variant+'.jpg'
-        sample_qc=output_segment+'_qc.jpg'
+        sample_qc = output_segment+'_qc.jpg'
 
         if run_in_bbox:
-            segment_symmetric=False # that would depend ?
-            do_initial_register=False
-            do_initial_local_register=False
+            segment_symmetric = False # that would depend ?
+            do_initial_register = False
+            do_initial_local_register = False
             # assume filter already applied!
-            pre_filters=None
-            post_filters=None
+            pre_filters =None
+            post_filters = None
+            print("Running in the box")
 
         if pre_filters is not None:
-            apply_filter( sample.scan,
-                        sample_filtered.scan,
-                        pre_filters,
-                        model=model.scan,
-                        model_mask=model.mask)
+            apply_filter(sample.scan,
+                         sample_filtered.scan,
+                         pre_filters,
+                         model=model.scan,
+                         model_mask=model.mask)
             
             if sample.mask is not None:
-                shutil.copyfile(sample.mask,sample_filtered.mask)
+                shutil.copyfile(sample.mask, sample_filtered.mask)
             else:
                 sample_filtered.mask=None
             
             for i,j in enumerate(sample.add):
-                shutil.copyfile(sample.add[i],sample_filtered.add[i])
+                shutil.copyfile(sample.add[i], sample_filtered.add[i])
                 
-            sample=sample_filtered
+            sample = sample_filtered
         else:
             sample_filtered=None
         
@@ -297,52 +298,52 @@ def fusion_segment( input_scan,
             else:
                 sample.mask_f=None
             
-            generate_flip_sample( sample )
+            generate_flip_sample(sample)
 
         if presegment is None:
-            sample.seg=None
-            sample.seg_f=None
+            sample.seg = None
+            sample.seg_f = None
 
         
         if do_initial_register is not None:
             initial_xfm=MriTransform(prefix=work_dir, name='init_'+sample.name )
             
             if inital_reg_type=='elx' or inital_reg_type=='elastix' :
-                elastix_registration( sample, 
-                    model, initial_xfm,
-                    symmetric=segment_symmetric,
-                    parameters=inital_reg_options,
-                    nl=False,
-                    use_mask=inital_reg_use_mask,
-                    downsample=inital_reg_downsample
-                    )
+                elastix_registration(sample,
+                                    model, initial_xfm,
+                                    symmetric=segment_symmetric,
+                                    parameters=inital_reg_options,
+                                    nl=False,
+                                    use_mask=inital_reg_use_mask,
+                                    downsample=inital_reg_downsample
+                                    )
             elif inital_reg_type=='ants' or inital_reg_ants:
-                linear_registration( sample, 
-                    model, initial_xfm,
-                    symmetric=segment_symmetric, 
-                    reg_type=inital_reg_type,
-                    linreg=inital_reg_options,
-                    ants=True,
-                    use_mask=inital_reg_use_mask,
-                    downsample=inital_reg_downsample
-                    )
+                linear_registration(sample,
+                                    model, initial_xfm,
+                                    symmetric=segment_symmetric,
+                                    reg_type=inital_reg_type,
+                                    linreg=inital_reg_options,
+                                    ants=True,
+                                    use_mask=inital_reg_use_mask,
+                                    downsample=inital_reg_downsample
+                                    )
             else:
-                linear_registration( sample, 
-                    model, initial_xfm,
-                    symmetric=segment_symmetric, 
-                    reg_type=inital_reg_type,
-                    linreg=inital_reg_options,
-                    downsample=inital_reg_downsample,
-                    use_mask=inital_reg_use_mask,
-                    objective=initial_reg_objective
-                    )
+                linear_registration(sample,
+                                    model, initial_xfm,
+                                    symmetric=segment_symmetric,
+                                    reg_type=inital_reg_type,
+                                    linreg=inital_reg_options,
+                                    downsample=inital_reg_downsample,
+                                    use_mask=inital_reg_use_mask,
+                                    objective=initial_reg_objective
+                                    )
             
             output_info['initial_xfm']=initial_xfm
             
 
         # local 
         bbox_sample = MriDataset(prefix=work_dir, name='bbox_init_'+sample.name,
-                                add_n=sample_modalities )
+                                 add_n=sample_modalities )
         # a hack to have sample mask
         bbox_sample_mask = MriDataset(prefix=work_dir, name='bbox_init_'+sample.name )
 
@@ -413,8 +414,8 @@ def fusion_segment( input_scan,
                     )
         
         if sample.seg is not None:
-            _lut=None
-            _flip_lut=None
+            _lut = None
+            _flip_lut = None
             if not run_in_bbox: # assume that labels are already renamed
                 _lut=invert_lut(library_description.get("map",None))
                 _flip_lut=invert_lut(library_description.get("flip_map",None))
@@ -488,51 +489,53 @@ def fusion_segment( input_scan,
                         filters=post_filters,
                         )
             
-            warp_model_mask(local_model,bbox_sample_mask,
+            warp_model_mask(local_model, bbox_sample_mask,
                         transform=nonlinear_xfm,
                         symmetric=segment_symmetric,
                         resample_order=resample_order)
             
-            bbox_sample.mask=bbox_sample_mask.mask
-            bbox_sample.mask_f=bbox_sample_mask.mask_f
+            bbox_sample.mask = bbox_sample_mask.mask
+            bbox_sample.mask_f = bbox_sample_mask.mask_f
             
-            output_info['bbox_sample']=bbox_sample
-            output_info['nl_sample']=nl_sample
+            output_info['bbox_sample'] = bbox_sample
+            output_info['nl_sample'] = nl_sample
         else:
             nl_sample=bbox_sample
             # use mask from the model directly?
-            bbox_sample.mask=local_model.mask
-            bbox_sample.mask_f=local_model.mask
+            bbox_sample.mask = local_model.mask
+            bbox_sample.mask_f = local_model.mask
             
         output_info['nonlinear_xfm']=nonlinear_xfm
 
         if generate_library:
             # remove excluded samples TODO: use regular expressions for matching?
-            selected_library=[i for i in library if i[0] not in exclude]
-            selected_library_f=[]
+            selected_library = [i for i in library if i[0] not in exclude]
+            selected_library_f = []
             
             if segment_symmetric: # fill up with all entries
-                selected_library_f=copy.deepcopy(selected_library)
+                selected_library_f = copy.deepcopy(selected_library)
 
             # library pre-selection if needed
             # TODO: skip if sample presegmented
             if library_preselect>0 and library_preselect < len(selected_library):
-                loaded=False
-                loaded_f=False
+                loaded = False
+                loaded_f = False
                 
-                if os.path.exists(work_lib_dir+os.sep+'sel_library.json'):
-                    with open(work_lib_dir+os.sep+'sel_library.json','r') as f:
-                        selected_library=json.load(f)
-                    loaded=True
+                if os.path.exists(work_lib_dir+os.sep+'sel_library.yaml'):
+                    with open(work_lib_dir+os.sep+'sel_library.yaml','r') as f:
+                        selected_library = yaml.load(f)
+                        # TODO: fix prefixes of the seg entries
+                    loaded = True
 
-                if segment_symmetric and os.path.exists(work_lib_dir_f+os.sep+'sel_library.json'):
-                    with open(work_lib_dir_f+os.sep+'sel_library.json','r') as f:
-                        selected_library_f=json.load(f)
-                    loaded_f=True
+                if segment_symmetric and os.path.exists(work_lib_dir_f+os.sep+'sel_library.yaml'):
+                    with open(work_lib_dir_f+os.sep+'sel_library.yaml','r') as f:
+                        selected_library_f = yaml.load(f)
+                        # TODO: fix prefixes of the seg entries
+                    loaded_f = True
                 
                 if do_nonlinear_register:
                     if not loaded:
-                        selected_library=preselect(nl_sample,
+                        selected_library = preselect(nl_sample,
                                             selected_library, 
                                             method=library_preselect_method, 
                                             number=library_preselect,
@@ -541,7 +544,7 @@ def fusion_segment( input_scan,
                                             lib_add_n=library_modalities) 
                     if segment_symmetric:
                         if not loaded_f:
-                            selected_library_f=preselect(nl_sample,
+                            selected_library_f = preselect(nl_sample,
                                                     selected_library_f, 
                                                     method=library_preselect_method,
                                                     number=library_preselect,
@@ -551,7 +554,7 @@ def fusion_segment( input_scan,
                                                     lib_add_n=library_modalities)
                 else:
                     if not loaded:
-                        selected_library=preselect(bbox_sample,
+                        selected_library = preselect(bbox_sample,
                                             selected_library,
                                             method=library_preselect_method,
                                             number=library_preselect,
@@ -560,7 +563,7 @@ def fusion_segment( input_scan,
                                             lib_add_n=library_modalities)
                     if segment_symmetric:
                         if not loaded_f:
-                            selected_library_f=preselect(bbox_sample, 
+                            selected_library_f = preselect(bbox_sample,
                                                     selected_library_f,
                                                     method=library_preselect_method,
                                                     number=library_preselect,
@@ -569,13 +572,13 @@ def fusion_segment( input_scan,
                                                     lib_add_n=library_modalities)
 
                 if not loaded:
-                    with open(work_lib_dir+os.sep+'sel_library.json','w') as f:
-                        json.dump(selected_library,f)
+                    with open(work_lib_dir+os.sep+'sel_library.yaml','w') as f:
+                        f.write(yaml.dump(selected_library))
 
                 if not loaded_f:
                     if segment_symmetric:
-                        with open(work_lib_dir_f+os.sep+'sel_library.json','w') as f:
-                            json.dump(selected_library_f,f)
+                        with open(work_lib_dir_f+os.sep+'sel_library.yaml','w') as f:
+                            f.write(yaml.dump(selected_library_f))
                             
                 output_info['selected_library']=selected_library
                 if segment_symmetric:
@@ -592,8 +595,8 @@ def fusion_segment( input_scan,
             selected_library_warped2_f=[]
             selected_library_xfm2_f=[]
             
-            for (i,j) in enumerate(selected_library):
-                d=MriDataset(scan=j[0],seg=j[1], add=j[2:2+library_modalities] )
+            for (i, j) in enumerate(selected_library):
+                d = MriDataset(scan=j[0], seg=j[1], add=list(j[2:2+library_modalities]))
                 
                 selected_library_scan.append(d)
                 
@@ -684,7 +687,7 @@ def fusion_segment( input_scan,
                     for (i,j) in enumerate(selected_library_f):
                         # TODO: make clever usage of precomputed transform if available
                         
-                        if pairwise_register_type=='elx' or pairwise_register_type=='elastix' :
+                        if pairwise_register_type == 'elx' or pairwise_register_type == 'elastix':
                             results.append( futures.submit(
                                 elastix_registration, 
                                 bbox_sample,
@@ -780,11 +783,13 @@ def fusion_segment( input_scan,
         
         results=[]
 
-        sample_seg=MriDataset(name='bbox_seg_' + sample.name+out_variant, prefix=work_dir )
-        sample_seg.mask=None
-        sample_seg.mask_f=None
-        
-        results.append( futures.submit(
+        sample_seg = MriDataset(name='bbox_seg_' + sample.name+out_variant, prefix=work_dir )
+        sample_seg.mask = None
+        sample_seg.mask_f = None
+
+        print(local_model        )
+
+        results.append(futures.submit(
             fuse_segmentations,
             bbox_sample,
             sample_seg,
@@ -833,7 +838,7 @@ def fusion_segment( input_scan,
                                     options=qc_options,
                                     model=local_model,
                                     symmetric=segment_symmetric,
-                                    labels=library_description['classes_number'])
+                                    labels=library_description.classes_number)
         # cleanup if need
         if cleanup:
             shutil.rmtree(work_lib_dir)
@@ -860,11 +865,11 @@ def fusion_segment( input_scan,
             
             warp_rename_seg(sample_seg, input_sample, sample_seg_native, 
                             transform=bbox_linear_xfm, invert_transform=True, 
-                            lut=library_description['map'] , 
+                            lut=library_description.map ,
                             symmetric=segment_symmetric,
                             symmetric_flip=segment_symmetric,
                             use_flipped=segment_symmetric,  # needed to flip .seg_f back to right orientation
-                            flip_lut=library_description['flip_map'],
+                            flip_lut=library_description.flip_map,
                             resample_baa=resample_baa, 
                             resample_order=resample_order,
                             datatype=seg_datatype )
@@ -890,9 +895,9 @@ def fusion_segment( input_scan,
             output_info['output_segment'] = _output_segment
             output_info['output_volumes'] = seg_to_volumes(_output_segment, 
                                             output_segment+'_vol.json', 
-                                            label_map=library_description.get('label_map',None))
+                                            label_map=library_description.label_map)
             
-            output_info['output_volumes_json']=output_segment+'_vol.json'
+            output_info['output_volumes_json'] = output_segment+'_vol.json'
 
             # TODO: cleanup more here (?)
             
@@ -902,11 +907,11 @@ def fusion_segment( input_scan,
         
     except mincError as e:
         print("Exception in fusion_segment:{}".format(str(e)))
-        traceback.print_exc( file=sys.stdout )
+        traceback.print_exc(file=sys.stdout )
         raise
     except :
         print("Exception in fusion_segment:{}".format(sys.exc_info()[0]))
-        traceback.print_exc( file=sys.stdout)
+        traceback.print_exc(file=sys.stdout)
         raise
     
 

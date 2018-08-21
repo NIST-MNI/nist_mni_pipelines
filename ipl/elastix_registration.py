@@ -201,11 +201,11 @@ def nl_xfm_to_elastix(xfm, elastix_par):
     Assuming that xfm file is strictly non-linear, with a single non-linear deformation field
     """
     # TODO: make a proper parsing of XFM file
-    with ip.minc_tools.mincTools() as minc:
+    with ipl.minc_tools.mincTools() as minc:
         grid=xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
         if not os.path.exists(grid):
           print("nl_xfm_to_elastix error!")
-          raise ip.minc_tools.mincError("Unfortunately currently only a very primitive way of dealing with Minc XFM files is implemented\n{}".format(traceback.format_exc()))
+          raise ipl.minc_tools.mincError("Unfortunately currently only a very primitive way of dealing with Minc XFM files is implemented\n{}".format(traceback.format_exc()))
         
         with open(elastix_par,'w') as f:
             f.write("(Transform \"DeformationFieldTransform\")\n")
@@ -218,7 +218,7 @@ def lin_xfm_to_elastix(xfm,elastix_par):
     """Convert MINC style xfm into elastix style registration parameters
     Assuming that xfm fiel is strictly linear
     """
-    with ip.minc_tools.mincTools() as minc:
+    with ipl.minc_tools.mincTools() as minc:
         minc.command(['itk_convert_xfm',xfm,minc.tmp('input.txt')],
                      inputs=xfm,outputs=[minc.tmp('input.txt')])
         # parsing text transformation
@@ -247,7 +247,7 @@ def lin_xfm_to_elastix(xfm,elastix_par):
     
 def nl_elastix_to_xfm(elastix_par, xfm, downsample_grid=None, nl=True ):
     """Convert elastix transformation file into minc XFM file"""
-    with ip.minc_tools.mincTools() as minc:
+    with ipl.minc_tools.mincTools() as minc:
         threads=os.environ.get('ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS',1)
         cmd=['transformix', '-tp',  elastix_par, '-out',  minc.tempdir,'-xfm', xfm, '-q', '-threads', str(threads)]
         
@@ -390,8 +390,9 @@ def register_elastix(
     nl          -- flag to show that non-linear version is running
     output_log  -- output log
     iterations  -- run several iterations (restarting elastix), will be done automatically if parameters is a list
+    :rtype:
     """
-    with ip.minc_tools.mincTools() as minc:
+    with ipl.minc_tools.mincTools() as minc:
         
         def_iterations=4000
         
@@ -407,7 +408,7 @@ def register_elastix(
 
         if (init_par is not None) and (init_xfm is not None):
             print("register_elastix: init_xfm={} init_par={}".format(repr(init_xfm),repr(init_par)))
-            raise ip.minc_tools.mincError("Specify either init_xfm or init_par")
+            raise ipl.minc_tools.mincError("Specify either init_xfm or init_par")
 
         outputs=[]
         if output_par is not None: outputs.append(output_par)
@@ -423,7 +424,7 @@ def register_elastix(
             parameters={}
         #print("Running elastix with parameters:{}".format(repr(parameters)))
         # figure out what to do here:
-        with ip.minc_tools.cache_files(work_dir=work_dir,context='elastix') as tmp:
+        with ipl.minc_tools.cache_files(work_dir=work_dir,context='elastix') as tmp:
             
             if init_xfm is not None:
                 if nl:
@@ -539,7 +540,7 @@ def register_elastix(
                         else:
                             #
                             print("Elastix output:\n{}".format("\n".join(out_)))
-                            raise ip.minc_tools.mincError("Elastix didn't report measure")
+                            raise ipl.minc_tools.mincError("Elastix didn't report measure")
                     else:
                         minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
                     

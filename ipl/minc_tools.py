@@ -223,7 +223,7 @@ class mincTools(temp_files):
     """minc toolkit interface , mostly basic tools """
 
     def __init__(self, tempdir=None, resample=None, verbose=0, prefix=None):
-        super(mincTools,self).__init__(tempdir=tempdir,prefix=prefix)
+        super(mincTools, self).__init__(tempdir=tempdir,prefix=prefix)
         # TODO: add some options?
         self.resample = resample
         self.verbose  = verbose
@@ -1017,6 +1017,7 @@ class mincTools(temp_files):
         operation,
         output,
         datatype=None,
+        labels=False
         ):
         """apply mathematical operation to image(s)"""
 
@@ -1024,7 +1025,8 @@ class mincTools(temp_files):
         
         if datatype:
             cmd.append(datatype)
-
+        if labels:
+            cmd.append('-labels')
         cmd.extend(inputs)
         cmd.append(output)
         

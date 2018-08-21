@@ -132,7 +132,8 @@ def average_error_maps(maps, out_avg):
         print("Exception in split_labels:{}".format(sys.exc_info()[0]))
         traceback.print_exc( file=sys.stdout)
         raise
-    
+
+
 def max_error_maps(maps, out_max):
     try:
         with mincTools( verbose=2 ) as m:
@@ -147,6 +148,7 @@ def max_error_maps(maps, out_max):
         traceback.print_exc( file=sys.stdout)
         raise
 
+
 def seg_to_volumes(seg, output_json, label_map=None,volume=None):
     with mincTools( verbose=2 ) as m:
         _out=m.label_stats(seg,label_defs=label_map,volume=volume)
@@ -158,6 +160,7 @@ def seg_to_volumes(seg, output_json, label_map=None,volume=None):
         with open(output_json,'w') as f:
             json.dump(out,f,indent=1)
         return out
+
 
 def invert_lut(inp):
     if inp is None:

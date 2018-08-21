@@ -21,6 +21,10 @@ import re
 import copy
 import random
 
+# YAML stuff
+import yaml
+
+
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
@@ -128,51 +132,50 @@ if __name__ == '__main__':
         create_parameters={}
         try:
             with open(options.create,'r') as f:
-                create_parameters=json.load(f)
-        except :
+                create_parameters = yaml.load(f)
+        except:
             print("Error loading configuration:{} {}\n".format(options.create,sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             exit( 1)
         try:
             generate_library(create_parameters, options.output, debug=options.debug,
-                            cleanup=options.cleanup)
-        except :
+                             cleanup=options.cleanup)
+        except:
             print("Error in library generation {}".format(sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             exit(1)
         
     elif options.cv is not None and \
-         options.segment is not None and \
+         options.library is not None and \
          options.output is not None:
  
         cv_parameters={}
         try:
-            with open(options.cv,'r') as f:
-                cv_parameters=json.load(f)
-        except :
+            with open(options.cv, 'r') as f:
+                cv_parameters = yaml.load(f)
+        except:
             print("Error loading configuration:{}\n{}".format(options.cv,sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             exit(1)
 
-
-        ec_parameters=None
+        ec_parameters = None
         if options.train_ec is not None:
             try:
-                with open(options.train_ec,'r') as f:
-                    ec_parameters=json.load(f)
-            except :
+                with open(options.train_ec, 'r') as f:
+                    ec_parameters = yaml.load(f)
+            except:
                 print("Error loading configuration:{}\n{}".format(options.train_ec,sys.exc_info()[0]),file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
                 exit(1)
 
-        library=load_library_info( options.segment )
+        library = SegLibrary(options.library)
 
-        segmentation_parameters={}
+        segmentation_parameters = {}
 
         if options.options is not None:
             try:
-                with open(options.options,'r') as f:
-                    segmentation_parameters=json.load(f)
+                with open(options.options, 'r') as f:
+                    segmentation_parameters = yaml.load(f)
             except :
                 print("Error loading configuration:{}\n{}".format(options.options,sys.exc_info()[0]),file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
@@ -190,17 +193,17 @@ if __name__ == '__main__':
                           cv_iter=options.cv_iter)
 
     elif options.train_ec is not None:
-        library=load_library_info(options.segment)
+        library = SegLibrary(options.library)
 
         ec_parameters={}
-        segmentation_parameters={}
+        segmentation_parameters = {}
 
         with open(options.train_ec,'r') as f:
-            ec_parameters=json.load(f)
+            ec_parameters = yaml.load(f)
 
         if options.options is not None:
             with open(options.options,'r') as f:
-                segmentation_parameters=json.load(f)
+                segmentation_parameters = yaml.load(f)
         
         train_ec_loo(library,
                      segmentation_parameters=segmentation_parameters, 

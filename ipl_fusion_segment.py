@@ -21,6 +21,8 @@ import re
 import copy
 import random
 
+import yaml
+
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
@@ -110,14 +112,14 @@ if __name__ == '__main__':
     if     options.library is not None \
        and options.input is not None \
        and options.output is not None:
-           
-        library=load_library_info( options.library )
-        segmentation_parameters={}
+
+        library = SegLibrary(options.segment)
+        segmentation_parameters = {}
 
         if options.options is not None:
             try:
                 with open(options.options,'r') as f:
-                    segmentation_parameters=json.load(f)
+                    segmentation_parameters = yaml.load(f)
             except :
                 print("Error loading configuration:{}\n{}".format(options.options,sys.exc_info()[0]),file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
