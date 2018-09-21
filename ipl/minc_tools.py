@@ -705,6 +705,7 @@ class mincTools(temp_files):
                      'byte','short','long','float','double'
         labels   -- assume scan contains integer labels, only works with nearest neignour
         tfm_input_sampling -- apply linear xfm to sampling parameters, assumes mincresample is used
+        :rtype: object
         """
         if os.path.exists(output):
             return
