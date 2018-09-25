@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #
@@ -465,9 +464,5 @@ hostname
 
         pass
 
-
-if __name__ == '__main__':
-
-    pass
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

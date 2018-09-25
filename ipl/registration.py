@@ -41,7 +41,7 @@ else:
     basestring = basestring
     
     
-    
+
 linear_registration_config={
     'bestlinreg': [
               {  "blur"       : "blur",

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #
@@ -501,14 +500,6 @@ def runTimePoint_ThirdStage(tp, patient):
         pipeline_classification(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
-        # writing images to file
-        # Face
-        # ###########
-        # pipeline_face(patient,tp)
-        # writing images to file
-        
-
-        # writing images to file
     except mincError as e:
         print("Exception in runTimePoint_ThirdStage:{}".format(repr(e)) )
         traceback.print_exc(file=sys.stdout)

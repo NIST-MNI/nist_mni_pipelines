@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import os
 from iplPatient import *  # class to store all the patient data
 import argparse
@@ -211,10 +210,9 @@ def parse_options():
 
     return options
 
-if __name__ == '__main__':
+def main():
     
     options = parse_options()
-    
     query_volumes(options)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on;tab-width 4

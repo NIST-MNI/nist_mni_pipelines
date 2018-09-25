@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #
@@ -233,11 +232,5 @@ def pipeline_run_add_tp(patient, tp):
             output_grad=output_prefix+'_grad.mnc'
             output_grad_vol=output_prefix+'_grad.json'
             patient[tp].add[output_name]={'grad':output_grad,'vol':output_grad_vol}
-
-if __name__ == '__main__':
-    pass
-
-  # Using script as a stand-alone script
-  # do nothing
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

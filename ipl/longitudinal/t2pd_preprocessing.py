@@ -1,6 +1,4 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
 # @author Daniel, Vladimir S. FONOV
 # @date 10/07/2011
