@@ -347,7 +347,7 @@ def launchPipeline(options):
             print('{} - {}'.format(id,visit) )
             # store patients in the pickle
         
-    if opts.pe is None: # use SCOOP to run all subjects in parallel
+    if options.pe is None: # use SCOOP to run all subjects in parallel
         pickles = []
     
         for (id, i) in patients.items():
