@@ -125,11 +125,15 @@ def parse_options():
     parser.add_argument('--grid_n',
                     default=10,type=int,
                     help="Number of grid PCA components to use")
+
+    parser.add_argument('--gridvar',
+                    default=0.1,type=float,
+                    help="Variance of grid transformation")
+
     ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
                         #default=None,
                         #help="Provide alternative samples (TODO)")
-    
     
     options = parser.parse_args()
     
@@ -189,8 +193,8 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
             # apply pre-filtering before other stages
             filtered_dataset = MriDataset( prefix=m.tempdir, name=sample_name )
             filter_sample( input_dataset, filtered_dataset, pre_filters, model=model)
-            filtered_dataset.seg =input_samples[j].seg
-            filtered_dataset.mask=input_samples[j].mask
+            filtered_dataset.seg  = input_samples[j].seg
+            filtered_dataset.mask = input_samples[j].mask
         
         m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0, 1.0, 1.0])
         
@@ -219,7 +223,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 
                   _files=[]
                   cmd=[]
-                  _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.shift)).tolist()
+                  _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.gridvar)).tolist()
                   # resample fields first
                   for i in range(options.grid_n):
                       _files.append(pca_grid[i])
@@ -242,13 +246,14 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     out_mask=None
                     
                 m.resample_labels(filtered_dataset.seg, out_seg, 
-                                transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
+                                transform=out_xfm, order=options.label_order, 
+                                remap=lut, like=model, baa=True)
 
                 output_scan=m.tmp('scan_{}.mnc'.format(r))
                     
                 # create a file in temp dir first
                 m.resample_smooth(filtered_dataset.scan, output_scan, 
-                                order=options.order, transform=out_xfm,like=model)
+                                order=options.order, transform=out_xfm, like=model)
 
                 if post_filters is not None:
                     output_scan2=m.tmp('scan2_{}.mnc'.format(r))
