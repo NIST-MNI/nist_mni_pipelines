@@ -30,7 +30,7 @@ class LibEntry(yaml.YAMLObject):
         if relpath is None:
             self.lst = lst
         else:# make relative paths
-            self.lst = [os.path.relpath(i, relpath) for i in lst]
+            self.lst = [ os.path.relpath(i, relpath) for i in lst ]
 
         self.ent_id = ent_id
 
@@ -131,8 +131,8 @@ class SegLibrary(yaml.YAMLObject):
 
         # remember the prefix for the library
         self.prefix = path
-        # Fix prefixes for all lib entries, as it is not laoded correctly
-        for i, _ in enumerate(self.library):
+        # Fix prefixes for all lib entries, as it is not loaded correctly
+        for i,_ in enumerate(self.library):
             self.library[i].prefix = self.prefix
 
     def save(self, path, name='library.yaml'):
