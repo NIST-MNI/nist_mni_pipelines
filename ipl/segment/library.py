@@ -65,20 +65,30 @@ class SegLibrary(yaml.YAMLObject):
     """
     yaml_tag = '!SegLibrary'
 
-    _rel_paths = {'local_model',
+    _rel_paths = {
+                  'local_model',
                   'local_model_mask',
                   'local_model_flip',
                   'local_model_mask_flip',
                   'local_model_seg',
                   'local_model_seg_flip',
-                  'gco_energy'}
+                  'local_model_add', 
+                  'local_model_add_flip',
+                  'gco_energy',
+                  'local_model_ovl',
+                  'local_model_sd',
+                  'local_model_avg',
+                  ''}
 
     _abs_paths = {'model',
                   'model_mask' }
 
-    _abs_paths_lst = {'local_model_add', 'local_model_add_flip', 'model_add'}
+    _abs_paths_lst = { 'model_add'}
 
-    _all_visible_tags = _rel_paths | _abs_paths | _abs_paths_lst | {'library'}
+    _all_visible_tags = _rel_paths | _abs_paths | _abs_paths_lst | \
+                        {'library', 'flip_map', 'seg_datatype', 'flip_map',
+                         'map', 'label_map', 'nl_samples_avail', 'modalities',
+                         'classes_number' }
 
     def __init__(self, path=None ):
         # compatibility info
@@ -93,7 +103,7 @@ class SegLibrary(yaml.YAMLObject):
         self.local_model_ovl = None
         self.local_model_add = []
         self.local_model_add_flip = []
-        self.model      = None
+        self.model = None
         self.model_add  = []
         self.model_mask = None
         self.flip_map = {}
@@ -104,8 +114,6 @@ class SegLibrary(yaml.YAMLObject):
         self.classes_number = 2
         self.nl_samples_avail = False
         self.seg_datatype = 'byte'
-        self.label_map={}
-
         # from file:
         self.prefix = None
         if path is not None:
@@ -137,7 +145,7 @@ class SegLibrary(yaml.YAMLObject):
 
     def save(self, path, name='library.yaml'):
         with open(path + os.sep + name, 'w') as f:
-            f.write(yaml.dump(self))
+            f.write( yaml.dump( self ) )
 
     def _load_legacy(self, library_description):
         try:
@@ -173,8 +181,6 @@ class SegLibrary(yaml.YAMLObject):
 
             for i in ['flip_map', 'map','label_map','nl_samples_avail','seg_datatype','modalities']:
                 self.__dict__[i] = library_description.get(i, self.__dict__[i])
-
-
         except:
             print("Error loading library information from:{} {}".format(prefix, sys.exc_info()[0]))
             traceback.print_exc(file=sys.stderr)
