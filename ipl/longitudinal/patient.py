@@ -628,7 +628,7 @@ def setFilenames(patient):
     # directories
 
     lngtmpldir = patient.patientdir + 'lng_template' + os.sep
-    os.makedirs(lngtmpldir)
+    os.makedirs(lngtmpldir,exist_ok=True)
 
     # ## template images
     # a) linear
