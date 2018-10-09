@@ -5,8 +5,6 @@
 #
 # routines for creating QC images
 
-from __future__ import print_function
-
 import numpy as np
 import numpy.ma as ma
 

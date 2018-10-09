@@ -17,6 +17,7 @@ import traceback
 
 # local stuff
 from .minc_tools import mincTools
+from .minc_tools import logger
 
 # import xfmavg from model/registration
 from .model.registration import xfmavg
@@ -56,7 +57,7 @@ def label_normalize(sample, sample_labels, ref, ref_labels, out=None,sample_mask
         
         if debug:
             import matplotlib.pyplot as plt
-            print('Coefficients: \n', clf.coef_)
+            logger.warn('Coefficients: \n', clf.coef_)
             #print('[0.0 100.0] -> {}'.format(clf.predict([[1.0,0.0,0.0], [1.0,100.0,100.0*100.0]] )))
             
             plt.scatter(_x[:,0], _y,  color='black')

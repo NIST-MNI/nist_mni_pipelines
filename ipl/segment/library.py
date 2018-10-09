@@ -30,7 +30,7 @@ class LibEntry(yaml.YAMLObject):
         if relpath is None:
             self.lst = lst
         else:# make relative paths
-            self.lst = [os.path.relpath(i, relpath) for i in lst]
+            self.lst = [ os.path.relpath(i, relpath) for i in lst ]
 
         self.ent_id = ent_id
 
@@ -65,23 +65,33 @@ class SegLibrary(yaml.YAMLObject):
     """
     yaml_tag = '!SegLibrary'
 
-    _rel_paths = {'local_model',
+    _rel_paths = {
+                  'local_model',
                   'local_model_mask',
                   'local_model_flip',
                   'local_model_mask_flip',
                   'local_model_seg',
                   'local_model_seg_flip',
-                  'gco_energy'}
+                  'gco_energy',
+                  'local_model_ovl',
+                  'local_model_sd',
+                  'local_model_avg',
+                  ''}
+
+    _rel_paths_lst = {'local_model_add', 'local_model_add_flip'}
 
     _abs_paths = {'model',
                   'model_mask' }
 
-    _abs_paths_lst = {'local_model_add', 'local_model_add_flip', 'model_add'}
+    _abs_paths_lst = { 'model_add'}
 
-    _all_visible_tags = _rel_paths | _abs_paths | _abs_paths_lst | {'library'}
+    _all_visible_tags = _rel_paths | _abs_paths | _abs_paths_lst | _rel_paths_lst | \
+                        {'library', 'flip_map', 'seg_datatype', 'flip_map',
+                         'map', 'label_map', 'nl_samples_avail', 'modalities',
+                         'classes_number' }
 
     def __init__(self, path=None ):
-        # compatibility info
+        # compatibility info 
         self.local_model = None
         self.local_model_mask = None
         self.local_model_flip = None,
@@ -93,10 +103,11 @@ class SegLibrary(yaml.YAMLObject):
         self.local_model_ovl = None
         self.local_model_add = []
         self.local_model_add_flip = []
-        self.model      = None
+        self.model = None
         self.model_add  = []
         self.model_mask = None
         self.flip_map = {}
+        self.label_map = {}
         self.map = {}
         self.gco_energy = None
         self.library = []
@@ -104,8 +115,6 @@ class SegLibrary(yaml.YAMLObject):
         self.classes_number = 2
         self.nl_samples_avail = False
         self.seg_datatype = 'byte'
-        self.label_map={}
-
         # from file:
         self.prefix = None
         if path is not None:
@@ -131,13 +140,13 @@ class SegLibrary(yaml.YAMLObject):
 
         # remember the prefix for the library
         self.prefix = path
-        # Fix prefixes for all lib entries, as it is not laoded correctly
-        for i, _ in enumerate(self.library):
+        # Fix prefixes for all lib entries, as it is not loaded correctly
+        for i,_ in enumerate(self.library):
             self.library[i].prefix = self.prefix
 
     def save(self, path, name='library.yaml'):
         with open(path + os.sep + name, 'w') as f:
-            f.write(yaml.dump(self))
+            f.write( yaml.dump( self ) )
 
     def _load_legacy(self, library_description):
         try:
@@ -173,10 +182,8 @@ class SegLibrary(yaml.YAMLObject):
 
             for i in ['flip_map', 'map','label_map','nl_samples_avail','seg_datatype','modalities']:
                 self.__dict__[i] = library_description.get(i, self.__dict__[i])
-
-
         except:
-            print("Error loading library information from:{} {}".format(prefix, sys.exc_info()[0]))
+            print("Error loading library information {}".format( sys.exc_info()[0]))
             traceback.print_exc(file=sys.stderr)
             raise
 
@@ -187,6 +194,7 @@ class SegLibrary(yaml.YAMLObject):
         return self.get(item, default=None)
 
     def get(self, item, default=None):
+      try:
         if item in self.__dict__:
             if item in SegLibrary._rel_paths:
                 return self.prefix + os.sep + self.__dict__[item]  if self.__dict__[item] is not None else default
@@ -194,10 +202,16 @@ class SegLibrary(yaml.YAMLObject):
                 return (self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item] ) if self.__dict__[item] is not None else default
             elif item in SegLibrary._abs_paths_lst:
                 return [ (self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
+            elif item in SegLibrary._rel_paths_lst:
+                return [ (self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
             else:
                 return self.__dict__[item]
         else:
             return default
+      except:
+        print("error getting {}".format(item))
+        traceback.print_exc(file=sys.stderr)
+        raise
 
     @classmethod
     def from_yaml(cls, loader, node):

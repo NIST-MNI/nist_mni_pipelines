@@ -28,6 +28,7 @@ from ipl.segment import *
 from ipl.segment.resample import *
 from ipl.segment.structures import *
 
+
 # scoop parallel execution
 from scoop import futures, shared
 
@@ -125,11 +126,15 @@ def parse_options():
     parser.add_argument('--grid_n',
                     default=10,type=int,
                     help="Number of grid PCA components to use")
+
+    parser.add_argument('--gridvar',
+                    default=0.1,type=float,
+                    help="Variance of grid transformation")
+
     ### TODO: augment samples that were segmented using something else
     #parser.add_argument('--samples',
                         #default=None,
                         #help="Provide alternative samples (TODO)")
-    
     
     options = parser.parse_args()
     
@@ -143,8 +148,8 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
   try:
     with mincTools() as m:
         
-        pre_filters  =        source_parameters.get('pre_filters', None )
-        post_filters =        source_parameters.get('post_filters', source_parameters.get( 'filters', None ))
+        pre_filters  =        source_parameters.get( 'pre_filters', None )
+        post_filters =        source_parameters.get( 'post_filters', source_parameters.get( 'filters', None ))
         
         build_symmetric     = source_parameters.get( 'build_symmetric',False)
         build_symmetric_flip= source_parameters.get( 'build_symmetric_flip',False)
@@ -155,24 +160,20 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         
         # Using linear XFM from the library
         # TODO: make route to estimate when not available
-        lib_sample          = library['library'][idx]
-        
-        lut                 = library['map']
+        lib_sample          = library.library[idx]
+        lut                 = library.map
         if flip:
-            lut               = library['flip_map']
-        
+            lut               = library.flip_map
         # inverse lut
         lut=[ [ _i[1], _i[0] ] for _i in lut.items() ]
         
-        
-        model      = library['local_model']
-        model_mask = library['local_model_mask']
+        model      = library.local_model
+        model_mask = library.local_model_mask
+
         model_seg  = library.get('local_model_seg',None)
         
-        
         mask = None
-        
-        sample_name=os.path.basename(sample[0]).rsplit('.mnc',1)[0]
+        sample_name = os.path.basename(sample[0]).rsplit('.mnc',1)[0]
         
         if flip:
             sample_name+='_f'
@@ -189,11 +190,9 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
             # apply pre-filtering before other stages
             filtered_dataset = MriDataset( prefix=m.tempdir, name=sample_name )
             filter_sample( input_dataset, filtered_dataset, pre_filters, model=model)
-            filtered_dataset.seg =input_samples[j].seg
-            filtered_dataset.mask=input_samples[j].mask
-        
+            filtered_dataset.seg  = lib_sample.seg
+            filtered_dataset.mask = lib_sample.mask
         m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0, 1.0, 1.0])
-        
         out_=[]
         for r in range(options.n):
             out_suffix="_{:03d}".format(r)
@@ -203,52 +202,66 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
             out_mask = options.output+ os.sep+ sample_name+ out_suffix+ '_mask.mnc'
             out_xfm  = options.output+ os.sep+ sample_name+ out_suffix+ '.xfm'
             
-            if not os.path.exists(out_vol) or not os.path.exists(out_seg) or not os.path.exists(out_mask) or not os.path.exists(out_xfm):
-                
+            if    not os.path.exists(out_vol) \
+               or not os.path.exists(out_seg) \
+               or not os.path.exists(out_xfm):
+
                 # apply random linear xfm
-                ran_xfm=m.tmp('random_{}.xfm'.format(r))
+                ran_lin_xfm = m.tmp('random_lin_{}.xfm'.format(r))
+                ran_nl_xfm  = None
+
+                m.param2xfm(ran_lin_xfm,
+                            scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
+                            translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
+                            rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
                 
-                if pca_grid is None:
-                  m.param2xfm(ran_xfm,
-                              scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
-                              translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
-                              rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
-                else:
+                if pca_grid is not None:
+                  ran_nl_xfm = m.tmp('random_nl_{}.xfm'.format(r))
                   # create a random transform
-                  ran_grid=ran_xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
+                  ran_nl_grid = ran_nl_xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
                 
                   _files=[]
                   cmd=[]
-                  _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.shift)).tolist()
+                  _par=((np.random.rand(options.grid_n)-0.5)*2.0*float(options.gridvar)).tolist()
                   # resample fields first
                   for i in range(options.grid_n):
                       _files.append(pca_grid[i])
                       cmd.append('A[{}]*{}'.format(i,_par[i]))
                   cmd='+'.join(cmd)
                   # apply to the output
-                  m.calc(_files,cmd,ran_grid)
-                  with open(ran_xfm,'w') as f:
+                  m.calc(_files,cmd,ran_nl_grid)
+                  with open(ran_nl_xfm,'w') as f:
                     f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
-                      format(os.path.basename(ran_grid)))
+                      format(os.path.basename(ran_nl_grid)))
+                xfms=[]
+                if os.path.exists(lib_sample[-1]):
+                    xfms.append(lib_sample[-1])
+                    print("Exists:{}".format(lib_sample[-1]))
+                
                 if flip:
-                    m.xfmconcat([lib_sample[-1], m.tmp('flip_x.xfm'), ran_xfm], out_xfm)
-                else:
-                    m.xfmconcat([lib_sample[-1], ran_xfm], out_xfm)
-                                
+                    xfms.append(m.tmp('flip_x.xfm'))
+
+                if ran_nl_xfm is not None:
+                    xfms.append(ran_nl_xfm)
+                xfms.extend([ran_lin_xfm])
+
+                m.xfmconcat(xfms, out_xfm)
+
                 if mask is not None:
                     m.resample_labels(mask, out_mask, 
                                     transform=out_xfm, like=model)
                 else:
                     out_mask=None
-                    
+                  
                 m.resample_labels(filtered_dataset.seg, out_seg, 
-                                transform=out_xfm, order=options.label_order, remap=lut, like=model, baa=True)
+                                transform=out_xfm, order=options.label_order, 
+                                remap=lut, like=model, baa=True)
 
                 output_scan=m.tmp('scan_{}.mnc'.format(r))
                     
                 # create a file in temp dir first
                 m.resample_smooth(filtered_dataset.scan, output_scan, 
-                                order=options.order, transform=out_xfm,like=model)
+                                order=options.order, transform=out_xfm, like=model)
 
                 if post_filters is not None:
                     output_scan2=m.tmp('scan2_{}.mnc'.format(r))
@@ -280,7 +293,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 shutil.copyfile(output_scan,out_vol)
                 
             # end of loop    
-            out_.append([out_vol, out_seg, out_xfm ])
+            out_.append( [out_vol, out_seg, out_xfm ] )
             
         return out_
   except:
@@ -299,13 +312,13 @@ def main():
         source_parameters={}
         try:
             with open(options.source,'r') as f:
-                source_parameters=json.load(f)
+                source_parameters = json.load(f)
         except :
             print("Error loading configuration:{} {}\n".format(options.source, sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             exit( 1)
         
-        library=load_library_info( options.library )
+        library = SegLibrary( options.library )
         
         samples      =        source_parameters[ 'library' ]
         build_symmetric     = source_parameters.get( 'build_symmetric',False)
@@ -337,24 +350,28 @@ def main():
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
-                gen_sample, library, options, source_parameters, j , idx=i,pca_grid=pca_grid,pca_int=pca_int ) )
+                gen_sample, library, options, source_parameters, j , idx=i, pca_grid=pca_grid, pca_int=pca_int ) )
             # flipped (?)
             if build_symmetric:
                 outputs.append( futures.submit( 
-                    gen_sample, library, options, source_parameters, j , idx=i , flip=True,pca_grid=pca_grid,pca_int=pca_int) )
-                    
+                    gen_sample, library, options, source_parameters, j , idx=i , flip=True, pca_grid=pca_grid, pca_int=pca_int) )
         #
         futures.wait(outputs, return_when=futures.ALL_COMPLETED)
         # generate a new library for augmented samples
-        augmented_library=copy.deepcopy(library)
+        augmented_library = library
+
         # wipe all the samples
-        augmented_library['library']=[]
+        augmented_library.library = []
         
         for j in outputs:
-            augmented_library['library'].extend(j.result())
+            for k in j.result():
+               # remove _scan_xxx.mnc part from id
+               augmented_library.library.append( LibEntry( k, relpath=options.output, ent_id=os.path.basename(k[0]).rsplit('_',2)[0] ) )
         
         # save new library description
-        save_library_info(augmented_library, options.output)
+        #save_library_info(augmented_library, options.output)
+        print("Saving to {}".format(options.output))
+        augmented_library.save(options.output)
     else:
         print("Run with --help")
         
