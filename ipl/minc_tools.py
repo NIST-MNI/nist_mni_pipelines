@@ -18,14 +18,20 @@ import fcntl
 import traceback
 import collections
 import math
+import logging
+
 
 import inspect
 
 # local stuff
-from . import registration
-from . import ants_registration
-from . import dd_registration
-from . import elastix_registration
+#from . import registration
+#from . import ants_registration
+#from . import dd_registration
+#from . import elastix_registration
+
+
+logger = logging.getLogger("MINC")
+logger.setLevel(logging.DEBUG)
 
 # hack to make it work on Python 3
 try:
@@ -42,6 +48,10 @@ else:
     unicode = unicode
     bytes = str
     basestring = basestring
+
+
+def get_logger():
+    return logger
 
 def get_git_hash():
     _script_dir=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -255,6 +265,7 @@ class mincTools(temp_files):
             if isinstance(inputs, basestring):  # check if input is only string and not list
                 if not os.path.exists(inputs):
                     inputs_exist = False
+                    logger.error('One input does not exists! :: {}'.format(inputs))
                     raise mincError(' ** Error: Input does not exists! :: {}'.format(str(inputs)))
                 else:
                     itime = os.path.getmtime(inputs)
@@ -262,7 +273,7 @@ class mincTools(temp_files):
                 for i in inputs:
                     if not os.path.exists(i):
                         inputs_exist = False
-                        print(' ** Error: One input does not exists! :: {}'.format(i), file=sys.stderr)
+                        logger.error('One input does not exists! :: {}'.format(i))
                         raise mincError(' ** Error: One input does not exists! :: {}'.format(i))
                     else:
                         timer = os.path.getmtime(i)
@@ -293,14 +304,11 @@ class mincTools(temp_files):
 
         if outExists:
             if timecheck and itime > 0 and otime > 0 and otime < itime:
-                if verbose>1:
-                    print(' -- Warning: Output exists but older than input! Redoing command',file=sys.stderr)
-                    print('     otime ' + str(otime) + ' < itime ' \
-                        + str(itime),file=sys.stderr)
+                logger.warn(' -- Warning: Output exists but older than input! Redoing command')
+                logger.warn('     otime ' + str(otime) + ' < itime ' + str(itime))
                 return True
             else:
-                if verbose>1:
-                    print(' -- Skipping: Output Exists:{}'.format(repr(exists)),file=sys.stderr)
+                logger.warn(' -- Skipping: Output Exists:{}'.format(repr(exists)))
                 return False
         return True
 
@@ -319,8 +327,7 @@ class mincTools(temp_files):
         output_stderr=""
         output=""
         outvalue=0
-        if verbose>0:
-            print(repr(cmds))
+        logger.debug(repr(cmds))
         try:
 
             if verbose<2:
@@ -333,10 +340,10 @@ class mincTools(temp_files):
             outvalue=p.wait()
 
         except OSError:
-            print("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outerr),output_stderr,traceback.format_exc()))
         if not outvalue == 0:
-            print("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
         return outvalue
         
@@ -354,18 +361,17 @@ class mincTools(temp_files):
         outvalue=0
 
         if verbose>0:
-            print(repr(cmds))
+            logger.debug(repr(cmds))
         try:
             p=subprocess.Popen(cmds,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (output,outerr)=p.communicate()
-            if verbose>0:
-                print(output.decode())
+            logger.debug(output.decode())
             outvalue=p.wait()
         except OSError as e:
-            print("ERROR: command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()),file=sys.stderr)
+            logger.error("command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()),file=sys.stderr)
             raise mincError("ERROR: command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()))
         if not outvalue == 0:
-            print("Command: {} generated output:{} {}\nError:{}".format(' '.join(cmds),outvalue,output,outerr),file=sys.stderr)
+            logger.error("Command: {} generated output:{} {}\nError:{}".format(' '.join(cmds),outvalue,output,outerr),file=sys.stderr)
             raise mincError("ERROR: command {} failed {}!\nError:{}\n{}".format(repr(cmds),str(outvalue),outerr,traceback.format_exc()))
         return output.decode()
 
@@ -390,8 +396,7 @@ class mincTools(temp_files):
         return : False if error, otherwise the execution output
         """
 
-        if verbose>0:
-            print(repr(cmds))
+        logger.debug(repr(cmds))
 
         if not mincTools.checkfiles(inputs=inputs, outputs=outputs,
                                     verbose=verbose,
@@ -412,10 +417,10 @@ class mincTools(temp_files):
             outvalue=p.wait()
             
         except OSError:
-            print("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
         if not outvalue == 0:
-            print("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
         
         outExists = False
@@ -464,10 +469,10 @@ class mincTools(temp_files):
             if depends:
                 qsub_comm.extend(['-hold_jid', depends])
 
-            print(' - Name    ' + name)
-            print(' - Queue   ' + queue)
-            print(' - Cmd     ' + ' '.join(comm))
-            print(' - logfile ' + path)
+            logger.debug(' - Name    ' + name)
+            logger.debug(' - Queue   ' + queue)
+            logger.debug(' - Cmd     ' + ' '.join(comm))
+            logger.debug(' - logfile ' + path)
 
             #qsub_comm.append(tmpscript)
 
@@ -514,11 +519,11 @@ class mincTools(temp_files):
             if depends:
                 qsub_comm.extend(['-hold_jid', depends])
 
-            print(' - Name    ' + name)
-            print(' - PE      ' + pe)
-            print(' - Slots   ' + str(slots))
-            print(' - Cmd     ' + ' '.join(comm))
-            print(' - logfile ' + path)
+            logger.debug(' - Name    ' + name)
+            logger.debug(' - PE      ' + pe)
+            logger.debug(' - Slots   ' + str(slots))
+            logger.debug(' - Cmd     ' + ' '.join(comm))
+            logger.debug(' - logfile ' + path)
 
             cmds="#!/bin/bash\nhostname\n"
             cmds+=' '.join(comm)+"\n"
@@ -1002,6 +1007,7 @@ class mincTools(temp_files):
         cmd = ['minccalc', '-copy_header','-q', '-clob', '-express', expression]
         
         if datatype:
+            if datatype[0] != '-': datatype = '-' + datatype
             cmd.append(datatype)
         if labels:
             cmd.append('-labels')
@@ -1048,7 +1054,7 @@ class mincTools(temp_files):
             args.append(stats)
         
         if mask is not None:
-            args.extend(['-mask',mask,'-mask_binvalue',str(mask_binvalue)])
+            args.extend(['-mask', mask, '-mask_binvalue', str(mask_binvalue)])
         if val_floor is not None:
             args.extend(['-floor',str(val_floor)])
         if val_ceil is not None:

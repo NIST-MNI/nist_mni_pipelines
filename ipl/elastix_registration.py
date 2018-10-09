@@ -4,10 +4,6 @@
 # @date 29/06/2015
 #
 # registration tools
-
-
-from __future__ import print_function
-
 import os
 import sys
 import shutil
@@ -21,7 +17,7 @@ import math
 
 # local stuff
 import ipl.minc_tools
-
+logger=ipl.minc_tools.get_logger()
 
 __lin_template="""
 (FixedInternalImagePixelType "float")
@@ -204,7 +200,7 @@ def nl_xfm_to_elastix(xfm, elastix_par):
     with ipl.minc_tools.mincTools() as minc:
         grid=xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
         if not os.path.exists(grid):
-          print("nl_xfm_to_elastix error!")
+          logger.error("nl_xfm_to_elastix error!")
           raise ipl.minc_tools.mincError("Unfortunately currently only a very primitive way of dealing with Minc XFM files is implemented\n{}".format(traceback.format_exc()))
         
         with open(elastix_par,'w') as f:
@@ -407,7 +403,7 @@ def register_elastix(
         use_mask=True
 
         if (init_par is not None) and (init_xfm is not None):
-            print("register_elastix: init_xfm={} init_par={}".format(repr(init_xfm),repr(init_par)))
+            logger.error("register_elastix: init_xfm={} init_par={}".format(repr(init_xfm),repr(init_par)))
             raise ipl.minc_tools.mincError("Specify either init_xfm or init_par")
 
         outputs=[]
@@ -539,7 +535,7 @@ def register_elastix(
                                 break
                         else:
                             #
-                            print("Elastix output:\n{}".format("\n".join(out_)))
+                            logger.error("Elastix output:\n{}".format("\n".join(out_)))
                             raise ipl.minc_tools.mincError("Elastix didn't report measure")
                     else:
                         minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
@@ -561,6 +557,3 @@ def register_elastix(
                     shutil.copyfile(it_output_dir+os.sep+'elastix.log',output_log)
 
         return outcome
-
-if __name__ == "__main__":
-    pass

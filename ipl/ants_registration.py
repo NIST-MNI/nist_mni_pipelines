@@ -4,10 +4,6 @@
 # @date 29/06/2015
 #
 # registration tools
-
-
-from __future__ import print_function
-
 import os
 import sys
 import shutil
@@ -21,7 +17,7 @@ import math
 
 # local stuff
 import ipl.minc_tools
-
+logger=ipl.minc_tools.get_logger()
 
 # hack to make it work on Python 3
 try:
@@ -177,7 +173,6 @@ def non_linear_register_ants(
     with ipl.minc_tools.mincTools(verbose=verbose) as minc:
 
         if parameters is None:
-            #print("Using default  ANTS parameters")
             parameters={}
             
         
@@ -524,9 +519,5 @@ def linear_register_ants2(
         
         outputs=[output_xfm ] # TODO: add inverse xfm ?
         minc.command(cmd, inputs=inputs, outputs=outputs,verbose=verbose)
-
-
-if __name__ == "__main__":
-    pass
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
