@@ -664,7 +664,7 @@ def setFilenames(patient):
     patient.lock = patient.patientdir + os.sep + patient.id + '.sge.lock'
 
     if len(patient) == 1:
-        tp = patient.keys()[0]  # taking the only timepoint
+        tp = list(patient.keys())[0]  # taking the only timepoint
 
         # a) linear
         # patient.template["linear_template"] = patient[tp].stx_mnc["t1"]
