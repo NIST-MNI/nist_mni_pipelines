@@ -23,11 +23,6 @@ import logging
 
 import inspect
 
-# local stuff
-#from . import registration
-#from . import ants_registration
-#from . import dd_registration
-#from . import elastix_registration
 
 
 logger = logging.getLogger("MINC")
@@ -601,81 +596,7 @@ class mincTools(temp_files):
             
         return _result
         
-    def ants_linear_register(
-        self,
-        source,
-        target,
-        output_xfm, 
-        **kwargs
-        ):
-        """perform linear registration with ANTs, obsolete"""
-        return ants_registration.ants_linear_register(source,target,output_xfm,**kwargs)
-                                                 
 
-    def linear_register(
-        self,
-        source,
-        target,
-        output_xfm,
-        **kwargs
-        ):
-        """perform linear registration"""
-
-        return registration.linear_register(source,target,output_xfm,**kwargs)
-    
-    def linear_register_to_self(
-        self,
-        source,
-        target,
-        output_xfm,
-        **kwargs
-        ):
-        """perform linear registration"""
-        
-        return registration.linear_register_to_self(source,target,output_xfm,**kwargs)
-    
-    def nl_xfm_to_elastix(self , xfm, elastix_par):
-        """Convert MINC style xfm into elastix style registration parameters"""
-        return elastix_registration.nl_xfm_to_elastix(sfm,elastix_par)
-
-    def nl_elastix_to_xfm(self , elastix_par, xfm, **kwargs ):
-        """Convert elastix style parameter file into a nonlinear xfm file"""
-        return elastix_registration.nl_elastix_to_xfm(elastix_par,xfm,**kwargs)
-
-    def register_elastix( self, source, target, **kwargs ):
-        """Perform registration with elastix """
-        return elastix_registration.register_elastix(source,target,**kwargs)
-
-    def non_linear_register_ants(
-        self, source, target, output_xfm, **kwargs
-        ):
-        """perform non-linear registration using ANTs, 
-        WARNING: will create inverted xfm  will be named output_invert.xfm
-        """
-        return ants_registration.non_linear_register_ants(source, target, output_xfm, **kwargs)
-
-    def non_linear_register_ldd(
-        self,
-        source, target,
-        output_velocity,
-        **kwargs    ):
-        """Use log-diffeomorphic demons to run registration"""
-        return dd_registration.non_linear_register_ldd(source,target,output_velocity,**kwargs)
-        
-    def non_linear_register_full(
-        self, 
-        source, target, output_xfm,
-        **kwargs
-        ):
-        """perform non-linear registration"""
-        return registration.non_linear_register_full(source,target,output_xfm,**kwargs)
-
-    def non_linear_register_increment(
-        self, source, target, output_xfm,** kwargs
-        ):
-        """perform incremental non-linear registration"""
-        return registration.non_linear_register_increment(source, target, output_xfm,** kwargs)
-        
     def resample_smooth(
         self,
         input,
@@ -1885,6 +1806,7 @@ class mincTools(temp_files):
         stxtemplate_xfm=None,
         ):
         """perform linear registration based on the skull segmentaton"""
+        # TODO: probably broken, do not use!
 
         temp_dir = self.temp_dir(prefix='skullregistration') + os.sep
         fit = '-xcorr'
