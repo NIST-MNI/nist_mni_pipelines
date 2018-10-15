@@ -305,7 +305,7 @@ if __name__ == '__main__':
 
             # apply transformation to native image
             # compute the linear resgistration to atlas
-            minc.linear_register( opts.clpt1,
+            ipl.register.linear_register( opts.clpt1,
                     beast_v10.template, opts.xfmt1,parameters='-lsq9')
 
             # register to stx space
