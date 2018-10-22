@@ -24,7 +24,6 @@ import logging
 import inspect
 
 
-
 logger = logging.getLogger("MINC")
 logger.setLevel(logging.DEBUG)
 
