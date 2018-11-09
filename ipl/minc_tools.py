@@ -362,10 +362,10 @@ class mincTools(temp_files):
             logger.debug(output.decode())
             outvalue=p.wait()
         except OSError as e:
-            logger.error("command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()),file=sys.stderr)
+            logger.error("command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()))
             raise mincError("ERROR: command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()))
         if not outvalue == 0:
-            logger.error("Command: {} generated output:{} {}\nError:{}".format(' '.join(cmds),outvalue,output,outerr),file=sys.stderr)
+            logger.error("Command: {} generated output:{} {}\nError:{}".format(' '.join(cmds),outvalue,output,outerr))
             raise mincError("ERROR: command {} failed {}!\nError:{}\n{}".format(repr(cmds),str(outvalue),outerr,traceback.format_exc()))
         return output.decode()
 
