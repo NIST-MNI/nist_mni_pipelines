@@ -72,8 +72,8 @@ def pipeline_run_add(patient):
                     with open(options,'r') as f:
                         options=json.load(f)
                 
-                library=ipl.segment.load_library_info( library )
-                
+                library=ipl.segment.SegLibrary( library )
+                print(repr(library))
                 if os.path.exists(output_prefix+'_seg.mnc'):
                     print('ADD:{} already done!'.format(output_name))
                 else:
