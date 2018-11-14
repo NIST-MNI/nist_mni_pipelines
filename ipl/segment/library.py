@@ -180,7 +180,7 @@ class SegLibrary(yaml.YAMLObject):
             # convert samples paths to absolute
             self.library = [LibEntry(i, self.prefix) for i in library_description['library']]
 
-            for i in ['flip_map', 'map','label_map','nl_samples_avail','seg_datatype','modalities']:
+            for i in ['flip_map', 'map','label_map','nl_samples_avail','seg_datatype','modalities','classes_number']:
                 self.__dict__[i] = library_description.get(i, self.__dict__[i])
         except:
             print("Error loading library information {}".format( sys.exc_info()[0]))
