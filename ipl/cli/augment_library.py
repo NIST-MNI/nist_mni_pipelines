@@ -347,7 +347,7 @@ def main():
         
         outputs=[]
         print(repr(samples))
-        print(repr(pca_grid.lib))
+        #print(repr(pca_grid.lib))
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 
