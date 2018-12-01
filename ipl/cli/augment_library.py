@@ -14,11 +14,12 @@ import sys
 import csv
 import traceback
 import argparse
-import json
 import tempfile
 import re
 import copy
 import random
+# YAML stuff
+import yaml
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
@@ -312,7 +313,7 @@ def main():
         source_parameters={}
         try:
             with open(options.source,'r') as f:
-                source_parameters = json.load(f)
+                source_parameters = yaml.load(f)
         except :
             print("Error loading configuration:{} {}\n".format(options.source, sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
