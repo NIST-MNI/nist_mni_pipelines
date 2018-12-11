@@ -347,7 +347,7 @@ def launchPipeline(options):
             print('{} - {}'.format(id,visit) )
             # store patients in the pickle
         
-    if opts.pe is None: # use SCOOP to run all subjects in parallel
+    if options.pe is None: # use SCOOP to run all subjects in parallel
         pickles = []
     
         for (id, i) in patients.items():
@@ -969,9 +969,7 @@ def parse_options():
 ## If used in a stand-alone application on one patient
 
 def main():
-
     opts = parse_options()
-
     # VF: disabled in public release
     opts.temporalregu = False
 
@@ -985,5 +983,5 @@ def main():
     else:
         print("missing something...")
         sys.exit(1)
-        
+
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

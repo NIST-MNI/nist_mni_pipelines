@@ -16,6 +16,10 @@ import traceback
 from ipl.model.generate_linear             import generate_linear_model
 from ipl.minc_tools import mincTools,mincError
 
+import ipl.registration
+#import ipl.ants_registration
+#import ipl.elastix_registration
+
 from .general import *
 
 from scoop import futures, shared

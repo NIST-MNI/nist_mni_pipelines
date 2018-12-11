@@ -5,10 +5,6 @@
 # @date 29/06/2015
 #
 # registration tools
-
-
-from __future__ import print_function
-
 import os
 import sys
 import shutil
@@ -22,7 +18,7 @@ import math
 
 # local stuff
 import ipl.minc_tools
-
+logger=ipl.minc_tools.get_logger()
 
 # hack to make it work on Python 3
 try:
@@ -315,7 +311,7 @@ def linear_register(
     Raises:
         mincError when tool fails
     """
-    print("linear_register s:{} s_m:{} t:{} t_m:{} i:{} ".format(source,source_mask,target,target_mask,init_xfm))
+    logger.debug("linear_register s:{} s_m:{} t:{} t_m:{} i:{} ".format(source,source_mask,target,target_mask,init_xfm))
     
     with ipl.minc_tools.mincTools(verbose=verbose) as minc:
       if not minc.checkfiles(inputs=[source,target], outputs=[output_xfm]):
@@ -602,7 +598,6 @@ def non_linear_register_full(
           return
 
       if parameters is None:
-          #print("Using default parameters")
           parameters = {
               'cost':        'corrcoeff',
               'weight':      1,

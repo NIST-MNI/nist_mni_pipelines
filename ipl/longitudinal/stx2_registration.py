@@ -11,6 +11,9 @@
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
 
 
 version = '1.0'

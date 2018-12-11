@@ -14,6 +14,7 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
+import ipl.registration
 
 def fix_spacing(scan):
     """make sure all spacing in 3D volume are regular

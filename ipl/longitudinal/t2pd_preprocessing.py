@@ -14,6 +14,9 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
 
 import shutil
 
@@ -309,7 +312,7 @@ def t2pdpreprocessing_v10(patient, tp):
                 if 'stx_pd' in patient[tp].manual \
                     and os.path.exists(patient[tp].manual['stx_pd']):
                     init_xfm = patient[tp].manual['stx_pd']
-                
+
                 ipl.registration.linear_register_to_self(
                     tmpnlm,
                     patient[tp].native['t1'],

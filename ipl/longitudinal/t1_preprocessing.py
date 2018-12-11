@@ -18,6 +18,10 @@ from optparse import OptionGroup  # to change when python updates in the machine
 
 from ipl.minc_tools import mincTools,mincError
 
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
+
 from .general import *
 from .patient import *
 
