@@ -53,7 +53,7 @@ def linearatlasregistration_v10(patient, tp):
             + '_mask.mnc'
 
         # register ns_stx into the atlas
-        minc.linear_register(patient[tp].stx_ns_mnc['t1'], atlas,
+        ipl.registration.linear_register(patient[tp].stx_ns_mnc['t1'], atlas,
                              patient.template['stx2_xfm'],
                              source_mask=patient[tp].stx_ns_mnc['masknoles'],
                              target_mask=atlas_mask)
