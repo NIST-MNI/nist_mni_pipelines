@@ -250,10 +250,12 @@ def warp_sample( sample,
 
     except mincError as e:
         print("Exception in warp_sample:{}".format(str(e)))
+        print("Inputs:",repr(sample),repr(model), repr(output))
         traceback.print_exc( file=sys.stdout )
         raise
     except :
         print("Exception in warp_sample:{}".format(sys.exc_info()[0]))
+        print("Inputs:",repr(sample),repr(model), repr(output))
         traceback.print_exc( file=sys.stdout)
         raise
 
