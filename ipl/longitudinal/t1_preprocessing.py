@@ -121,7 +121,7 @@ def t1preprocessing_v10(patient, tp):
                     
                     minc.calc([minc.tmp('trunc_t1.mnc'),minc.tmp('otsu_closed_t1.mnc')], 'A[0]*A[1]',  minc.tmp('trunc_masked_t1.mnc'))
                     minc.calc([tmpt1,minc.tmp('otsu_closed_t1.mnc')],'A[0]*A[1]' ,minc.tmp('masked_t1.mnc'))
-
+                    
                     ipl.registration.linear_register( minc.tmp('trunc_masked_t1.mnc'), modelt1, tmpxfm,
                             init_xfm=init_xfm, 
                             objective='-nmi', conf=patient.linreg )

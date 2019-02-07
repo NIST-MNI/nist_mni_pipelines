@@ -99,10 +99,12 @@ def apply_filter(input, output, filters, model=None, input_mask=None, model_mask
             shutil.copyfile(input,output)
     except mincError as e:
         print("Exception in apply_filter:{}".format(str(e)))
+        print("Inputs:",repr(input),repr(output), repr(filters))
         traceback.print_exc( file=sys.stdout )
         raise
     except :
         print("Exception in apply_filter:{}".format(sys.exc_info()[0]))
+        print("Inputs:",repr(input),repr(output), repr(filters))
         traceback.print_exc( file=sys.stdout)
         raise
 
