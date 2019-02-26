@@ -85,12 +85,14 @@ def parse_options():
                         help="Amplification factor (i.e number of augmented samples per each input",
                         dest='n')
 
-    parser.add_argument('--degrade',type=float,
+    parser.add_argument('--degrade',
+                        type=float,
                         default=0.0,
                         help="Change to apply degradation to the image (downsampling)",
                         dest='degrade')
 
-    parser.add_argument('--degrade_factor',type=int,
+    parser.add_argument('--degrade_factor',
+                        type=int,
                         default=2,
                         help="Degradation factor (integer)",
                         dest='degrade_factor')
