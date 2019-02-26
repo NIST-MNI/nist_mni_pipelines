@@ -14,11 +14,12 @@ import sys
 import csv
 import traceback
 import argparse
-import json
 import tempfile
 import re
 import copy
 import random
+# YAML stuff
+import yaml
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
@@ -81,9 +82,19 @@ def parse_options():
 
     parser.add_argument('-n',type=int,
                         default=10,
-                        help="Aplification factor (i.e number of augmented samples per each input",
+                        help="Amplification factor (i.e number of augmented samples per each input",
                         dest='n')
-    
+
+    parser.add_argument('--degrade',type=float,
+                        default=0.0,
+                        help="Change to apply degradation to the image (downsampling)",
+                        dest='degrade')
+
+    parser.add_argument('--degrade_factor',type=int,
+                        default=2,
+                        help="Degradation factor (integer)",
+                        dest='degrade_factor')
+
     parser.add_argument('--shift',type=float,
                         default=1.0,
                         help="Shift magnitude (mm)")
@@ -209,6 +220,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 # apply random linear xfm
                 ran_lin_xfm = m.tmp('random_lin_{}.xfm'.format(r))
                 ran_nl_xfm  = None
+                do_degrade = (np.random.rand(1)[0]<options.degrade)
 
                 m.param2xfm(ran_lin_xfm,
                             scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
@@ -233,7 +245,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                   with open(ran_nl_xfm,'w') as f:
                     f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
                       format(os.path.basename(ran_nl_grid)))
-                xfms=[]
+                xfms = []
                 if os.path.exists(lib_sample[-1]):
                     xfms.append(lib_sample[-1])
                     print("Exists:{}".format(lib_sample[-1]))
@@ -257,8 +269,16 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                                 transform=out_xfm, order=options.label_order, 
                                 remap=lut, like=model, baa=True)
 
+                tmp_scan = m.tmp('scan_{}_degraded.mnc'.format(r))
+
+                # degrade (simulate multislice image)
+                if do_degrade:
+                    m.downsample(filtered_dataset.scan,tmp_scan,factor_z=options.degrade_factor)
+                else:
+                    tmp_scan = filtered_dataset.scan
+
                 output_scan=m.tmp('scan_{}.mnc'.format(r))
-                    
+
                 # create a file in temp dir first
                 m.resample_smooth(filtered_dataset.scan, output_scan, 
                                 order=options.order, transform=out_xfm, like=model)
@@ -312,7 +332,7 @@ def main():
         source_parameters={}
         try:
             with open(options.source,'r') as f:
-                source_parameters = json.load(f)
+                source_parameters = yaml.load(f)
         except :
             print("Error loading configuration:{} {}\n".format(options.source, sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
@@ -346,7 +366,7 @@ def main():
         
         outputs=[]
         print(repr(samples))
-        print(repr(pca_grid.lib))
+        #print(repr(pca_grid.lib))
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
             outputs.append( futures.submit( 

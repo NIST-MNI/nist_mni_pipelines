@@ -4,10 +4,6 @@
 # @date 29/06/2015
 #
 # registration tools
-
-
-from __future__ import print_function
-
 import os
 import sys
 import shutil
@@ -21,6 +17,7 @@ import math
 
 # local stuff
 import ipl.minc_tools
+logger=ipl.minc_tools.get_logger()
 
 
 # hack to make it work on Python 3
@@ -55,7 +52,7 @@ def non_linear_register_ldd(
     ):
     """Use log-diffeomorphic demons to run registration"""
     
-    with ip.minc_tools.mincTools() as minc:
+    with ipl.minc_tools.mincTools() as minc:
         if not minc.checkfiles(inputs=[source,target],
                                 outputs=[output_velocity]):
             return
@@ -188,7 +185,7 @@ def non_linear_register_dd(
     ):
     """perform incremental non-linear registration with diffeomorphic demons"""
     
-    with ip.minc_tools.mincTools() as minc:
+    with ipl.minc_tools.mincTools() as minc:
         if not minc.checkfiles(inputs=[source,target],
                                 outputs=[output_xfm]):
             return
@@ -266,6 +263,5 @@ def non_linear_register_dd(
             
         minc.command(cmd, inputs=inputs, outputs=outputs)
         # todo add dependency for masks
-    
     
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80

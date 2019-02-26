@@ -12,7 +12,9 @@ version = '1.0'
 from .general import *
 
 from ipl.minc_tools import mincTools,mincError
-
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -61,20 +63,20 @@ def VBM_v10(patient, tp, options):
         # TODO: create (regularize?) dbm-specific XFM to calculate jacobians only 
         if vbm_nl_method is not None and vbm_nl_level is not None:
             if vbm_nl_method=='minctracc':
-                minc.non_linear_register_full(
+                ipl.registration.non_linear_register_full(
                     patient[tp].stx2_mnc['t1'], modelt1,
                     patient[tp].vbm['xfm'],
                     source_mask=patient[tp].stx2_mnc['mask'], 
                     target_mask=modelmask,
                     level=vbm_nl_level )
             elif vbm_nl_method=='ANTS':
-                minc.non_linear_register_ants(
+                ipl.ants_registration.non_linear_register_ants(
                     patient[tp].stx2_mnc['t1'], modelt1,
                     patient[tp].vbm['xfm'],
                     source_mask=patient[tp].stx2_mnc['mask'],
                     target_mask=modelmask )
             else:
-                minc.register_elastix(
+                ipl.elastix_registration.register_elastix(
                     patient[tp].stx2_mnc['t1'], modelt1,
                     patient[tp].vbm['xfm'],
                     source_mask=patient[tp].stx2_mnc['mask'], 

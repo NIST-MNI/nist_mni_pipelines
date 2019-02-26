@@ -14,6 +14,7 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
+import ipl.registration
 
 def fix_spacing(scan):
     """make sure all spacing in 3D volume are regular
@@ -85,7 +86,7 @@ def estimate_nu(in_scan, out_field, parameters={},model=None):
                 minc.calc([minc.tmp('trunc_t1.mnc'),minc.tmp('otsu_closed_t1.mnc')], 'A[0]*A[1]',  minc.tmp('trunc_masked_t1.mnc'))
                 minc.calc([in_scan.scan,minc.tmp('otsu_closed_t1.mnc')],'A[0]*A[1]' ,minc.tmp('masked_t1.mnc'))
                 
-                minc.linear_register( minc.tmp('trunc_masked_t1.mnc'), model.scan, minc.tmp('stx.xfm'),
+                ipl.registration.linear_register( minc.tmp('trunc_masked_t1.mnc'), model.scan, minc.tmp('stx.xfm'),
                         init_xfm=init_xfm, objective='-nmi',conf='bestlinreg_new')
                 
                 minc.resample_labels( model.mask, minc.tmp('brainmask_t1.mnc'),

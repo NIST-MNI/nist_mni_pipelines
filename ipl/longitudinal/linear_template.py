@@ -16,6 +16,10 @@ import traceback
 from ipl.model.generate_linear             import generate_linear_model
 from ipl.minc_tools import mincTools,mincError
 
+import ipl.registration
+#import ipl.ants_registration
+#import ipl.elastix_registration
+
 from .general import *
 
 from scoop import futures, shared
@@ -278,12 +282,12 @@ def linearlngtemplate_v11(patient):
         # TODO: add pre-scaling in case of rigid (?)
 
         if patient.large_atrophy:
-            minc.linear_register(patient.template['linear_template'],
+            ipl.registration.linear_register(patient.template['linear_template'],
                                 atlas, patient.template['stx2_xfm'],
                                 source_mask=atlas_mask_novent,
                                 target_mask=atlas_mask_novent)
         else:
-            minc.linear_register(patient.template['linear_template'],
+            ipl.registration.linear_register(patient.template['linear_template'],
                                 atlas, patient.template['stx2_xfm'],
                                 source_mask=patient.template['linear_template_mask'], 
                                 target_mask=atlas_mask)

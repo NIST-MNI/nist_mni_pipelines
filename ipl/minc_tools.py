@@ -18,14 +18,14 @@ import fcntl
 import traceback
 import collections
 import math
+import logging
+
 
 import inspect
 
-# local stuff
-from . import registration
-from . import ants_registration
-from . import dd_registration
-from . import elastix_registration
+
+logger = logging.getLogger("MINC")
+logger.setLevel(logging.DEBUG)
 
 # hack to make it work on Python 3
 try:
@@ -42,6 +42,10 @@ else:
     unicode = unicode
     bytes = str
     basestring = basestring
+
+
+def get_logger():
+    return logger
 
 def get_git_hash():
     _script_dir=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -255,6 +259,7 @@ class mincTools(temp_files):
             if isinstance(inputs, basestring):  # check if input is only string and not list
                 if not os.path.exists(inputs):
                     inputs_exist = False
+                    logger.error('One input does not exists! :: {}'.format(inputs))
                     raise mincError(' ** Error: Input does not exists! :: {}'.format(str(inputs)))
                 else:
                     itime = os.path.getmtime(inputs)
@@ -262,7 +267,7 @@ class mincTools(temp_files):
                 for i in inputs:
                     if not os.path.exists(i):
                         inputs_exist = False
-                        print(' ** Error: One input does not exists! :: {}'.format(i), file=sys.stderr)
+                        logger.error('One input does not exists! :: {}'.format(i))
                         raise mincError(' ** Error: One input does not exists! :: {}'.format(i))
                     else:
                         timer = os.path.getmtime(i)
@@ -293,14 +298,11 @@ class mincTools(temp_files):
 
         if outExists:
             if timecheck and itime > 0 and otime > 0 and otime < itime:
-                if verbose>1:
-                    print(' -- Warning: Output exists but older than input! Redoing command',file=sys.stderr)
-                    print('     otime ' + str(otime) + ' < itime ' \
-                        + str(itime),file=sys.stderr)
+                logger.warn(' -- Warning: Output exists but older than input! Redoing command')
+                logger.warn('     otime ' + str(otime) + ' < itime ' + str(itime))
                 return True
             else:
-                if verbose>1:
-                    print(' -- Skipping: Output Exists:{}'.format(repr(exists)),file=sys.stderr)
+                logger.warn(' -- Skipping: Output Exists:{}'.format(repr(exists)))
                 return False
         return True
 
@@ -319,8 +321,7 @@ class mincTools(temp_files):
         output_stderr=""
         output=""
         outvalue=0
-        if verbose>0:
-            print(repr(cmds))
+        logger.debug(repr(cmds))
         try:
 
             if verbose<2:
@@ -333,10 +334,10 @@ class mincTools(temp_files):
             outvalue=p.wait()
 
         except OSError:
-            print("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outerr),output_stderr,traceback.format_exc()))
         if not outvalue == 0:
-            print("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
         return outvalue
         
@@ -354,18 +355,17 @@ class mincTools(temp_files):
         outvalue=0
 
         if verbose>0:
-            print(repr(cmds))
+            logger.debug(repr(cmds))
         try:
             p=subprocess.Popen(cmds,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (output,outerr)=p.communicate()
-            if verbose>0:
-                print(output.decode())
+            logger.debug(output.decode())
             outvalue=p.wait()
         except OSError as e:
-            print("ERROR: command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()),file=sys.stderr)
+            logger.error("command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()))
             raise mincError("ERROR: command {} Error:{}!\n{}".format(repr(cmds),str(e),traceback.format_exc()))
         if not outvalue == 0:
-            print("Command: {} generated output:{} {}\nError:{}".format(' '.join(cmds),outvalue,output,outerr),file=sys.stderr)
+            logger.error("Command: {} generated output:{} {}\nError:{}".format(' '.join(cmds),outvalue,output,outerr))
             raise mincError("ERROR: command {} failed {}!\nError:{}\n{}".format(repr(cmds),str(outvalue),outerr,traceback.format_exc()))
         return output.decode()
 
@@ -390,8 +390,7 @@ class mincTools(temp_files):
         return : False if error, otherwise the execution output
         """
 
-        if verbose>0:
-            print(repr(cmds))
+        logger.debug(repr(cmds))
 
         if not mincTools.checkfiles(inputs=inputs, outputs=outputs,
                                     verbose=verbose,
@@ -412,10 +411,10 @@ class mincTools(temp_files):
             outvalue=p.wait()
             
         except OSError:
-            print("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} Error:{}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
         if not outvalue == 0:
-            print("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()), file=sys.stderr)
+            logger.error("command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
             raise mincError("ERROR: command {} failed {}!\nMessage: {}\n{}".format(str(cmds),str(outvalue),output_stderr,traceback.format_exc()))
         
         outExists = False
@@ -464,10 +463,10 @@ class mincTools(temp_files):
             if depends:
                 qsub_comm.extend(['-hold_jid', depends])
 
-            print(' - Name    ' + name)
-            print(' - Queue   ' + queue)
-            print(' - Cmd     ' + ' '.join(comm))
-            print(' - logfile ' + path)
+            logger.debug(' - Name    ' + name)
+            logger.debug(' - Queue   ' + queue)
+            logger.debug(' - Cmd     ' + ' '.join(comm))
+            logger.debug(' - logfile ' + path)
 
             #qsub_comm.append(tmpscript)
 
@@ -514,11 +513,11 @@ class mincTools(temp_files):
             if depends:
                 qsub_comm.extend(['-hold_jid', depends])
 
-            print(' - Name    ' + name)
-            print(' - PE      ' + pe)
-            print(' - Slots   ' + str(slots))
-            print(' - Cmd     ' + ' '.join(comm))
-            print(' - logfile ' + path)
+            logger.debug(' - Name    ' + name)
+            logger.debug(' - PE      ' + pe)
+            logger.debug(' - Slots   ' + str(slots))
+            logger.debug(' - Cmd     ' + ' '.join(comm))
+            logger.debug(' - logfile ' + path)
 
             cmds="#!/bin/bash\nhostname\n"
             cmds+=' '.join(comm)+"\n"
@@ -596,81 +595,7 @@ class mincTools(temp_files):
             
         return _result
         
-    def ants_linear_register(
-        self,
-        source,
-        target,
-        output_xfm, 
-        **kwargs
-        ):
-        """perform linear registration with ANTs, obsolete"""
-        return ants_registration.ants_linear_register(source,target,output_xfm,**kwargs)
-                                                 
 
-    def linear_register(
-        self,
-        source,
-        target,
-        output_xfm,
-        **kwargs
-        ):
-        """perform linear registration"""
-
-        return registration.linear_register(source,target,output_xfm,**kwargs)
-    
-    def linear_register_to_self(
-        self,
-        source,
-        target,
-        output_xfm,
-        **kwargs
-        ):
-        """perform linear registration"""
-        
-        return registration.linear_register_to_self(source,target,output_xfm,**kwargs)
-    
-    def nl_xfm_to_elastix(self , xfm, elastix_par):
-        """Convert MINC style xfm into elastix style registration parameters"""
-        return elastix_registration.nl_xfm_to_elastix(sfm,elastix_par)
-
-    def nl_elastix_to_xfm(self , elastix_par, xfm, **kwargs ):
-        """Convert elastix style parameter file into a nonlinear xfm file"""
-        return elastix_registration.nl_elastix_to_xfm(elastix_par,xfm,**kwargs)
-
-    def register_elastix( self, source, target, **kwargs ):
-        """Perform registration with elastix """
-        return elastix_registration.register_elastix(source,target,**kwargs)
-
-    def non_linear_register_ants(
-        self, source, target, output_xfm, **kwargs
-        ):
-        """perform non-linear registration using ANTs, 
-        WARNING: will create inverted xfm  will be named output_invert.xfm
-        """
-        return ants_registration.non_linear_register_ants(source, target, output_xfm, **kwargs)
-
-    def non_linear_register_ldd(
-        self,
-        source, target,
-        output_velocity,
-        **kwargs    ):
-        """Use log-diffeomorphic demons to run registration"""
-        return dd_registration.non_linear_register_ldd(source,target,output_velocity,**kwargs)
-        
-    def non_linear_register_full(
-        self, 
-        source, target, output_xfm,
-        **kwargs
-        ):
-        """perform non-linear registration"""
-        return registration.non_linear_register_full(source,target,output_xfm,**kwargs)
-
-    def non_linear_register_increment(
-        self, source, target, output_xfm,** kwargs
-        ):
-        """perform incremental non-linear registration"""
-        return registration.non_linear_register_increment(source, target, output_xfm,** kwargs)
-        
     def resample_smooth(
         self,
         input,
@@ -705,6 +630,7 @@ class mincTools(temp_files):
                      'byte','short','long','float','double'
         labels   -- assume scan contains integer labels, only works with nearest neignour
         tfm_input_sampling -- apply linear xfm to sampling parameters, assumes mincresample is used
+        :rtype: object
         """
         if os.path.exists(output):
             return
@@ -1002,6 +928,7 @@ class mincTools(temp_files):
         cmd = ['minccalc', '-copy_header','-q', '-clob', '-express', expression]
         
         if datatype:
+            if datatype[0] != '-': datatype = '-' + datatype
             cmd.append(datatype)
         if labels:
             cmd.append('-labels')
@@ -1048,7 +975,7 @@ class mincTools(temp_files):
             args.append(stats)
         
         if mask is not None:
-            args.extend(['-mask',mask,'-mask_binvalue',str(mask_binvalue)])
+            args.extend(['-mask', mask, '-mask_binvalue', str(mask_binvalue)])
         if val_floor is not None:
             args.extend(['-floor',str(val_floor)])
         if val_ceil is not None:
@@ -1868,6 +1795,26 @@ class mincTools(temp_files):
             out=[ [ ( float(j) if k>0 else int(j) ) for k,j in enumerate(i.split(',')) ] for i in _out if len(i)>0 ]
         return out
 
+    def downsample(self,source,output,factor_z=None,factor_y=None,factor_x=None,factor=None,data_type=None):
+        """
+        Apply downsampling (integer factor only) by averaging voxels in the given direction (minc_downsample)
+        :param source:  source file
+        :param output:  output file
+        :param factor_z: factor for z
+        :param factor_y: factor for y
+        :param factor_x: factor for x
+        :param factor:  uniform downsampling factor
+        :param data_type:  output minc data type
+        :return:
+        """
+        cmd = ['minc_downsample', input, output]
+        if factor_x is not None: cmd.extend(['--xfactor',str(factor_x)])
+        if factor_y is not None: cmd.extend(['--yfactor',str(factor_y)])
+        if factor_z is not None: cmd.extend(['--zfactor',str(factor_z)])
+        if factor is not None:   cmd.extend(['--3dfactor',str(factor)])
+        if data_type is not None: cmd.extend(['--'+data_type])
+        self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+
     def skullregistration(
         self,
         source,
@@ -1879,6 +1826,7 @@ class mincTools(temp_files):
         stxtemplate_xfm=None,
         ):
         """perform linear registration based on the skull segmentaton"""
+        # TODO: probably broken, do not use!
 
         temp_dir = self.temp_dir(prefix='skullregistration') + os.sep
         fit = '-xcorr'

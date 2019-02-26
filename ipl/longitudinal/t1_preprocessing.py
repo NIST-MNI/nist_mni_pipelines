@@ -18,6 +18,10 @@ from optparse import OptionGroup  # to change when python updates in the machine
 
 from ipl.minc_tools import mincTools,mincError
 
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
+
 from .general import *
 from .patient import *
 
@@ -118,7 +122,7 @@ def t1preprocessing_v10(patient, tp):
                     minc.calc([minc.tmp('trunc_t1.mnc'),minc.tmp('otsu_closed_t1.mnc')], 'A[0]*A[1]',  minc.tmp('trunc_masked_t1.mnc'))
                     minc.calc([tmpt1,minc.tmp('otsu_closed_t1.mnc')],'A[0]*A[1]' ,minc.tmp('masked_t1.mnc'))
                     
-                    minc.linear_register( minc.tmp('trunc_masked_t1.mnc'), modelt1, tmpxfm,
+                    ipl.registration.linear_register( minc.tmp('trunc_masked_t1.mnc'), modelt1, tmpxfm,
                             init_xfm=init_xfm, 
                             objective='-nmi', conf=patient.linreg )
                     
@@ -152,7 +156,7 @@ def t1preprocessing_v10(patient, tp):
                         )
                 elif patient.mask_n3:
                     # 2. Reformat mask
-                    minc.linear_register( tmpt1, modelt1, tmpxfm,
+                    ipl.registration.linear_register( tmpt1, modelt1, tmpxfm,
                             init_xfm=init_xfm, 
                             objective='-nmi', 
                             conf=patient.linreg )
@@ -196,7 +200,7 @@ def t1preprocessing_v10(patient, tp):
                                   transform=patient[tp].geo['t1'] )
 
         if not os.path.exists( patient[tp].stx_xfm['t1']):
-            minc.linear_register( t1_corr, modelt1,
+            ipl.registration.linear_register( t1_corr, modelt1,
                                   patient[tp].stx_xfm['t1'],
                                   init_xfm=init_xfm,
                                   objective='-nmi', 

@@ -14,6 +14,9 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
 
 import shutil
 
@@ -127,7 +130,7 @@ def t2pdpreprocessing_v10(patient, tp):
                 and os.path.exists(patient[tp].manual['stx_t2']):
                 init_xfm = patient[tp].manual['stx_t2']
 
-            minc.linear_register_to_self(  # patient[tp].clp["t2t1xfm"],
+            ipl.registration.linear_register_to_self(  # patient[tp].clp["t2t1xfm"],
                 tmpnlm,
                 patient[tp].native['t1'],
                 tmp_t2_t1_xfm,
@@ -236,7 +239,7 @@ def t2pdpreprocessing_v10(patient, tp):
 
 
             # 6. second round of co-registration
-            minc.linear_register_to_self(
+            ipl.registration.linear_register_to_self(
                 t2_corr,
                 t1_corr,
                 patient[tp].clp['t2t1xfm'],
@@ -309,8 +312,8 @@ def t2pdpreprocessing_v10(patient, tp):
                 if 'stx_pd' in patient[tp].manual \
                     and os.path.exists(patient[tp].manual['stx_pd']):
                     init_xfm = patient[tp].manual['stx_pd']
-                
-                minc.linear_register_to_self( 
+
+                ipl.registration.linear_register_to_self(
                     tmpnlm,
                     patient[tp].native['t1'],
                     tmp_pd_t1_xfm,
@@ -438,7 +441,7 @@ def t2pdpreprocessing_v10(patient, tp):
 
             if not 't2' in patient[tp].native:
                 # 6. second round of co-registration
-                minc.linear_register_to_self(
+                ipl.registration.linear_register_to_self(
                     pd_corr,
                     t1_corr,
                     patient[tp].clp['pdt1xfm'],

@@ -90,7 +90,11 @@ def parse_options():
                                      "MultiBSplineTransformWithNormal",
                                      "TranslationTransform"]
                         )
-    
+    parser.add_argument('--auto_init',
+                        default='CenterOfGravity',
+                        help="Automatic initialization method",
+                        choices=['CenterOfGravity','GeometricalCenter'])
+
     parser.add_argument("--metric",
                         default="AdvancedNormalizedCorrelation",
                         help="Elastix metric",
@@ -207,7 +211,8 @@ def main():
             "grid_spacing":options.grid_spacing,
             "max_step":    options.max_step,
             "measure":     options.measure,
-            "automatic_transform_init": not options.close
+            "automatic_transform_init": not options.close,
+            "automatic_transform_init_method": options.auto_init,
             }
         
         out=ipl.elastix_registration.register_elastix( 

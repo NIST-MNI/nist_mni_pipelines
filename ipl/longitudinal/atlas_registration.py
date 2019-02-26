@@ -10,6 +10,9 @@ version = '1.0'
 # Atlas registration
 #
 from ipl.minc_tools import mincTools,mincError
+import ipl.registration
+import ipl.ants_registration
+import ipl.elastix_registration
 
 from .general import *
 
@@ -37,7 +40,7 @@ def atlasregistration_v10(patient):
         model_t1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
         model_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
 
-        minc.non_linear_register_full(
+        ipl.registration.non_linear_register_full(
             patient.template['nl_template'],
             model_t1,
             patient.nl_xfm,

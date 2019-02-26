@@ -72,26 +72,26 @@ class SegLibrary(yaml.YAMLObject):
                   'local_model_mask_flip',
                   'local_model_seg',
                   'local_model_seg_flip',
-                  'local_model_add', 
-                  'local_model_add_flip',
                   'gco_energy',
                   'local_model_ovl',
                   'local_model_sd',
                   'local_model_avg',
                   ''}
 
+    _rel_paths_lst = {'local_model_add', 'local_model_add_flip'}
+
     _abs_paths = {'model',
                   'model_mask' }
 
     _abs_paths_lst = { 'model_add'}
 
-    _all_visible_tags = _rel_paths | _abs_paths | _abs_paths_lst | \
+    _all_visible_tags = _rel_paths | _abs_paths | _abs_paths_lst | _rel_paths_lst | \
                         {'library', 'flip_map', 'seg_datatype', 'flip_map',
                          'map', 'label_map', 'nl_samples_avail', 'modalities',
                          'classes_number' }
 
     def __init__(self, path=None ):
-        # compatibility info
+        # compatibility info 
         self.local_model = None
         self.local_model_mask = None
         self.local_model_flip = None,
@@ -108,6 +108,7 @@ class SegLibrary(yaml.YAMLObject):
         self.model_mask = None
         self.label_map = {}
         self.flip_map = {}
+        self.label_map = {}
         self.map = {}
         self.gco_energy = None
         self.library = []
@@ -180,10 +181,10 @@ class SegLibrary(yaml.YAMLObject):
             # convert samples paths to absolute
             self.library = [LibEntry(i, self.prefix) for i in library_description['library']]
 
-            for i in ['flip_map', 'map','label_map','nl_samples_avail','seg_datatype','modalities']:
+            for i in ['flip_map', 'map','label_map','nl_samples_avail', 'seg_datatype', 'modalities', 'classes_number']:
                 self.__dict__[i] = library_description.get(i, self.__dict__[i])
         except:
-            print("Error loading library information from:{} {}".format(prefix, sys.exc_info()[0]))
+            print("Error loading library information {}".format( sys.exc_info()[0]))
             traceback.print_exc(file=sys.stderr)
             raise
 
@@ -194,6 +195,7 @@ class SegLibrary(yaml.YAMLObject):
         return self.get(item, default=None)
 
     def get(self, item, default=None):
+      try:
         if item in self.__dict__:
             if item in SegLibrary._rel_paths:
                 return self.prefix + os.sep + self.__dict__[item]  if self.__dict__[item] is not None else default
@@ -201,10 +203,16 @@ class SegLibrary(yaml.YAMLObject):
                 return (self.prefix + os.sep + self.__dict__[item] if self.__dict__[item][0] != os.sep else self.__dict__[item] ) if self.__dict__[item] is not None else default
             elif item in SegLibrary._abs_paths_lst:
                 return [ (self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
+            elif item in SegLibrary._rel_paths_lst:
+                return [ (self.prefix + os.sep + i if i[0] != os.sep else i) for i in self.__dict__[item]]
             else:
                 return self.__dict__[item]
         else:
             return default
+      except:
+        print("error getting {}".format(item))
+        traceback.print_exc(file=sys.stderr)
+        raise
 
     @classmethod
     def from_yaml(cls, loader, node):
