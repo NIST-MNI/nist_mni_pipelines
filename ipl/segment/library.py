@@ -106,6 +106,7 @@ class SegLibrary(yaml.YAMLObject):
         self.model = None
         self.model_add  = []
         self.model_mask = None
+        self.label_map = {}
         self.flip_map = {}
         self.label_map = {}
         self.map = {}
