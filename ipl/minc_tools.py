@@ -1795,6 +1795,26 @@ class mincTools(temp_files):
             out=[ [ ( float(j) if k>0 else int(j) ) for k,j in enumerate(i.split(',')) ] for i in _out if len(i)>0 ]
         return out
 
+    def downsample(self,source,output,factor_z=None,factor_y=None,factor_x=None,factor=None,data_type=None):
+        """
+        Apply downsampling (integer factor only) by averaging voxels in the given direction (minc_downsample)
+        :param source:  source file
+        :param output:  output file
+        :param factor_z: factor for z
+        :param factor_y: factor for y
+        :param factor_x: factor for x
+        :param factor:  uniform downsampling factor
+        :param data_type:  output minc data type
+        :return:
+        """
+        cmd = ['minc_downsample', input, output]
+        if factor_x is not None: cmd.extend(['--xfactor',str(factor_x)])
+        if factor_y is not None: cmd.extend(['--yfactor',str(factor_y)])
+        if factor_z is not None: cmd.extend(['--zfactor',str(factor_z)])
+        if factor is not None:   cmd.extend(['--3dfactor',str(factor)])
+        if data_type is not None: cmd.extend(['--'+data_type])
+        self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+
     def skullregistration(
         self,
         source,
