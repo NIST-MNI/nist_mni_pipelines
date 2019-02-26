@@ -220,7 +220,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 # apply random linear xfm
                 ran_lin_xfm = m.tmp('random_lin_{}.xfm'.format(r))
                 ran_nl_xfm  = None
-                do_degrade = (np.random.rand(1)[0]<options.degrade)
+
 
                 m.param2xfm(ran_lin_xfm,
                             scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
@@ -272,7 +272,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 tmp_scan = m.tmp('scan_{}_degraded.mnc'.format(r))
 
                 # degrade (simulate multislice image)
-                if do_degrade:
+                if np.random.rand(1)[0] < options.degrade:
                     m.downsample(filtered_dataset.scan,tmp_scan,factor_z=options.degrade_factor)
                 else:
                     tmp_scan = filtered_dataset.scan
@@ -280,7 +280,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 output_scan=m.tmp('scan_{}.mnc'.format(r))
 
                 # create a file in temp dir first
-                m.resample_smooth(filtered_dataset.scan, output_scan, 
+                m.resample_smooth(tmp_scan, output_scan,
                                 order=options.order, transform=out_xfm, like=model)
 
                 if post_filters is not None:
