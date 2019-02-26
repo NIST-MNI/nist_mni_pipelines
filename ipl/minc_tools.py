@@ -1807,13 +1807,13 @@ class mincTools(temp_files):
         :param data_type:  output minc data type
         :return:
         """
-        cmd = ['minc_downsample', input, output]
+        cmd = ['minc_downsample', source, output]
         if factor_x is not None: cmd.extend(['--xfactor',str(factor_x)])
         if factor_y is not None: cmd.extend(['--yfactor',str(factor_y)])
         if factor_z is not None: cmd.extend(['--zfactor',str(factor_z)])
         if factor is not None:   cmd.extend(['--3dfactor',str(factor)])
         if data_type is not None: cmd.extend(['--'+data_type])
-        self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+        self.command(cmd, inputs=[source], outputs=[output], verbose=self.verbose)
 
     def skullregistration(
         self,
