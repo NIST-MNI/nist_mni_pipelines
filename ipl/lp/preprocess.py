@@ -105,7 +105,7 @@ def estimate_nu(in_scan, out_field, parameters={},model=None):
                         datatype=parameters.get('datatype',None)
                         )
             else:
-                minc.n4(in_scan.scan, 
+                minc.n4(in_scan.scan,
                     output_field=out_field.scan,
                     weight_mask=weight_mask,
                     shrink=parameters.get('shrink',4),
@@ -122,7 +122,7 @@ def apply_nu(in_scan, field, out_scan, parameters={}):
             return
         minc.resample_smooth(field.scan,minc.tmp('fld.mnc'),like=in_scan.scan,order=1)
         minc.calc([in_scan.scan,minc.tmp('fld.mnc')],
-                  'A[0]/A[1]', out_scan.scan)
+                  'A[0]/A[1]', out_scan.scan,zero=True)
 
 
 def normalize_intensity(in_scan, out_scan,

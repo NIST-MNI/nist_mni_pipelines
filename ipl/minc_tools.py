@@ -609,7 +609,8 @@ class mincTools(temp_files):
         resample=None,
         datatype=None,
         tfm_input_sampling=False,
-        labels=False
+        labels=False,
+        fill=None
         ):
         """resample an image, interpreting voxels as intnsities 
         
@@ -653,6 +654,8 @@ class mincTools(temp_files):
                 raise mincError('Not implemented!')
             if datatype:
                 cmd.append('-' + datatype)
+            if fill is not None:
+                cmd.extend(['-fill','-fillvalue',str(fill)])
             self.command(cmd, inputs=[input], outputs=[output])
         elif resample == 'linear':
             cmd = ['mincresample', input, output, '-trilinear', '-q']
@@ -670,6 +673,8 @@ class mincTools(temp_files):
                 raise mincError('Not implemented!')
             if datatype:
                 cmd.append('-' + datatype)
+            if fill is not None:
+                cmd.extend(['-fill','-fillvalue',str(fill)])
             self.command(cmd, inputs=[input], outputs=[output])
         elif resample == 'cubic':
             cmd = ['mincresample', input, output, '-tricubic', '-q']
@@ -687,6 +692,8 @@ class mincTools(temp_files):
                 raise mincError('Not implemented!')
             if datatype:
                 cmd.append('-' + datatype)
+            if fill is not None:
+                cmd.extend(['-fill','-fillvalue',str(fill)])
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
         elif resample == 'nearest' or labels:
             cmd = ['mincresample', input, output, '-nearest', '-q']
@@ -706,6 +713,8 @@ class mincTools(temp_files):
                 cmd.append('-' + datatype)
             if labels:
                 cmd.append('-labels')
+            if fill is not None:
+                cmd.extend(['-fill','-fillvalue',str(fill)])
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
         else:
             cmd = ['itk_resample', input, output, '--order', str(order)]
@@ -721,6 +730,8 @@ class mincTools(temp_files):
                 cmd.extend(['--unistep', str(unistep)])
             if datatype:
                 cmd.append('--' + datatype)
+            if fill is not None:
+                cmd.extend(['--fill',str(fill)])
             self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
 
     def resample_labels(
@@ -921,7 +932,8 @@ class mincTools(temp_files):
         expression,
         output,
         datatype=None,
-        labels=False
+        labels=False,
+        zero=False
         ):
         """apply mathematical expression to image(s)"""
 
@@ -932,7 +944,8 @@ class mincTools(temp_files):
             cmd.append(datatype)
         if labels:
             cmd.append('-labels')
-        
+        if zero:
+            cmd.append('-zero')
         cmd.extend(inputs)
         cmd.append(output)
         
@@ -1075,19 +1088,25 @@ class mincTools(temp_files):
             expfile = self.temp_file(suffix='.exp')
             rm_expfile = True
         try:
+            nan_mask=None
             cmd = ['volume_pol',
                 source, target,
                 '--order',  str(order),
                 '--expfile', expfile,
-                '--noclamp','--clob', ]
+                '--noclamp','--clob' ]
             if source_mask:
                 cmd.extend(['--source_mask', source_mask])
+            else: # hack to remove NaNs
+                nan_mask=self.temp_file(suffix='.mnc')
+                self.command(['minccalc','-byte','-labels', '-express', '!isnan(A[0])',source,nan_mask])
+                cmd.extend(['--source_mask', nan_mask])
             if target_mask:
                 cmd.extend(['--target_mask', target_mask])
             self.command(cmd, inputs=[source, target],
                          outputs=[expfile], verbose=self.verbose)
+            if nan_mask is not None: os.unlink(nan_mask)
             exp = open(expfile).read().rstrip()
-            cmd = ['minccalc', '-q' ,'-expression', exp, source, output]
+            cmd = ['minccalc', '-q' ,'-expression', exp, source, output , '-zero']
             if datatype:
                 cmd.append(datatype)
             self.command(cmd, inputs=[source, target], outputs=[output], verbose=self.verbose)
