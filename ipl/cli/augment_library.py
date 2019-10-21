@@ -334,7 +334,7 @@ def main():
         source_parameters={}
         try:
             with open(options.source,'r') as f:
-                source_parameters = yaml.load(f)
+                source_parameters = yaml.load(f, Loader=yaml.FullLoader)
         except :
             print("Error loading configuration:{} {}\n".format(options.source, sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)

@@ -25,6 +25,7 @@ class LibEntry(yaml.YAMLObject):
     Segmentation library sample, closely related to MriDataset
     """
     yaml_tag = '!Entry'
+    yaml_loader=yaml.SafeLoader
 
     def __init__(self, lst=None, prefix='.', ent_id=None, relpath=None):
         if relpath is None:
@@ -64,6 +65,7 @@ class SegLibrary(yaml.YAMLObject):
     Segmentation library DB
     """
     yaml_tag = '!SegLibrary'
+    yaml_loader = yaml.SafeLoader
 
     _rel_paths = {
                   'local_model',
@@ -129,7 +131,7 @@ class SegLibrary(yaml.YAMLObject):
                 name = 'library.json'
 
         with open(path + os.sep + name, 'r') as f:
-            tmp = yaml.load(f)
+            tmp = yaml.load(f, Loader=yaml.SafeLoader)
             self.prefix = path
 
             if type(tmp) is dict:
@@ -289,7 +291,7 @@ def load_library_info(prefix, name='library.json'):
     try:
         library_description={}
         with open(prefix+os.sep+name, 'r') as f:
-            library_description = yaml.load(f)
+            library_description = yaml.load(f, Loader=yaml.FullLoader)
 
         library_description['prefix'] = prefix
 
@@ -349,6 +351,7 @@ def make_segmented_label_list(library_description, symmetric=False):
             for i in library_description['flip_map']:
                 used_labels.add(int(i[1]))
     return list(used_labels)
+
 
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
