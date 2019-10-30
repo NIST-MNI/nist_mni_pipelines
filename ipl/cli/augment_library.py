@@ -174,11 +174,11 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         # Using linear XFM from the library
         # TODO: make route to estimate when not available
         lib_sample          = library.library[idx]
-        lut                 = library.map
+        lut                 = source_parameters.get('build_remap',None)
         if flip:
-            lut               = library.flip_map
-        # inverse lut
-        lut=[ [ _i[1], _i[0] ] for _i in lut.items() ]
+            lut               = source_parameters.get('build_flip_remap',None)
+        # inverse lut NOT NEEDED
+        # lut=[ [ _i[1], _i[0] ] for _i in lut.items() ]
         
         model      = library.local_model
         model_mask = library.local_model_mask
@@ -208,6 +208,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0, 1.0, 1.0])
         out_=[]
         for r in range(options.n):
+          with mincTools() as m2:
             out_suffix="_{:03d}".format(r)
             
             out_vol  = options.output+ os.sep+ sample_name+ out_suffix+ '_scan.mnc'
@@ -224,13 +225,13 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 ran_nl_xfm  = None
 
 
-                m.param2xfm(ran_lin_xfm,
+                m2.param2xfm(ran_lin_xfm,
                             scales=     ((np.random.rand(3)-0.5)*2*float(options.scale)/100.0+1.0).tolist(),
                             translation=((np.random.rand(3)-0.5)*2*float(options.shift)).tolist(),
                             rotations=  ((np.random.rand(3)-0.5)*2*float(options.rot))  .tolist())
                 
                 if pca_grid is not None:
-                  ran_nl_xfm = m.tmp('random_nl_{}.xfm'.format(r))
+                  ran_nl_xfm = m2.tmp('random_nl_{}.xfm'.format(r))
                   # create a random transform
                   ran_nl_grid = ran_nl_xfm.rsplit('.xfm',1)[0]+'_grid_0.mnc'
                 
@@ -243,7 +244,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                       cmd.append('A[{}]*{}'.format(i,_par[i]))
                   cmd='+'.join(cmd)
                   # apply to the output
-                  m.calc(_files,cmd,ran_nl_grid)
+                  m2.calc(_files,cmd,ran_nl_grid)
                   with open(ran_nl_xfm,'w') as f:
                     f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
                       format(os.path.basename(ran_nl_grid)))
@@ -259,34 +260,34 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     xfms.append(ran_nl_xfm)
                 xfms.extend([ran_lin_xfm])
 
-                m.xfmconcat(xfms, out_xfm)
+                m2.xfmconcat(xfms, out_xfm)
 
                 if mask is not None:
-                    m.resample_labels(mask, out_mask, 
+                    m2.resample_labels(mask, out_mask, 
                                     transform=out_xfm, like=model)
                 else:
                     out_mask=None
                   
-                m.resample_labels(filtered_dataset.seg, out_seg, 
+                m2.resample_labels(filtered_dataset.seg, out_seg, 
                                 transform=out_xfm, order=options.label_order, 
                                 remap=lut, like=model, baa=True)
 
-                tmp_scan = m.tmp('scan_{}_degraded.mnc'.format(r))
+                tmp_scan = m2.tmp('scan_{}_degraded.mnc'.format(r))
 
                 # degrade (simulate multislice image)
                 if np.random.rand(1)[0] < options.degrade:
-                    m.downsample(filtered_dataset.scan,tmp_scan,factor_z=options.degrade_factor)
+                    m2.downsample(filtered_dataset.scan,tmp_scan,factor_z=options.degrade_factor)
                 else:
                     tmp_scan = filtered_dataset.scan
 
-                output_scan=m.tmp('scan_{}.mnc'.format(r))
+                output_scan=m2.tmp('scan_{}.mnc'.format(r))
 
                 # create a file in temp dir first
-                m.resample_smooth(tmp_scan, output_scan,
+                m2.resample_smooth(tmp_scan, output_scan,
                                 order=options.order, transform=out_xfm, like=model)
 
                 if post_filters is not None:
-                    output_scan2=m.tmp('scan2_{}.mnc'.format(r))
+                    output_scan2=m2.tmp('scan2_{}.mnc'.format(r))
                     apply_filter(output_scan, output_scan2, 
                                 post_filters, model=model, 
                                 input_mask=out_mask, 
@@ -296,27 +297,25 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 
                 # apply itensity variance
                 if pca_int is not None and options.int_n>0:
-                    output_scan2=m.tmp('scan3_{}.mnc'.format(r))
+                    output_scan2=m2.tmp('scan3_{}.mnc'.format(r))
                     
                     _files=[output_scan]
                     cmd='A[0]'
                     _par=((np.random.rand(options.int_n)-0.5)*2.0*float(options.intvar)).tolist()
                     # resample fields first
                     for i in range(options.int_n):
-                        fld=m.tmp('field_{}_{}.mnc'.format(r,i))
-                        m.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm,like=model)
+                        fld=m2.tmp('field_{}_{}.mnc'.format(r,i))
+                        m2.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm,like=model)
                         _files.append(fld)
                         cmd+='*exp(A[{}]*{})'.format(i+1,_par[i])
                     # apply to the output
-                    m.calc(_files,cmd,output_scan2)
+                    m2.calc(_files,cmd,output_scan2)
                     output_scan=output_scan2
-                
                 # finally copy to putput
                 shutil.copyfile(output_scan,out_vol)
-                
             # end of loop    
             out_.append( [out_vol, out_seg, out_xfm ] )
-            
+
         return out_
   except:
     print("Exception:{}".format(sys.exc_info()[0]))
