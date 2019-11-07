@@ -25,7 +25,7 @@ class LibEntry(yaml.YAMLObject):
     Segmentation library sample, closely related to MriDataset
     """
     yaml_tag = '!Entry'
-    yaml_loader=yaml.SafeLoader
+    yaml_loader = yaml.SafeLoader
 
     def __init__(self, lst=None, prefix='.', ent_id=None, relpath=None):
         if relpath is None:
@@ -243,9 +243,10 @@ def save_library_info(library_description, output, name='library.json'):
         tmp_library_description = copy.deepcopy(library_description)
         tmp_library_description.pop('prefix', None)
 
-        for i in ['local_model', 'local_model_mask', 'local_model_flip',
-                  'local_model_mask_flip',
-                  'local_model_seg', 'local_model_sd', 'local_model_avg', 'local_model_ovl',
+        for i in ['local_model', 'local_model_mask', 
+                  'local_model_flip', 'local_model_mask_flip',
+                  'local_model_seg', 'local_model_sd', 
+                  'local_model_avg', 'local_model_ovl',
                   'gco_energy']:
             if tmp_library_description[i] is not None: 
                 tmp_library_description[i] = os.path.relpath(tmp_library_description[i],output)

@@ -104,7 +104,6 @@ def parse_options():
                     default=False,
                     help='Remove most temporary files' )
     
-    
     parser.add_argument('--variant_fuse',
                         default='fuse',
                         dest='variant_fuse')
@@ -136,7 +135,7 @@ def main():
         except:
             print("Error loading configuration:{} {}\n".format(options.create,sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
-            exit( 1)
+            exit(1)
         try:
             generate_library(create_parameters, options.output, debug=options.debug,
                              cleanup=options.cleanup)

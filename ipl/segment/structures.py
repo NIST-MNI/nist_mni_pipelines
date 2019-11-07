@@ -142,7 +142,7 @@ class MriTransform(object):
                     os.unlink(i)
 
 
-class MRIEncoder(json.JSONEncoder):
+class MRIEncoder( json.JSONEncoder ):
     def default(self, obj):
         if isinstance(obj, MriTransform):
             return {'name': obj.name,

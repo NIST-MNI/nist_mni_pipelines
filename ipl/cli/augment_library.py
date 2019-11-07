@@ -170,18 +170,29 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         
         use_fake_masks      = source_parameters.get( 'fake_mask', False )
         op_mask             = source_parameters.get( 'op_mask','E[2] D[4]')
+        modalities          = source_parameters.get( 'modalities',1 ) - 1
         
+        sample_add          = sample[2:modalities+2] # additional modalties
         # Using linear XFM from the library
         # TODO: make route to estimate when not available
         lib_sample          = library.library[idx]
         lut                 = source_parameters.get('build_remap',None)
         if flip:
-            lut               = source_parameters.get('build_flip_remap',None)
-        # inverse lut NOT NEEDED
-        # lut=[ [ _i[1], _i[0] ] for _i in lut.items() ]
+            lut             = source_parameters.get('build_flip_remap',None)
         
-        model      = library.local_model
-        model_mask = library.local_model_mask
+        # model      = library.local_model
+        # model_add  = library.local_model_add
+        # model_mask = library.local_model_mask
+        model = MriDataset(scan=  library["local_model"],
+                                 mask=  library["local_model_mask"],
+                                 scan_f=library["local_model_flip"],
+                                 mask_f=library["local_model_mask_flip"],
+                                 seg=   library["local_model_seg"],
+                                 seg_f= library["local_model_seg_flip"],
+                                 add=   library["local_model_add"],
+                                 add_f= library["local_model_add_flip"],
+                                 )
+        
 
         model_seg  = library.get('local_model_seg',None)
         
@@ -195,14 +206,15 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
             mask  = m.tmp('mask.mnc')
             create_fake_mask(sample[1], mask, op=op_mask)
         
-        input_dataset = MriDataset(scan=sample[0], seg=sample[1], mask=mask, protect=True)
+        input_dataset = MriDataset(scan=sample[0], seg=sample[1], mask=mask, protect=True, add=sample_add)
         filtered_dataset = input_dataset
         # preprocess sample
         # code from train.py
+        
         if pre_filters is not None:
             # apply pre-filtering before other stages
-            filtered_dataset = MriDataset( prefix=m.tempdir, name=sample_name )
-            filter_sample( input_dataset, filtered_dataset, pre_filters, model=model)
+            filtered_dataset = MriDataset( prefix=m.tempdir, name=sample_name, add_n=modalities )
+            filter_sample( input_dataset, filtered_dataset, pre_filters, model = model)
             filtered_dataset.seg  = lib_sample.seg
             filtered_dataset.mask = lib_sample.mask
         m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0, 1.0, 1.0])
@@ -215,6 +227,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
             out_seg  = options.output+ os.sep+ sample_name+ out_suffix+ '_seg.mnc'
             out_mask = options.output+ os.sep+ sample_name+ out_suffix+ '_mask.mnc'
             out_xfm  = options.output+ os.sep+ sample_name+ out_suffix+ '.xfm'
+            out_vol_add = [ options.output+ os.sep+ sample_name+ out_suffix+ '_{}_scan.mnc'.format(am) for am in range(modalities)]
             
             if    not os.path.exists(out_vol) \
                or not os.path.exists(out_seg) \
@@ -280,11 +293,25 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 else:
                     tmp_scan = filtered_dataset.scan
 
-                output_scan=m2.tmp('scan_{}.mnc'.format(r))
-
+                output_scan = m2.tmp('scan_{}.mnc'.format(r))
                 # create a file in temp dir first
                 m2.resample_smooth(tmp_scan, output_scan,
-                                order=options.order, transform=out_xfm, like=model)
+                                order=options.order, transform=out_xfm, like=model )
+
+                output_scans_add = []
+                for am in range(modalities):
+                    # degrade (simulate multislice image)
+                    tmp_scan_add = m2.tmp('scan_{}_{}_degraded.mnc'.format(r,am))
+                    output_scan_add = m2.tmp('scan_{}_{}.mnc'.format(r,am))
+                    if np.random.rand(1)[0] < options.degrade:
+                        m2.downsample(filtered_dataset.add[am],tmp_scan_add,factor_z=options.degrade_factor)
+                    else:
+                        tmp_scan_add = filtered_dataset.add[am]
+
+                    m2.resample_smooth(tmp_scan_add, output_scan_add,
+                                    order=options.order, transform=out_xfm, like=model )
+                    
+                    output_scans_add.push_back(output_scan_add)
 
                 if post_filters is not None:
                     output_scan2=m2.tmp('scan2_{}.mnc'.format(r))
@@ -294,28 +321,46 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                                 input_labels=out_seg, 
                                 model_labels=model_seg)
                     output_scan=output_scan2
+
+                    output_scans_add2 = []
+                    for am in range(modalities):
+                        output_scans_add2.push_back(m2.tmp('scan2_{}_{}.mnc'.format(r,am)))
+                        apply_filter(output_scans_add[am], output_scans_add2[am], 
+                                    post_filters, model=model.add[am], 
+                                    input_mask=out_mask, 
+                                    input_labels=out_seg, 
+                                    model_labels=model_seg)
+                    output_scans_add=output_scans_add2
                 
                 # apply itensity variance
                 if pca_int is not None and options.int_n>0:
                     output_scan2=m2.tmp('scan3_{}.mnc'.format(r))
                     
-                    _files=[output_scan]
+                    _files=[  ]
                     cmd='A[0]'
                     _par=((np.random.rand(options.int_n)-0.5)*2.0*float(options.intvar)).tolist()
                     # resample fields first
                     for i in range(options.int_n):
                         fld=m2.tmp('field_{}_{}.mnc'.format(r,i))
-                        m2.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm,like=model)
+                        m2.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm, like=model)
                         _files.append(fld)
                         cmd+='*exp(A[{}]*{})'.format(i+1,_par[i])
                     # apply to the output
-                    m2.calc(_files,cmd,output_scan2)
-                    output_scan=output_scan2
-                # finally copy to putput
-                shutil.copyfile(output_scan,out_vol)
-            # end of loop    
-            out_.append( [out_vol, out_seg, out_xfm ] )
+                    m2.calc([ output_scan ]+_files,cmd,output_scan2)
+                    output_scan = output_scan2
+                    # TODO: simulate different field for other modalities?
+                    output_scans_add2 = []
+                    for am in range(modalities):
+                        output_scans_add2.push_back(m2.tmp('scan3_{}_{}.mnc'.format(r,am)))
+                        m2.calc([ output_scans_add[am] ]+_files,cmd,output_scans_add2[am])
+                    output_scans_add=output_scans_add2
 
+                # finally copy to putput
+                shutil.copyfile(output_scan, out_vol)
+                for am in range(modalities):
+                    shutil.copyfile(output_scans_add[am], out_vol_add[am])
+            # end of loop    
+            out_.append( [out_vol, out_seg ] + out_vol_add + [ out_xfm ] )
         return out_
   except:
     print("Exception:{}".format(sys.exc_info()[0]))
@@ -386,8 +431,8 @@ def main():
         
         for j in outputs:
             for k in j.result():
-               # remove _scan_xxx.mnc part from id
-               augmented_library.library.append( LibEntry( k, relpath=options.output, ent_id=os.path.basename(k[0]).rsplit('_',2)[0] ) )
+               # remove _scan_xxx.mnc part from id, to indicate that the augmented sample still comes from original ID 
+               augmented_library.library.append( LibEntry( k, relpath=options.output, ent_id = os.path.basename(k[0]).rsplit('_',2)[0] ) )
         
         # save new library description
         #save_library_info(augmented_library, options.output)
