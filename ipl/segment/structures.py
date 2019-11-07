@@ -14,9 +14,9 @@ import json
 
 class MriDataset(object):
     ''' Scan sample with segmentation and mask'''
-    def __init__(self, prefix=None, name=None, scan=None, mask=None, seg=None, 
-                 scan_f=None, mask_f=None, seg_f=None, protect=False, 
-                 add=[], add_n=None, 
+    def __init__(self, prefix=None, name=None, scan=None, mask=None, seg=None,
+                 scan_f=None, mask_f=None, seg_f=None, protect=False,
+                 add=[], add_n=None,
                  add_f=[] ):
         self.prefix = prefix
         self.name = name
