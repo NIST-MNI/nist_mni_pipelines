@@ -21,7 +21,7 @@ def filter_sample(input, output, filters, model=None):
                  model=model.scan, input_mask=input.mask, 
                  model_mask=model.mask)
     # TODO: parallelalize?
-    for (i,j) in enumerate( input.add ):
+    for (i, j) in enumerate( input.add ):
         apply_filter(input.add[i], output.add[i], filters, 
                      model=model.add[i], input_mask=i.mask, 
                      model_mask=model.mask)
