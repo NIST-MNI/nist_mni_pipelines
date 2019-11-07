@@ -183,16 +183,16 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         # model      = library.local_model
         # model_add  = library.local_model_add
         # model_mask = library.local_model_mask
-        model = MriDataset(scan=  library["local_model"],
-                                 mask=  library["local_model_mask"],
-                                 scan_f=library["local_model_flip"],
-                                 mask_f=library["local_model_mask_flip"],
-                                 seg=   library["local_model_seg"],
-                                 seg_f= library["local_model_seg_flip"],
-                                 add=   library["local_model_add"],
-                                 add_f= library["local_model_add_flip"],
-                                 )
-        
+        model = MriDataset(scan=  library.local_model,
+                           mask=  library.local_model_mask,
+                           scan_f=library.local_model_flip,
+                           mask_f=library.local_model_mask_flip,
+                           seg=   library.local_model_seg,
+                           seg_f= library.local_model_seg_flip,
+                           add=   library.local_model_add,
+                           add_f= library.local_model_add_flip,
+                          )
+        print(repr(model))
 
         model_seg  = library.get('local_model_seg',None)
         
@@ -277,13 +277,13 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
 
                 if mask is not None:
                     m2.resample_labels(mask, out_mask, 
-                                    transform=out_xfm, like=model)
+                                    transform=out_xfm, like=model.scan)
                 else:
                     out_mask=None
                   
                 m2.resample_labels(filtered_dataset.seg, out_seg, 
                                 transform=out_xfm, order=options.label_order, 
-                                remap=lut, like=model, baa=True)
+                                remap=lut, like=model.scan, baa=True)
 
                 tmp_scan = m2.tmp('scan_{}_degraded.mnc'.format(r))
 
@@ -296,7 +296,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 output_scan = m2.tmp('scan_{}.mnc'.format(r))
                 # create a file in temp dir first
                 m2.resample_smooth(tmp_scan, output_scan,
-                                order=options.order, transform=out_xfm, like=model )
+                                order=options.order, transform=out_xfm, like=model.scan )
 
                 output_scans_add = []
                 for am in range(modalities):
@@ -309,27 +309,27 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                         tmp_scan_add = filtered_dataset.add[am]
 
                     m2.resample_smooth(tmp_scan_add, output_scan_add,
-                                    order=options.order, transform=out_xfm, like=model )
+                                    order=options.order, transform=out_xfm, like=model.scan )
                     
-                    output_scans_add.push_back(output_scan_add)
+                    output_scans_add += [output_scan_add]
 
                 if post_filters is not None:
                     output_scan2=m2.tmp('scan2_{}.mnc'.format(r))
                     apply_filter(output_scan, output_scan2, 
-                                post_filters, model=model, 
+                                post_filters, model=model.scan, 
                                 input_mask=out_mask, 
                                 input_labels=out_seg, 
-                                model_labels=model_seg)
+                                model_labels=model.seg)
                     output_scan=output_scan2
 
                     output_scans_add2 = []
                     for am in range(modalities):
-                        output_scans_add2.push_back(m2.tmp('scan2_{}_{}.mnc'.format(r,am)))
+                        output_scans_add2+=[m2.tmp('scan2_{}_{}.mnc'.format(r,am))]
                         apply_filter(output_scans_add[am], output_scans_add2[am], 
                                     post_filters, model=model.add[am], 
                                     input_mask=out_mask, 
                                     input_labels=out_seg, 
-                                    model_labels=model_seg)
+                                    model_labels=model.seg)
                     output_scans_add=output_scans_add2
                 
                 # apply itensity variance
@@ -342,7 +342,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     # resample fields first
                     for i in range(options.int_n):
                         fld=m2.tmp('field_{}_{}.mnc'.format(r,i))
-                        m2.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm, like=model)
+                        m2.resample_smooth(pca_int[i], fld, order=1, transform=out_xfm, like=model.scan)
                         _files.append(fld)
                         cmd+='*exp(A[{}]*{})'.format(i+1,_par[i])
                     # apply to the output
@@ -351,7 +351,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     # TODO: simulate different field for other modalities?
                     output_scans_add2 = []
                     for am in range(modalities):
-                        output_scans_add2.push_back(m2.tmp('scan3_{}_{}.mnc'.format(r,am)))
+                        output_scans_add2+=[m2.tmp('scan3_{}_{}.mnc'.format(r,am))]
                         m2.calc([ output_scans_add[am] ]+_files,cmd,output_scans_add2[am])
                     output_scans_add=output_scans_add2
 
