@@ -428,12 +428,12 @@ def main():
 
         # wipe all the samples
         augmented_library.library = []
-        
+
         for j in outputs:
             for k in j.result():
-               # remove _scan_xxx.mnc part from id, to indicate that the augmented sample still comes from original ID 
+               # remove _scan_xxx.mnc part from id, to indicate that the augmented sample still comes from original ID
                augmented_library.library.append( LibEntry( k, relpath=options.output, ent_id = os.path.basename(k[0]).rsplit('_',2)[0] ) )
-        
+
         # save new library description
         #save_library_info(augmented_library, options.output)
         print("Saving to {}".format(options.output))
