@@ -46,6 +46,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         
         reference_local_model_flip= parameters.get( 'reference_local_model_flip', None)
         reference_local_mask_flip = parameters.get( 'reference_local_mask_flip', None)
+        reference_local_model_add = parameters.get( 'reference_local_model_add', [])
         
         library                   = parameters[ 'library' ]
         
@@ -361,10 +362,10 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             if not os.path.exists(local_model.scan_f) and build_symmetric and build_symmetric_flip:
                 create_local_model_flip(local_model, model, remap=build_unflip_remap, op=op_mask)
         else:
-            local_model=MriDataset(scan=reference_local_model, mask=reference_local_mask)
-
-            local_model.scan_f=reference_local_model_flip
-            local_model.mask_f=reference_local_mask_flip
+            local_model = MriDataset(scan=reference_local_model, mask=reference_local_mask, add_n=modalities )
+            local_model.add    = reference_local_model_add
+            local_model.scan_f = reference_local_model_flip
+            local_model.mask_f = reference_local_mask_flip
         
         if do_initial_local_register:
             for (j,i) in enumerate(filtered_samples):
