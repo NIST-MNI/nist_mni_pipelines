@@ -279,7 +279,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     m2.resample_labels(mask, out_mask, 
                                     transform=out_xfm, like=model.scan)
                 else:
-                    out_mask=None
+                    out_mask = None
                   
                 m2.resample_labels(filtered_dataset.seg, out_seg, 
                                 transform=out_xfm, order=options.label_order, 
