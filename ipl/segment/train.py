@@ -362,7 +362,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             if not os.path.exists(local_model.scan_f) and build_symmetric and build_symmetric_flip:
                 create_local_model_flip(local_model, model, remap=build_unflip_remap, op=op_mask)
         else:
-            local_model = MriDataset(scan=reference_local_model, mask=reference_local_mask, add_n=modalities )
+            local_model        = MriDataset(scan=reference_local_model, mask=reference_local_mask, add_n=modalities )
             local_model.add    = reference_local_model_add
             local_model.scan_f = reference_local_model_flip
             local_model.mask_f = reference_local_mask_flip
@@ -529,25 +529,26 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
 
             with mincTools() as m:
                 # a hack, to replace a rough model with a new one
-                if os.path.exists(local_model.seg):
+                if local_model.seg is not None: # HACK
+                  if os.path.exists(local_model.seg):
                     os.unlink(local_model.seg)
 
-                # create majority voted model segmentation, for ANIMAL segmentation if needed
-                segs=['multiple_volume_similarity']
+                  # create majority voted model segmentation, for ANIMAL segmentation if needed
+                  segs=['multiple_volume_similarity']
 
-                segs.extend([ i.seg for i in warped_samples ])
-                if build_symmetric: segs.extend([ i.seg_f for i in warped_samples ])
+                  segs.extend([ i.seg for i in warped_samples ])
+                  if build_symmetric: segs.extend([ i.seg_f for i in warped_samples ])
 
-                segs.extend(['--majority', local_model.seg, '--bg', '--overlap', local_model_ovl.scan ] )
-                m.command(segs,inputs=[],outputs=[local_model.seg,local_model_ovl.scan])
+                  segs.extend(['--majority', local_model.seg, '--bg', '--overlap', local_model_ovl.scan ] )
+                  m.command(segs,inputs=[],outputs=[local_model.seg,local_model_ovl.scan])
 
-                avg=['mincaverage','-float']
-                avg.extend([ i.scan for i in warped_samples ])
-                if build_symmetric: avg.extend([ i.scan_f for i in warped_samples ])
-                avg.extend([local_model_avg.scan, '-sdfile', local_model_sd.scan ] )
-                m.command(avg,inputs=[],outputs=[local_model_avg.scan,local_model_sd.scan])
+                  avg=['mincaverage','-float']
+                  avg.extend([ i.scan for i in warped_samples ])
+                  if build_symmetric: avg.extend([ i.scan_f for i in warped_samples ])
+                  avg.extend([local_model_avg.scan, '-sdfile', local_model_sd.scan ] )
+                  m.command(avg, inputs=[], outputs=[local_model_avg.scan, local_model_sd.scan])
 
-                for i in range(modalities):
+                  for i in range(modalities):
                     avg=['mincaverage','-float']
                     avg.extend([ j.add[i] for j in warped_samples ])
                     if build_symmetric: avg.extend([ j.add_f[i] for j in warped_samples ])
@@ -557,25 +558,26 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         else:
             with mincTools() as m:
                 # a hack, to replace a rough model with a new one
-                if os.path.exists(local_model.seg):
+                if local_model.seg is not None: #HACK
+                  if os.path.exists(local_model.seg):
                     os.unlink(local_model.seg)
 
-                # create majority voted model segmentation, for ANIMAL segmentation if needed
-                segs=['multiple_volume_similarity']
-                segs.extend([ i.seg for i in final_samples ])
+                  # create majority voted model segmentation, for ANIMAL segmentation if needed
+                  segs=['multiple_volume_similarity']
+                  segs.extend([ i.seg for i in final_samples ])
 
-                if build_symmetric: segs.extend([ i.seg_f for i in final_samples ])
+                  if build_symmetric: segs.extend([ i.seg_f for i in final_samples ])
 
-                segs.extend(['--majority', local_model.seg, '--bg','--overlap', local_model_ovl.scan] )
-                m.command(segs,inputs=[],outputs=[local_model.seg,local_model_ovl.scan])
+                  segs.extend(['--majority', local_model.seg, '--bg','--overlap', local_model_ovl.scan] )
+                  m.command(segs,inputs=[],outputs=[local_model.seg,local_model_ovl.scan])
                 
-                avg=['mincaverage','-float']
-                avg.extend([ i.scan for i in final_samples ])
-                if build_symmetric: avg.extend([ i.scan_f for i in final_samples ])
-                avg.extend([local_model_avg.scan, '-sdfile', local_model_sd.scan ] )
-                m.command(avg,inputs=[],outputs=[local_model_avg.scan,local_model_sd.scan])
+                  avg=['mincaverage','-float']
+                  avg.extend([ i.scan for i in final_samples ])
+                  if build_symmetric: avg.extend([ i.scan_f for i in final_samples ])
+                  avg.extend([local_model_avg.scan, '-sdfile', local_model_sd.scan ] )
+                  m.command(avg,inputs=[],outputs=[local_model_avg.scan,local_model_sd.scan])
 
-                for i in range(modalities):
+                  for i in range(modalities):
                     avg=['mincaverage','-float']
                     avg.extend([ j.add[i] for j in final_samples ])
                     if build_symmetric: avg.extend([ j.add_f[i] for j in final_samples ])
@@ -598,9 +600,10 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         library_description.local_model_add  = local_model.add
         library_description.local_model_mask = local_model.mask
         library_description.local_model_seg  = local_model.seg
-        library_description.local_model_avg  = local_model_avg.scan
-        library_description.local_model_ovl  = local_model_ovl.scan
-        library_description.local_model_sd   = local_model_sd.scan
+        if local_model_avg is not None:
+          library_description.local_model_avg  = local_model_avg.scan
+          library_description.local_model_ovl  = local_model_ovl.scan
+          library_description.local_model_sd   = local_model_sd.scan
         
         # library parameters
         library_description.map = inv_dict(dict(build_remap))
