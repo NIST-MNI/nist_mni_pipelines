@@ -160,18 +160,16 @@ def parse_options():
 def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, pca_int=None, pca_grid=None):
   try:
     with mincTools() as m:
-        
+
         pre_filters  =        source_parameters.get( 'pre_filters', None )
         post_filters =        source_parameters.get( 'post_filters', source_parameters.get( 'filters', None ))
-        
+
         build_symmetric     = source_parameters.get( 'build_symmetric',False)
         build_symmetric_flip= source_parameters.get( 'build_symmetric_flip',False)
         use_fake_masks      = source_parameters.get( 'fake_mask', False )
-        
-        use_fake_masks      = source_parameters.get( 'fake_mask', False )
         op_mask             = source_parameters.get( 'op_mask','E[2] D[4]')
         modalities          = source_parameters.get( 'modalities',1 ) - 1
-        
+
         sample_add          = sample[2:modalities+2] # additional modalties
         # Using linear XFM from the library
         # TODO: make route to estimate when not available
@@ -179,7 +177,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         lut                 = source_parameters.get('build_remap',None)
         if flip:
             lut             = source_parameters.get('build_flip_remap',None)
-        
+
         # model      = library.local_model
         # model_add  = library.local_model_add
         # model_mask = library.local_model_mask
@@ -195,22 +193,29 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         print(repr(model))
 
         model_seg  = library.get('local_model_seg',None)
-        
+
         mask = None
+        # HACK, figure out better solution
+        if len(sample)>modalities+3: 
+           mask = sample[modalities+3]
+
+        # HACK: the last one supposed to be XFM
+        sample_xfm = sample[-1]
+
         sample_name = os.path.basename(sample[0]).rsplit('.mnc',1)[0]
-        
+
         if flip:
             sample_name+='_f'
-        
+
         if use_fake_masks:
             mask  = m.tmp('mask.mnc')
             create_fake_mask(sample[1], mask, op=op_mask)
-        
+
         input_dataset = MriDataset(scan=sample[0], seg=sample[1], mask=mask, protect=True, add=sample_add)
         filtered_dataset = input_dataset
         # preprocess sample
         # code from train.py
-        
+
         if pre_filters is not None:
             # apply pre-filtering before other stages
             filtered_dataset = MriDataset( prefix=m.tempdir, name=sample_name, add_n=modalities )
@@ -222,13 +227,13 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
         for r in range(options.n):
           with mincTools() as m2:
             out_suffix="_{:03d}".format(r)
-            
+
             out_vol  = options.output+ os.sep+ sample_name+ out_suffix+ '_scan.mnc'
             out_seg  = options.output+ os.sep+ sample_name+ out_suffix+ '_seg.mnc'
             out_mask = options.output+ os.sep+ sample_name+ out_suffix+ '_mask.mnc'
             out_xfm  = options.output+ os.sep+ sample_name+ out_suffix+ '.xfm'
             out_vol_add = [ options.output+ os.sep+ sample_name+ out_suffix+ '_{}_scan.mnc'.format(am) for am in range(modalities)]
-            
+
             if    not os.path.exists(out_vol) \
                or not os.path.exists(out_seg) \
                or not os.path.exists(out_xfm):
@@ -262,10 +267,10 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                     f.write("MNI Transform File\n\nTransform_Type = Grid_Transform;\nInvert_Flag = True;\nDisplacement_Volume = {};\n".\
                       format(os.path.basename(ran_nl_grid)))
                 xfms = []
-                if os.path.exists(lib_sample[-1]):
-                    xfms.append(lib_sample[-1])
-                    print("Exists:{}".format(lib_sample[-1]))
-                
+                if os.path.exists(sample_xfm):
+                    xfms.append(sample_xfm)
+                    print("Exists:{}".format(sample_xfm))
+
                 if flip:
                     xfms.append(m.tmp('flip_x.xfm'))
 
@@ -280,7 +285,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                                     transform=out_xfm, like=model.scan)
                 else:
                     out_mask = None
-                  
+
                 m2.resample_labels(filtered_dataset.seg, out_seg, 
                                 transform=out_xfm, order=options.label_order, 
                                 remap=lut, like=model.scan, baa=True)
@@ -359,8 +364,12 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
                 shutil.copyfile(output_scan, out_vol)
                 for am in range(modalities):
                     shutil.copyfile(output_scans_add[am], out_vol_add[am])
-            # end of loop    
-            out_.append( [out_vol, out_seg ] + out_vol_add + [ out_xfm ] )
+            # end of loop
+            out_sample = [out_vol, out_seg ] + out_vol_add
+            if out_mask is not None:
+                 out_sample += [out_mask]
+            out_sample += [ out_xfm ]
+            out_.append( out_sample )
         return out_
   except:
     print("Exception:{}".format(sys.exc_info()[0]))
@@ -393,13 +402,12 @@ def main():
         if samples is not list:
             with open(samples,'r') as f:
                 samples=list(csv.reader(f))
-        
-        
+
         n_samples    =        len(samples)
         #
         if not os.path.exists(options.output):
             os.makedirs(options.output)
-        
+
         pca_int=None
         pca_grid=None
         
@@ -415,7 +423,7 @@ def main():
         #print(repr(pca_grid.lib))
         for i,j in enumerate( samples ):
             # submit jobs to produce augmented dataset
-            outputs.append( futures.submit( 
+            outputs.append( futures.submit(
                 gen_sample, library, options, source_parameters, j , idx=i, pca_grid=pca_grid, pca_int=pca_int ) )
             # flipped (?)
             if build_symmetric:

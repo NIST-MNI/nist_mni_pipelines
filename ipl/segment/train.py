@@ -49,7 +49,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         reference_local_model_add = parameters.get( 'reference_local_model_add', [])
         
         library                   = parameters[ 'library' ]
-        
+
         if work_dir is None:
             work_dir              = parameters.get( 'workdir',output+os.sep+'work')
         
@@ -225,7 +225,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 mask = work_dir + os.sep + 'fake_mask_' + os.path.basename(scan)
                 create_fake_mask(seg, mask, op=op_mask)
 
-            sample=                  MriDataset(scan=scan, seg=seg, mask=mask, protect=True,add=add)
+            sample=                  MriDataset(scan=scan, seg=seg, mask=mask, protect=True, add=add)
             input_samples.append(    sample )
             filtered_samples.append( MriDataset(  prefix=work_dir, name='flt_'+sample.name,      add_n=modalities ) )
             lin_xfm.append(          MriTransform(prefix=work_dir, name='lin_'+sample.name      ) )
@@ -604,7 +604,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
           library_description.local_model_avg  = local_model_avg.scan
           library_description.local_model_ovl  = local_model_ovl.scan
           library_description.local_model_sd   = local_model_sd.scan
-        
+
         # library parameters
         library_description.map = inv_dict(dict(build_remap))
         library_description.classes_number = classes_number
@@ -633,24 +633,28 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             library_description.local_model_add_flip = []
             library_description.local_model_mask_flip = None
             library_description.flip_map = {}
-        
+
         library_description.library = []
-        
+
         for (j, i) in enumerate(final_samples):
             ss = [i.scan, i.seg]
             ss.extend(i.add)
-            
+            if not use_fake_masks and i.mask is not None:
+               ss.append(i.mask)
+
             if do_nonlinear_register:
                 ss.extend([final_transforms[j].xfm, final_transforms[j].xfm_inv, warped_samples[j].scan, warped_samples[j].seg, bbox_lin_xfm[j].xfm])
             else:
                 ss.extend([bbox_lin_xfm[j].xfm])
 
             library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
-            
+
             if build_symmetric:
                 ss = [i.scan_f, i.seg_f]
                 ss.extend(i.add_f)
-                
+                if not use_fake_masks and i.mask_f is not None:
+                   ss.append(i.mask)
+
                 if do_nonlinear_register:
                     ss.extend([final_transforms[j].xfm_f, final_transforms[j].xfm_f_inv, warped_samples[j].scan_f, warped_samples[j].seg_f, bbox_lin_xfm[j].xfm_f ])
                 else:
