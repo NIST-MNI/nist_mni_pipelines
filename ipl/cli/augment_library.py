@@ -200,7 +200,7 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
            mask = sample[modalities+3]
 
         # HACK: the last one supposed to be XFM
-        sample_xfm = sample[-1]
+        sample_xfm = lib_sample[ -1 ]
 
         sample_name = os.path.basename(sample[0]).rsplit('.mnc',1)[0]
 
