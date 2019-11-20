@@ -196,8 +196,8 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
 
         mask = None
         # HACK, figure out better solution
-        if len(sample)>modalities+3: 
-           mask = sample[modalities+3]
+        if len(sample)>modalities+2:
+           mask = sample[modalities+2]
 
         # HACK: the last one supposed to be XFM
         sample_xfm = lib_sample[ -1 ]
@@ -236,7 +236,8 @@ def gen_sample(library, options, source_parameters, sample, idx=0, flip=False, p
 
             if    not os.path.exists(out_vol) \
                or not os.path.exists(out_seg) \
-               or not os.path.exists(out_xfm):
+               or not os.path.exists(out_xfm) \
+               or not os.path.exists(out_mask) :
 
                 # apply random linear xfm
                 ran_lin_xfm = m.tmp('random_lin_{}.xfm'.format(r))
