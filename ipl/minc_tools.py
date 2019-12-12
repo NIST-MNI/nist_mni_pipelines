@@ -2112,7 +2112,7 @@ class mincTools(temp_files):
         if downsample is not None:
             sources_lr=[]
             targets_lr=[]
-            for _s,_ in enumerate(modalities):
+            for _s,_ in enumerate(sources):
                 s_base=os.path.basename(sources[_s]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                 t_base=os.path.basename(targets[_s]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                 
@@ -2124,14 +2124,19 @@ class mincTools(temp_files):
                 
                 sources_lr.append(source_lr)
                 targets_lr.append(target_lr)
-                
-                if _s==0:
-                    if source_mask is not None:
-                        source_mask_lr=self.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
-                        self.resample_labels(source_mask,source_mask_lr,unistep=downsample,datatype='byte')
-                    if target_mask is not None:
-                        target_mask_lr=self.tmp(t_base+'_mask_'+str(downsample)+'.mnc')
-                        self.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
+            
+            # downsample mask
+            if source_mask is not None:
+                source_mask_lr=self.tmp(s_base+'_mask_'+str(downsample)+'.mnc')
+                self.resample_labels(source_mask,source_mask_lr,unistep=downsample,datatype='byte')
+            else:
+                source_mask_lr=None
+            if target_mask is not None:
+                target_mask_lr=self.tmp(t_base+'_mask_'+str(downsample)+'.mnc')
+                self.resample_labels(target_mask,target_mask_lr,unistep=downsample,datatype='byte')
+            else:
+                target_mask_lr=None
+
         else:
             # do nothing
             sources_lr=sources
