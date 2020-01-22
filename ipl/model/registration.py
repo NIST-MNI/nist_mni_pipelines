@@ -206,7 +206,8 @@ def non_linear_register_step(
     work_dir=None,
     downsample=None,
     avg_symmetric=True,
-    verbose=2   
+    verbose=2,
+    legacy=False
     ):
     """perform linear registration to the model, and calculate inverse"""
 
@@ -240,6 +241,7 @@ def non_linear_register_step(
                         level=level,
                         start=start,
                         downsample=downsample,
+                        legacy=legacy,
                         #work_dir=work_dir
                         )
                     
@@ -254,6 +256,7 @@ def non_linear_register_step(
                         level=level,
                         start=start,
                         downsample=downsample,
+                        legacy=legacy,
                         #work_dir=work_dir
                         )
                     
@@ -287,6 +290,7 @@ def non_linear_register_step(
                         level=level,
                         start=start,
                         downsample=downsample,
+                        legacy=legacy,
                         #work_dir=work_dir
                         )
                     m.xfm_normalize(m.tmp('forward.xfm'),model.scan,output.xfm,step=level)

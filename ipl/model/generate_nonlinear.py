@@ -67,6 +67,7 @@ def generate_nonlinear_average(
     use_elastix=   options.get('use_elastix',False)
     start_level=   options.get('start_level',None)
     use_median=    options.get('median',False)
+    use_legacy=    options.get('legacy',False)
 
     models=[]
     models_sd=[]
@@ -189,7 +190,8 @@ def generate_nonlinear_average(
                                 level=p['level'],
                                 start=start,
                                 work_dir=prefix,
-                                downsample=downsample)
+                                downsample=downsample,
+                                legacy=use_legacy)
                             )
                 inv_transforms.append(sample_inv_xfm)
                 fwd_transforms.append(sample_xfm)

@@ -1447,21 +1447,33 @@ class mincTools(temp_files):
         dy=False,
         dz=False,
         output_float=False,
+        legacy=False
         ):
         """Apply gauissian blurring to the input image"""
 
-        cmd = ['fast_blur', input, output, '--fwhm', str(fwhm)]
-        if gmag:
-            cmd.append('--gmag')
-        if dx:
-            cmd.append('--dx')
-        if dy:
-            cmd.append('--dy')
-        if dz:
-            cmd.append('--dz')
-        if output_float:
-            cmd.append('--float')
-        self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+        if legacy:
+          # TODO: implement gmag and dx,dy,dz
+          try:
+            # generating prefix for the outpu
+            output_pfx=self.temp_file(suffix='')
+            self.command(['mincblur','-no_apodize', '-fwhm',str(fwhm),input, output_pfx+'_blur.mnc'], inputs=[input], outputs=[], verbose=self.verbose)
+            shutil.move(output_pfx+'_blur.mnc', output) 
+          finally:
+            if os.path.exists(output_pfx+'_blur.mnc'):
+               os.unlink(output_pfx+'_blur.mnc')
+        else:
+          cmd = ['fast_blur', input, output, '--fwhm', str(fwhm)]
+          if gmag:
+              cmd.append('--gmag')
+          if dx:
+              cmd.append('--dx')
+          if dy:
+              cmd.append('--dy')
+          if dz:
+              cmd.append('--dz')
+          if output_float:
+              cmd.append('--float')
+          self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
 
     def blur_orig(
         self,

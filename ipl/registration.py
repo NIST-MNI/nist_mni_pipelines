@@ -569,7 +569,8 @@ def non_linear_register_full(
     start=32,
     parameters=None,
     work_dir=None,
-    downsample=None
+    downsample=None,
+    legacy=False
     ):
     """perform non-linear registration, multiple levels
     Args:
@@ -584,7 +585,7 @@ def non_linear_register_full(
         start - initial step size, default 32mm 
         level - final step size, default 4mm
         downsample - downsample initial files to this step size, default None
-
+        legacy - try to simulate nlfit_s script
     Returns:
         resulting XFM file
 
@@ -711,10 +712,10 @@ def non_linear_register_full(
                     for s_,_ in enumerate(sources_lr):
                         tmp_source = tmp.cache(s_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'_'+str(s_)+'.mnc')
                         if not os.path.exists(tmp_source):
-                            minc.blur(sources_lr[s_],tmp_source,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
+                            minc.blur(sources_lr[s_],tmp_source,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'],legacy=legacy)
                         tmp_target = tmp.cache(t_base+'_'+c['blur']+'_'+str(c['blur_fwhm'])+'_'+str(s_)+'.mnc')
                         if not os.path.exists(tmp_target):
-                            minc.blur(targets_lr[s_],tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'])
+                            minc.blur(targets_lr[s_],tmp_target,gmag=(c['blur']=='dxyz'), fwhm=c['blur_fwhm'],legacy=legacy)
                         tmp_sources.append(tmp_source)
                         tmp_targets.append(tmp_target)
 
@@ -787,7 +788,8 @@ def non_linear_register_increment(
     level=4,
     parameters=None,
     work_dir=None,
-    downsample=None
+    downsample=None,
+    legacy=False
     ):
     """perform non-linear registration, increment right now there are no 
     difference with non_linear_register_full , 
@@ -819,7 +821,8 @@ def non_linear_register_increment(
           start=level,
           parameters=parameters,
           work_dir=work_dir,
-          downsample=downsample)
+          downsample=downsample,
+          legacy=legacy)
 
 
 
