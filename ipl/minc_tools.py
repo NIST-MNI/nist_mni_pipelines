@@ -429,7 +429,7 @@ class mincTools(temp_files):
                     break
 
         if not outExists:
-            raise mincError('ERROR: Command didn not produce output: {}!'.format(str(cmds)))
+            raise mincError('ERROR: Command did not produce output: {}!'.format(str(cmds)))
 
         return outvalue
 
@@ -1456,7 +1456,7 @@ class mincTools(temp_files):
           try:
             # generating prefix for the outpu
             output_pfx=self.temp_file(suffix='')
-            self.command(['mincblur','-no_apodize', '-fwhm',str(fwhm),input, output_pfx+'_blur.mnc'], inputs=[input], outputs=[], verbose=self.verbose)
+            self.command(['mincblur','-no_apodize', '-fwhm', str(fwhm), input, output_pfx], inputs=[input], outputs=[output_pfx+'_blur.mnc'], verbose=self.verbose)
             shutil.move(output_pfx+'_blur.mnc', output) 
           finally:
             if os.path.exists(output_pfx+'_blur.mnc'):
