@@ -1,0 +1,22 @@
+{
+    "model":     "mni_icbm152_t1_tal_nlin_sym_09c",
+    "model_dir": "/ipl/quarantine/models/icbm152_model_09c",
+    "beast":     { "beastlib":  "/ipl/quarantine/models/beast"},
+
+    "mri_3t":    false,
+    "qc":        true,
+
+    "t1w_stx":   {
+	"type":"-lsq9",
+	"objective":"-nmi"
+    },
+
+    "nl_reg":    null,
+
+    "tissue_classify": null,
+    "lobe_segment": null,
+
+    "nl":        false,
+    "cls":       false,
+    "lobes":     false
+}
