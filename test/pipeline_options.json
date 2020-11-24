@@ -7,6 +7,7 @@
     "qc":        true,
 
     "t1w_stx":   {
+	"noscale":true,
 	"type":"-lsq9",
 	"objective":"-nmi"
     },

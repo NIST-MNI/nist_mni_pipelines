@@ -53,10 +53,10 @@ def standard_pipeline(info,
                 't1w_clp':   {},
                 'add_clp':   {},
 
-                't1w_stx':   {
-                        'type':'ants',
-                        'resample':False,
-                        #'options': {
+                't1w_stx':   {  # options for linear registration
+                        #'type':'ants',
+                        'resample':False, # only used to resample to 1x1x1 when needed (if org data is very hig res)
+                        #'options': {     # options for linear regisration engine;  in this case for ants.
                             #'levels': 2,
                             #'conf':  {'2':1000,'1':1000}, 
                             #'blur':  {'2':4, '1': 2 }, 
@@ -69,7 +69,7 @@ def standard_pipeline(info,
                         },
                 
                 'stx': {
-                            'noscale':False,
+                            'noscale':True, # this will give (size) scaled and unscaled data
                             'nuc': None,
                     },
                 
@@ -78,19 +78,19 @@ def standard_pipeline(info,
                 'tissue_classify': {},
                 'lobe_segment': {},
                 
-                'nl':        True,
-                'lobes':     True,
-                'cls'  :     True,
+                'nl':        False, # to examine later... we might need these.
+                'lobes':     False,
+                'cls'  :     False,
                 
-                'qc':        {
+                'qc':        {  # for QC images
                     'nu':      False,
                     't1w_stx': True,
-                    'add_stx': True,
+                    'add_stx': True, # for T2 or PD is available
                     'cls':     True,
                     'lob':     True
                     },
                 
-                'aqc':        {
+                'aqc':        { # automated QC; none done here... for now.
                     'nu':      False,
                     't1w_stx': False,
                     'add_stx': False,
@@ -99,7 +99,7 @@ def standard_pipeline(info,
                     'slices':  3
                     },
                 
-                'denoise':   {},
+                'denoise':   {}, # run standard patch-based denoising
             }
                 
             # setup parameters
@@ -168,6 +168,8 @@ def standard_pipeline(info,
             nuc_parameters     = options.get('t1w_nuc',{})
             clp_parameters     = options.get('t1w_clp',{})
             stx_parameters     = options.get('t1w_stx',{})
+
+            IBIS_parameters    = options.get('IBIS',{'skin':True,'cortex':True})
             
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
@@ -181,6 +183,7 @@ def standard_pipeline(info,
             aqc_dir = work_dir+os.sep+'aqc'
             lob_dif = work_dir+os.sep+'lob'
             vol_dir = work_dir+os.sep+'vol'
+            obj_dir = work_dir+os.sep+'obj'
             
             manual_clp_dir = None
             manual_tal_dir = None
@@ -189,7 +192,7 @@ def standard_pipeline(info,
                 manual_clp_dir = manual_dir+os.sep+'clp'
                 manual_tal_dir = manual_dir+os.sep+'tal'
             
-            # create all
+            # create all subdirs (even if we don't need them because some outputs are not required)
             create_dirs([clp_dir,tal_dir,nl_dir,cls_dir,qc_dir,aqc_dir,lob_dif,vol_dir])
             
             # files produced by pipeline
@@ -200,8 +203,10 @@ def standard_pipeline(info,
             t1w_clp=MriScan(prefix=clp_dir,  name='clamp_'+dataset_id, modality='t1w', mask=None)
             
             # stereotaxic space
+            #    all filenames for internal use
             t1w_tal_xfm=MriTransform(prefix=tal_dir,name='tal_xfm_'+dataset_id)
-            
+
+            #      if auto registration does not work, we can start it with a manual seed 
             if manual_dir is not None:
                 manual_t1w_tal_xfm=MriTransform(prefix=manual_tal_dir,name='tal_xfm_'+dataset_id)
                 
@@ -214,44 +219,49 @@ def standard_pipeline(info,
             unscale_xfm=MriTransform(prefix=tal_dir,name='unscale_xfm_'+dataset_id)
             
             t1w_tal=MriScan(prefix=tal_dir, name='tal_'+dataset_id, modality='t1w')
-            t1w_tal_fld=MriScan(prefix=tal_dir, name='tal_fld_'+dataset_id, modality='t1w')
+            t1w_tal_fld=MriScan(prefix=tal_dir, name='tal_fld_'+dataset_id, modality='t1w') # to xform nonuniformity correction field into stx space
             
             t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
+
+            t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
+
+            t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
+            t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
             
-            t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id)
+            t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
 
-            # tissue classification results
+            # tissue classification results (if requested)
             tal_cls=MriScan(prefix=cls_dir, name='cls_'+dataset_id)
             native_t1w_cls=MriScan(prefix=clp_dir,  name='cls_'+dataset_id, modality='t1w')
-            # lobe segmentation results
+            # lobe segmentation results (if requested)
             tal_lob=MriScan(prefix=lob_dif, name='lob_'+dataset_id)
 
-            # nl space
+            # nl space  (if requested)
             nl_xfm=MriTransform(prefix=nl_dir, name='nl_'+dataset_id)
 
-            # QC files
+            # QC files(if requested)
             qc_tal= MriQCImage(prefix=qc_dir,name='tal_t1w_'+dataset_id)
             qc_mask=MriQCImage(prefix=qc_dir,name='tal_mask_'+dataset_id)
             qc_cls= MriQCImage(prefix=qc_dir,name='tal_cls_'+dataset_id)
             qc_lob= MriQCImage(prefix=qc_dir,name='tal_lob_'+dataset_id)
             qc_nu=  MriQCImage(prefix=qc_dir,name='nu_'+dataset_id)
             
-            # QC files
+            # QC files (if requested)
             aqc_tal= MriQCImage(prefix=aqc_dir,name='tal_t1w_'+dataset_id,suffix='')
             aqc_mask=MriQCImage(prefix=aqc_dir,name='tal_mask_'+dataset_id,suffix='')
             aqc_cls= MriQCImage(prefix=aqc_dir,name='tal_cls_'+dataset_id,suffix='')
             aqc_lob= MriQCImage(prefix=aqc_dir,name='tal_lob_'+dataset_id,suffix='')
             aqc_nu=  MriQCImage(prefix=aqc_dir,name='nu_'+dataset_id,suffix='')
             
-            # AUX files
+            # AUX files (filenames for segmentation volumes and other measurements)
             lob_volumes=MriAux(prefix=vol_dir,name='vol_'+dataset_id)
             lob_volumes_json=MriAux(prefix=vol_dir,name='vol_'+dataset_id,suffix='.json')
             summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.json')
             
             
             
-            iter_summary={
+            iter_summary={      # dictionary containing all the filenames (for other scripts eventually)
                         'subject':      subject_id,
                         'timepoint':    timepoint_id,
                         'dataset_id':   dataset_id,
@@ -322,7 +332,7 @@ def standard_pipeline(info,
             iter_summary["t1w_clp"]   = t1w_clp
             
             ####
-            if add_scans is not None:
+            if add_scans is not None: # any additional modalities to worry about?
                 iter_summary["add_den"]   = []
                 iter_summary["add_field"] = []
                 iter_summary["add_nuc"]   = []
@@ -331,7 +341,7 @@ def standard_pipeline(info,
                 
                 prev_co_xfm=None
                 
-                for i,c in enumerate(add_scans):
+                for i,c in enumerate(add_scans): # if so, deal with each modality, mapping to t1.
                     # get add options 
                     #TODO do it per modality
                     add_options            = options.get('add',options)
@@ -595,8 +605,35 @@ def standard_pipeline(info,
                     # warping mask from tal space to unscaled tal space
                     warp_mask(t1w_tal, model_t1w, t1w_tal_noscale, transform=unscale_xfm)
                     iter_summary["t1w_tal_noscale"]=t1w_tal_noscale
-                
-                # perform non-linear registration
+                 
+                    if IBIS_parameters['skin'] or IBIS_parameters['cortex'] :
+                        # do skin & cortex processing here
+
+                        if IBIS_parameters['cortex'] :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale
+                                #mincmask t1w_tal_noscale.mnc t1w_tal_noscale_mask.mnc t1w_tal_noscale_masked.mnc
+                                minc.command(['mincmask','-clobber',t1w_tal_noscale.scan,t1w_tal_noscale.mask,t1w_tal_noscale_masked.scan])
+                                #marching_cubes t1w_tal_noscale_masked.mnc cortex.obj 45
+                                minc.command(['marching_cubes',t1w_tal_noscale_masked.scan,t1w_tal_noscale_cortex.fname,'45'])
+                                #ascii_binary cortex.obj
+                                minc.command(['ascii_binary',t1w_tal_noscale_cortex.fname])
+                            
+                        if IBIS_parameters['skin'] :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale, then blur it.
+                                tmpname = minc.tmp('tmp_t1_noscaled')
+                                minc.command(['mincblur','-clobber','-fwhm','2', t1w_tal_noscale.scan,tmpname])
+                                #marching_cubes t1w_tal_noscale_masked.mnc skin.obj 30
+                                minc.command(['marching_cubes',tmpname+'_blur.mnc',t1w_tal_noscale_skin.fname,'30'])
+                                #ascii_binary cortex.obj
+                                minc.command(['ascii_binary',t1w_tal_noscale_skin.fname])
+
+
+
+
+                                
+                    # perform non-linear registration
                 if run_nl: 
                     nl_registration(t1w_tal, model_t1w, nl_xfm, 
                                 parameters=options.get('nl_reg',{}))
@@ -649,7 +686,7 @@ def standard_pipeline(info,
                     iter_summary["lob_volumes"]=     lob_volumes
                     iter_summary["lob_volumes_json"]=lob_volumes_json
             
-            save_summary(iter_summary,summary_file.fname)
+            save_summary(iter_summary,summary_file.fname) # use this to build scene.xml for IBIS
             return iter_summary
     
     except mincError as e:
