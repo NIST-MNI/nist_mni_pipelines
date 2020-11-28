@@ -193,7 +193,7 @@ def standard_pipeline(info,
                 manual_tal_dir = manual_dir+os.sep+'tal'
             
             # create all subdirs (even if we don't need them because some outputs are not required)
-            create_dirs([clp_dir,tal_dir,nl_dir,cls_dir,qc_dir,aqc_dir,lob_dif,vol_dir])
+            create_dirs([clp_dir,tal_dir,nl_dir,cls_dir,qc_dir,aqc_dir,lob_dif,vol_dir,obj_dir])
             
             # files produced by pipeline
             # native space
