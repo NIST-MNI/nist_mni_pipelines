@@ -26,7 +26,7 @@ from .aqc          import *
 
 
 def save_summary(iter_summary, 
-                 summary_file.fname):
+                 fname):
     """
     Save a scene containing the volumes calculated by the pipeline.
     The volumes are the registered head image, the brain mask, the cortex
