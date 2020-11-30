@@ -25,6 +25,22 @@ from .qc           import *
 from .aqc          import *
 
 
+def save_summary(iter_summary, 
+                 summary_file.fname):
+    """
+    Save a scene containing the volumes calculated by the pipeline.
+    The volumes are the registered head image, the brain mask, the cortex
+    surface, and the skin surface.
+
+    Arguments: iter_summary Dictionary containing all the filenames
+               summary_file.fname
+    """
+
+    default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
+    f = open(default_xml_path, 'r')
+    print(f.read())
+    
+
 def standard_pipeline(info,
                       output_dir,
                       options =None,
