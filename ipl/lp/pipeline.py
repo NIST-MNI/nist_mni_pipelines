@@ -59,7 +59,7 @@ def standard_pipeline(info,
     
     import subprocess
     subprocess.call(["cp", default_xml_path, new_xml_dir_path])
-f
+
     # try:
         # with temp_files() as tmp:
             # if options is None:
