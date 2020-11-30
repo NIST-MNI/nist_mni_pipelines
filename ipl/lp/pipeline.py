@@ -34,11 +34,7 @@ def save_summary(iter_summary,
 
     Arguments: iter_summary Dictionary containing all the filenames
                summary_file.fname
-    """
-
-    default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
-    f = open(default_xml_path, 'r')
-    print(f.read())
+    """ 
     
 
 def standard_pipeline(info,
@@ -57,9 +53,13 @@ def standard_pipeline(info,
     """
 
     default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
-    f = open(default_xml_path, 'r')
-    print(f.read())
-
+    new_xml_dir_path = work_dir+os.sep+'tal'
+    #f = open(default_xml_path, 'r')
+    #print(f.read())
+    
+    import subprocess
+    subprocess.call(["cp", default_xml_path, new_xml_dir_path])
+f
     # try:
         # with temp_files() as tmp:
             # if options is None:
