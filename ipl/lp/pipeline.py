@@ -60,7 +60,7 @@ def standard_pipeline(info,
     import subprocess
     subprocess.call(["cp", default_xml_path, new_xml_dir_path])
 
-    subprocess.call(["sed", 's/replace_main_image/word2/g', new_xml_dir_path])
+    subprocess.call(["sed", '-i,', 's/replace_main_image/word2/g', new_xml_dir_path])
 
     # try:
         # with temp_files() as tmp:
