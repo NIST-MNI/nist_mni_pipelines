@@ -53,12 +53,14 @@ def standard_pipeline(info,
     """
 
     default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
-    new_xml_dir_path = work_dir+os.sep+'tal'
+    new_xml_dir_path = work_dir+os.sep+'tal'+os.sep+'my_xml.xml'
     #f = open(default_xml_path, 'r')
     #print(f.read())
     
     import subprocess
     subprocess.call(["cp", default_xml_path, new_xml_dir_path])
+
+    subprocess.call(["sed", 's/replace_main_image/word2/g', new_xml_dir_path])
 
     # try:
         # with temp_files() as tmp:
