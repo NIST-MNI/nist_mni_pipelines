@@ -30,15 +30,14 @@ def save_summary(iter_summary,
     """
     Save a scene containing the volumes calculated by the pipeline.
     The volumes are the registered head image, the brain mask, the cortex
-    surface, and the skin surface.
+    surface, and the skin surface. The scene is stored in fname.
 
     Arguments: iter_summary Dictionary containing all the filenames
-               summary_file.fname
+               fname Path of the output scene file
     """
 
     #Set required variables
     default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
-    new_xml_dir_path = iter_summary['output_dir']+os.sep+'tal'+os.sep+'scene.xml'
 
     replace_names = {
                     'main_image_path': 'replace_main_image_path',
@@ -53,7 +52,7 @@ def save_summary(iter_summary,
 
     #Replace correspoding image names in the xml scene
     file_in = open(default_xml_path, "rt")
-    file_out = open(new_xml_dir_path, "wt")
+    file_out = open(fname, "wt")
 
     for line in file_in:
         line_modified = line.replace(replace_names['main_image_path'], iter_summary['t1w_tal_noscale'].scan)
@@ -301,7 +300,7 @@ def standard_pipeline(info,
             # AUX files (filenames for segmentation volumes and other measurements)
             lob_volumes=MriAux(prefix=vol_dir,name='vol_'+dataset_id)
             lob_volumes_json=MriAux(prefix=vol_dir,name='vol_'+dataset_id,suffix='.json')
-            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.json')
+            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.scn')
 
 
 
