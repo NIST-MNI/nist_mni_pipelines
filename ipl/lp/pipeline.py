@@ -58,11 +58,14 @@ def save_summary(iter_summary,
         line_modified = line.replace(replace_names['main_image_path'], 
                             os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']))
         line_modified = line_modified.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
-        line_modified = line_modified.replace(replace_names['mask_path'], iter_summary['t1w_tal_noscale_mask'].scan)
+        line_modified = line_modified.replace(replace_names['mask_path'], 
+                            os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']))
         line_modified = line_modified.replace(replace_names['mask_name'], iter_summary['t1w_tal_noscale_mask'].name)
-        line_modified = line_modified.replace(replace_names['cortex_path'], iter_summary['t1w_tal_noscale_cortex'].fname)
+        line_modified = line_modified.replace(replace_names['cortex_path'], 
+                            os.path.relpath(iter_summary['t1w_tal_noscale_cortex'].fname, iter_summary['output_dir']))
         line_modified = line_modified.replace(replace_names['cortex_name'], iter_summary['t1w_tal_noscale_cortex'].name)
-        line_modified = line_modified.replace(replace_names['skin_path'], iter_summary['t1w_tal_noscale_skin'].fname)
+        line_modified = line_modified.replace(replace_names['skin_path'], 
+                            os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']))
         line_modified = line_modified.replace(replace_names['skin_name'], iter_summary['t1w_tal_noscale_skin'].name)
         file_out.write(line_modified)
     file_in.close()
