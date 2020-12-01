@@ -37,8 +37,7 @@ def save_summary(iter_summary,
     """
 
     #Set required variables
-    default_xml = """
-    <!DOCTYPE configML>
+    default_xml = """<!DOCTYPE configML>
     <configuration>
      <SaveScene>
       <IbisVersion value="3.0.0  Dev"/>
@@ -377,16 +376,16 @@ def save_summary(iter_summary,
 
     xml_modified = default_xml.replace(replace_names['main_image_path'], 
                         os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']))
-    default_xml = default_xml.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
-    default_xml = default_xml.replace(replace_names['mask_path'], 
+    xml_modified = xml_modified.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
+    xml_modified = xml_modified.replace(replace_names['mask_path'], 
                         os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']))
-    default_xml = default_xml.replace(replace_names['mask_name'], iter_summary['t1w_tal_noscale_mask'].name)
-    default_xml = default_xml.replace(replace_names['cortex_path'], 
+    xml_modified = xml_modified.replace(replace_names['mask_name'], iter_summary['t1w_tal_noscale_mask'].name)
+    xml_modified = xml_modified.replace(replace_names['cortex_path'], 
                         os.path.relpath(iter_summary['t1w_tal_noscale_cortex'].fname, iter_summary['output_dir']))
-    default_xml = default_xml.replace(replace_names['cortex_name'], iter_summary['t1w_tal_noscale_cortex'].name)
-    default_xml = default_xml.replace(replace_names['skin_path'], 
+    xml_modified = xml_modified.replace(replace_names['cortex_name'], iter_summary['t1w_tal_noscale_cortex'].name)
+    xml_modified = xml_modified.replace(replace_names['skin_path'], 
                         os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']))
-    default_xml = default_xml.replace(replace_names['skin_name'], iter_summary['t1w_tal_noscale_skin'].name)
+    xml_modified = xml_modified.replace(replace_names['skin_name'], iter_summary['t1w_tal_noscale_skin'].name)
 
     file_out.write(xml_modified)
     file_out.close()
