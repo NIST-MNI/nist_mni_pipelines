@@ -54,6 +54,10 @@ def save_summary(iter_summary,
     #Replace correspoding image names in the xml scene
     file_in = open(default_xml_path, "rt")
     file_out = open(new_xml_dir_path, "wt")
+
+    print(replace_names['main_image_path'])
+    print(iter_summary['t1w_tal_noscale'].scan)
+
     for line in file_in:
         line_modified = line.replace(replace_names['main_image_path'], iter_summary['t1w_tal_noscale'].scan)
         line_modified = line.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
