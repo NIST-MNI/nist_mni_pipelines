@@ -41,21 +41,28 @@ def save_summary(iter_summary,
     new_xml_dir_path = iter_summary['output_dir']+os.sep+'tal'+os.sep+'scene.xml'
 
     replace_names = {
-                    'main_image': 'replace_main_image',
-                    'mask': 'replace_mask',
-                    'cortex': 'replace_cortex_surface',
-                    'skin': 'replace_skin_surface',
+                    'main_image_path': 'replace_main_image_path',
+                    'main_image_name': 'replace_main_image_name',
+                    'mask_path': 'replace_mask_path',
+                    'mask_name': 'replace_mask_name',
+                    'cortex_path': 'replace_cortex_surface_path',
+                    'cortex_name': 'replace_cortex_surface_name',
+                    'skin_path': 'replace_skin_surface_path',
+                    'skin_name': 'replace_skin_surface_name',
                     }
 
     #Replace correspoding image names in the xml scene
     file_in = open(default_xml_path, "rt")
     file_out = open(new_xml_dir_path, "wt")
     for line in file_in:
-        line_modified = line.replace(
-                        replace_names['main_image'], iter_summary['t1w_tal_noscale'].scan)
-        line_modified = line_modified.replace(replace_names['mask'], iter_summary['t1w_tal_noscale_mask'].scan)
-        line_modified = line_modified.replace(replace_names['cortex'], iter_summary['t1w_tal_noscale_cortex'].fname)
-        line_modified = line_modified.replace(replace_names['skin'], iter_summary['t1w_tal_noscale_skin'].fname)
+        line_modified = line.replace(replace_names['main_image_path'], iter_summary['t1w_tal_noscale'].scan)
+        line_modified = line.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
+        line_modified = line_modified.replace(replace_names['mask_path'], iter_summary['t1w_tal_noscale_mask'].scan)
+        line_modified = line_modified.replace(replace_names['mask_name'], iter_summary['t1w_tal_noscale_mask'].name)
+        line_modified = line_modified.replace(replace_names['cortex_path'], iter_summary['t1w_tal_noscale_cortex'].fname)
+        line_modified = line_modified.replace(replace_names['cortex_name'], iter_summary['t1w_tal_noscale_cortex'].name)
+        line_modified = line_modified.replace(replace_names['skin_path'], iter_summary['t1w_tal_noscale_skin'].fname)
+        line_modified = line_modified.replace(replace_names['skin_name'], iter_summary['t1w_tal_noscale_skin'].name)
         file_out.write(line_modified)
     file_in.close()
     file_out.close()
