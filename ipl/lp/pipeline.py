@@ -38,7 +38,7 @@ def save_summary(iter_summary,
 
     #Set required variables
     default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
-    new_xml_dir_path = work_dir+os.sep+'tal'+os.sep+'scene.xml'
+    new_xml_dir_path = iter_summary['output_dir']+os.sep+'tal'+os.sep+'scene.xml'
 
     replace_names = {
                     'main_image': 'replace_main_image',
