@@ -42,7 +42,7 @@ def save_summary(iter_summary,
 
     replace_names = {
                     'main_image': 'replace_main_image',
-                    'mask': 'replace_main_image',
+                    'mask': 'replace_mask',
                     'cortex': 'replace_cortex_surface',
                     'skin': 'replace_skin_surface',
                     }
@@ -51,10 +51,13 @@ def save_summary(iter_summary,
     file_in = open(default_xml_path, "rt")
     file_out = open(new_xml_dir_path, "wt")
     for line in file_in:
-        line_modified = line.replace(replace_names['main_image'], iter_summary['t1w_tal_noscale'].scan)
+        line_modified = line.replace(
+                        replace_names['main_image'], iter_summary['t1w_tal_noscale'].scan)
         line_modified = line_modified.replace(replace_names['mask'], iter_summary['t1w_tal_noscale_mask'].scan)
-        line_modified = line_modified.replace(replace_names['cortex'], iter_summary['t1w_tal_noscale_cortex'].prefix)
-        line_modified = line_modified.replace(replace_names['skin'], iter_summary['t1w_tal_noscale_skin'].prefix)
+        line_modified = line_modified.replace(
+                        replace_names['cortex'], iter_summary['t1w_tal_noscale_cortex'].prefix + iter_summary['t1w_tal_noscale_cortex'].name)
+        line_modified = line_modified.replace(
+                        replace_names['skin'], iter_summary['t1w_tal_noscale_skin'].prefix + iter_summary['t1w_tal_noscale_skin'].name)
         file_out.write(line_modified)
     file_in.close()
     file_out.close()
