@@ -54,10 +54,8 @@ def save_summary(iter_summary,
         line_modified = line.replace(
                         replace_names['main_image'], iter_summary['t1w_tal_noscale'].scan)
         line_modified = line_modified.replace(replace_names['mask'], iter_summary['t1w_tal_noscale_mask'].scan)
-        line_modified = line_modified.replace(
-                        replace_names['cortex'], iter_summary['t1w_tal_noscale_cortex'].prefix + iter_summary['t1w_tal_noscale_cortex'].name)
-        line_modified = line_modified.replace(
-                        replace_names['skin'], iter_summary['t1w_tal_noscale_skin'].prefix + iter_summary['t1w_tal_noscale_skin'].name)
+        line_modified = line_modified.replace(replace_names['cortex'], iter_summary['t1w_tal_noscale_cortex'].fname)
+        line_modified = line_modified.replace(replace_names['skin'], iter_summary['t1w_tal_noscale_skin'].fname)
         file_out.write(line_modified)
     file_in.close()
     file_out.close()
