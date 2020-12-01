@@ -54,14 +54,15 @@ def standard_pipeline(info,
 
     default_xml_path = '/home/bic/renzop/nist_mni_pipelines/test/default_scene.xml' #Replace this with a relative path
     new_xml_dir_path = work_dir+os.sep+'tal'+os.sep+'my_xml.xml'
-    main_image_path = work_dir+os.sep+'tal'+os.sep+'some weird name.mnc'
+    main_image_path = work_dir+os.sep+'tal'+os.sep+'some_weird_name.mnc'
     #replace_mask replace_cortex_surface replace_skin_surface
-    #f = open(default_xml_path, 'r')
-    #print(f.read())
     
     import subprocess
     subprocess.call(["cp", default_xml_path, new_xml_dir_path])
-    subprocess.call(["sed", '-i,', 's/'+ main_image_path +'/word2/g', new_xml_dir_path])
+    import fileinput
+    with fileinput.FileInput(new_xml_dir_path, inplace=True) as file:
+        for line in file:
+            print(line.replace('replace_main_image', main_image_path), end='')
 
     # try:
         # with temp_files() as tmp:
