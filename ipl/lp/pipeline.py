@@ -55,7 +55,8 @@ def save_summary(iter_summary,
     file_out = open(fname, "wt")
 
     for line in file_in:
-        line_modified = line.replace(replace_names['main_image_path'], iter_summary['t1w_tal_noscale'].scan)
+        line_modified = line.replace(replace_names['main_image_path'], 
+                            os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']))
         line_modified = line_modified.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
         line_modified = line_modified.replace(replace_names['mask_path'], iter_summary['t1w_tal_noscale_mask'].scan)
         line_modified = line_modified.replace(replace_names['mask_name'], iter_summary['t1w_tal_noscale_mask'].name)
@@ -300,7 +301,7 @@ def standard_pipeline(info,
             # AUX files (filenames for segmentation volumes and other measurements)
             lob_volumes=MriAux(prefix=vol_dir,name='vol_'+dataset_id)
             lob_volumes_json=MriAux(prefix=vol_dir,name='vol_'+dataset_id,suffix='.json')
-            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.scn')
+            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.xml')
 
 
 
