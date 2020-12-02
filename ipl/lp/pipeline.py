@@ -24,6 +24,8 @@ from .segment      import *
 from .qc           import *
 from .aqc          import *
 
+# for xml manipulation
+from string import Template
 
 def save_summary(iter_summary,
                  fname):
@@ -36,8 +38,7 @@ def save_summary(iter_summary,
                fname Path of the output scene file
     """
 
-    #Set required variables
-    from string import Template
+    #Set xml structure
 
     default_xml = Template("""<!DOCTYPE configML>
     <configuration>
@@ -373,9 +374,9 @@ def save_summary(iter_summary,
                         replace_cortex_surface_name = iter_summary['t1w_tal_noscale_cortex'].name,
                         replace_skin_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']),
                         replace_skin_surface_name = iter_summary['t1w_tal_noscale_skin'].name
-                        )    
+                        )
 
-    file_out = open(fname, "wt")                                     
+    file_out = open(fname, "wt")
     file_out.write(xml_modified)
     file_out.close()
 
