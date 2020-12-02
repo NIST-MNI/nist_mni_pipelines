@@ -24,6 +24,8 @@ from .segment      import *
 from .qc           import *
 from .aqc          import *
 
+# for xml manipulation
+from string import Template
 
 def save_summary(iter_summary,
                  fname):
@@ -36,8 +38,9 @@ def save_summary(iter_summary,
                fname Path of the output scene file
     """
 
-    #Set required variables
-    default_xml = """<!DOCTYPE configML>
+    #Set xml structure
+
+    default_xml = Template("""<!DOCTYPE configML>
     <configuration>
      <SaveScene>
       <IbisVersion value="3.0.0  Dev"/>
@@ -129,10 +132,10 @@ def save_summary(iter_summary,
        </ObjectInScene_2>
        <ObjectInScene_3>
         <ObjectClass value="ImageObject"/>
-        <FullFileName value="./replace_main_image_path"/>
+        <FullFileName value="./$replace_main_image_path"/>
         <ObjectID value="0"/>
         <ParentID value="-2"/>
-        <ObjectName value="replace_main_image_name"/>
+        <ObjectName value="$replace_main_image_name"/>
         <AllowChildren value="1"/>
         <AllowChangeParent value="1"/>
         <ObjectManagedBySystem value="0"/>
@@ -179,10 +182,10 @@ def save_summary(iter_summary,
        </ObjectInScene_3>
        <ObjectInScene_4>
         <ObjectClass value="ImageObject"/>
-        <FullFileName value="./replace_mask_path"/>
+        <FullFileName value="./$replace_mask_path"/>
         <ObjectID value="1"/>
         <ParentID value="-2"/>
-        <ObjectName value="replace_mask_name"/>
+        <ObjectName value="$replace_mask_name"/>
         <AllowChildren value="1"/>
         <AllowChangeParent value="1"/>
         <ObjectManagedBySystem value="0"/>
@@ -229,10 +232,10 @@ def save_summary(iter_summary,
        </ObjectInScene_4>
        <ObjectInScene_5>
         <ObjectClass value="PolyDataObject"/>
-        <FullFileName value="./replace_cortex_surface_path"/>
+        <FullFileName value="./$replace_cortex_surface_path"/>
         <ObjectID value="2"/>
         <ParentID value="-2"/>
-        <ObjectName value="replace_cortex_surface_name"/>
+        <ObjectName value="$replace_cortex_surface_name"/>
         <AllowChildren value="1"/>
         <AllowChangeParent value="1"/>
         <ObjectManagedBySystem value="0"/>
@@ -258,10 +261,10 @@ def save_summary(iter_summary,
        </ObjectInScene_5>
        <ObjectInScene_6>
         <ObjectClass value="PolyDataObject"/>
-        <FullFileName value="./replace_skin_surface_path"/>
+        <FullFileName value="./$replace_skin_surface_path"/>
         <ObjectID value="4"/>
         <ParentID value="-2"/>
-        <ObjectName value="replace_skin_surface_name"/>
+        <ObjectName value="$replace_skin_surface_name"/>
         <AllowChildren value="1"/>
         <AllowChangeParent value="1"/>
         <ObjectManagedBySystem value="0"/>
@@ -358,35 +361,22 @@ def save_summary(iter_summary,
       </Plugins>
      </SaveScene>
     </configuration>
-    """
-
-    replace_names = {
-                    'main_image_path': 'replace_main_image_path',
-                    'main_image_name': 'replace_main_image_name',
-                    'mask_path': 'replace_mask_path',
-                    'mask_name': 'replace_mask_name',
-                    'cortex_path': 'replace_cortex_surface_path',
-                    'cortex_name': 'replace_cortex_surface_name',
-                    'skin_path': 'replace_skin_surface_path',
-                    'skin_name': 'replace_skin_surface_name',
-                    }
+    """)
 
     #Replace correspoding image names in the xml scene
+
+    xml_modified = default_xml.substitute(
+                        replace_main_image_path = os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']),
+                        replace_main_image_name = iter_summary['t1w_tal_noscale'].name,
+                        replace_mask_path = os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']),
+                        replace_mask_name = iter_summary['t1w_tal_noscale_mask'].name,
+                        replace_cortex_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_cortex'].fname, iter_summary['output_dir']),
+                        replace_cortex_surface_name = iter_summary['t1w_tal_noscale_cortex'].name,
+                        replace_skin_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']),
+                        replace_skin_surface_name = iter_summary['t1w_tal_noscale_skin'].name
+                        )
+
     file_out = open(fname, "wt")
-
-    xml_modified = default_xml.replace(replace_names['main_image_path'], 
-                        os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']))
-    xml_modified = xml_modified.replace(replace_names['main_image_name'], iter_summary['t1w_tal_noscale'].name)
-    xml_modified = xml_modified.replace(replace_names['mask_path'], 
-                        os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']))
-    xml_modified = xml_modified.replace(replace_names['mask_name'], iter_summary['t1w_tal_noscale_mask'].name)
-    xml_modified = xml_modified.replace(replace_names['cortex_path'], 
-                        os.path.relpath(iter_summary['t1w_tal_noscale_cortex'].fname, iter_summary['output_dir']))
-    xml_modified = xml_modified.replace(replace_names['cortex_name'], iter_summary['t1w_tal_noscale_cortex'].name)
-    xml_modified = xml_modified.replace(replace_names['skin_path'], 
-                        os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']))
-    xml_modified = xml_modified.replace(replace_names['skin_name'], iter_summary['t1w_tal_noscale_skin'].name)
-
     file_out.write(xml_modified)
     file_out.close()
 
