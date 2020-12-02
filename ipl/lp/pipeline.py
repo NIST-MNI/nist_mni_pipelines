@@ -376,7 +376,7 @@ def save_summary(iter_summary,
     #Replace correspoding image names in the xml scene
     file_out = open(fname, "wt")
 
-    xml_modified = replace_names.substitute(
+    xml_modified = default_xml.substitute(
                         replace_main_image_path = os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']),
                         replace_main_image_name = iter_summary['t1w_tal_noscale'].name,
                         replace_mask_path = os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']),
