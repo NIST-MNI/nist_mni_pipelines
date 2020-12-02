@@ -25,7 +25,7 @@ from .qc           import *
 from .aqc          import *
 
 # for xml manipulation
-#from string import Template
+from string import Template
 
 def save_summary(iter_summary,
                  fname):
