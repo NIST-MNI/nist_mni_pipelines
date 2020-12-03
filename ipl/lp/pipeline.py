@@ -27,7 +27,7 @@ from .aqc          import *
 # for xml manipulation
 from string import Template
 
-def save_summary(iter_summary,
+def save_ibis_summary(iter_summary,
                  fname):
     """
     Save a scene containing the volumes calculated by the pipeline.
@@ -618,7 +618,8 @@ def standard_pipeline(info,
             # AUX files (filenames for segmentation volumes and other measurements)
             lob_volumes=MriAux(prefix=vol_dir,name='vol_'+dataset_id)
             lob_volumes_json=MriAux(prefix=vol_dir,name='vol_'+dataset_id,suffix='.json')
-            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.xml')
+
+            ibis_summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.xml')
 
 
 
@@ -1045,8 +1046,9 @@ def standard_pipeline(info,
 
                     iter_summary["lob_volumes"]=     lob_volumes
                     iter_summary["lob_volumes_json"]=lob_volumes_json
-
-            save_summary(iter_summary,summary_file.fname) # use this to build scene.xml for IBIS
+            
+            # TODO: figure out when this is needed
+            save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this to build scene.xml for IBIS
             return iter_summary
 
     except mincError as e:
