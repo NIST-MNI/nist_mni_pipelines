@@ -5,6 +5,8 @@
 #
 # routines for creating QC images
 
+import copy
+
 import numpy as np
 import numpy.ma as ma
 
@@ -169,8 +171,8 @@ def qc(
         vmin=np.nanmin(_idata)
         vmax=np.nanmax(_idata)
 
-    cm = plt.get_cmap(image_cmap)
-    cmo= plt.get_cmap(mask_cmap)
+    cm = copy.copy(plt.get_cmap(image_cmap))
+    cmo= copy.copy(plt.get_cmap(mask_cmap))
     cmo.set_bad('k',alpha=0.0)
 
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)

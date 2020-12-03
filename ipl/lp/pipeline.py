@@ -25,37 +25,22 @@ from .qc           import *
 from .aqc          import *
 
 
-def standard_pipeline(info,
-                      output_dir,
-                      options =None,
-                      work_dir=None,
-                      manual_dir=None):
-    """
-    drop-in replacement for the standard pipeline
-
-    Argumets: t1w_scan `MriScan` for T1w scan
-            output_dir string pointing to output directory
-            
-    Kyword arguments:
-            work_dir string pointing to work directory , default None - use output_dir
-    """
-    try:
-        with temp_files() as tmp:
-            if options is None:
-                # TODO: load defaults from a settings file?
-                options= {
+default_pipeline_options = {
                 'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
                 'model_dir': '/opt/minc/share/icbm152_model_09c',
 
-                't1w_nuc':   {},
-                'add_nuc':   {},
+                't1w_nuc':   {"distance":200.0},
+                'add_nuc':   {"distance":200.0},
                 
                 't1w_clp':   {},
                 'add_clp':   {},
 
                 't1w_stx':   {  # options for linear registration
-                        #'type':'ants',
+                        'type': '-lsq9',
+                        'objective': '-nmi',
+                        'options': 'bestlinreg_20180117',
                         'resample':False, # only used to resample to 1x1x1 when needed (if org data is very hig res)
+                        #'type':'ants',
                         #'options': {     # options for linear regisration engine;  in this case for ants.
                             #'levels': 2,
                             #'conf':  {'2':1000,'1':1000}, 
@@ -72,8 +57,8 @@ def standard_pipeline(info,
                             'noscale':True, # this will give (size) scaled and unscaled data
                             'nuc': None,
                     },
-                
                 'beast':     { 'beastlib':  '/opt/minc/share/beast-library-1.1' },
+
                 'brain_nl_seg':  None,
                 'tissue_classify': {},
                 'lobe_segment': {},
@@ -101,6 +86,26 @@ def standard_pipeline(info,
                 
                 'denoise':   {}, # run standard patch-based denoising
             }
+
+def standard_pipeline(info,
+                      output_dir,
+                      options =None,
+                      work_dir=None,
+                      manual_dir=None):
+    """
+    drop-in replacement for the standard pipeline
+
+    Argumets: t1w_scan `MriScan` for T1w scan
+            output_dir string pointing to output directory
+            
+    Kyword arguments:
+            work_dir string pointing to work directory , default None - use output_dir
+    """
+    try:
+        with temp_files() as tmp:
+            if options is None:
+                # try to use default options for 1.5T scan
+                options = default_pipeline_options
                 
             # setup parameters
             subject_id       = info['subject']
@@ -169,7 +174,8 @@ def standard_pipeline(info,
             clp_parameters     = options.get('t1w_clp',{})
             stx_parameters     = options.get('t1w_stx',{})
 
-            IBIS_parameters    = options.get('IBIS',{'skin':True,'cortex':True})
+            surfaces_parameters = options.get('surfaces', 
+                                  {'skin':True, 'cortex':True})
             
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
@@ -595,7 +601,6 @@ def standard_pipeline(info,
                     t1w_tal.mask=None
                     pass
                     
-                    
                 # create unscaled version
                 if create_unscaled:
                     xfm_remove_scale(t1w_tal_xfm, t1w_tal_noscale_xfm, unscale=unscale_xfm)
@@ -606,10 +611,11 @@ def standard_pipeline(info,
                     warp_mask(t1w_tal, model_t1w, t1w_tal_noscale, transform=unscale_xfm)
                     iter_summary["t1w_tal_noscale"]=t1w_tal_noscale
                  
-                    if IBIS_parameters['skin'] or IBIS_parameters['cortex'] :
+                    if surfaces_parameters.get('skin',False) \
+                       or surfaces_parameters.get('cortex',False) :
                         # do skin & cortex processing here
 
-                        if IBIS_parameters['cortex'] :
+                        if surfaces_parameters.get('cortex',False) :
                             with mincTools(verbose=2) as minc:
                                 #start with t1w_tal_noscale
                                 #mincmask t1w_tal_noscale.mnc t1w_tal_noscale_mask.mnc t1w_tal_noscale_masked.mnc
@@ -617,9 +623,10 @@ def standard_pipeline(info,
                                 #marching_cubes t1w_tal_noscale_masked.mnc cortex.obj 45
                                 minc.command(['marching_cubes',t1w_tal_noscale_masked.scan,t1w_tal_noscale_cortex.fname,'45'])
                                 #ascii_binary cortex.obj
-                                minc.command(['ascii_binary',t1w_tal_noscale_cortex.fname])
+                                minc.command(['ascii_binary', t1w_tal_noscale_cortex.fname])
+                            iter_summary['cortex_surface'] = t1w_tal_noscale_cortex
                             
-                        if IBIS_parameters['skin'] :
+                        if surfaces_parameters.get('skin',False) :
                             with mincTools(verbose=2) as minc:
                                 #start with t1w_tal_noscale, then blur it.
                                 tmpname = minc.tmp('tmp_t1_noscaled')
@@ -627,10 +634,8 @@ def standard_pipeline(info,
                                 #marching_cubes t1w_tal_noscale_masked.mnc skin.obj 30
                                 minc.command(['marching_cubes',tmpname+'_blur.mnc',t1w_tal_noscale_skin.fname,'30'])
                                 #ascii_binary cortex.obj
-                                minc.command(['ascii_binary',t1w_tal_noscale_skin.fname])
-
-
-
+                                minc.command(['ascii_binary', t1w_tal_noscale_skin.fname])
+                            iter_summary['skin_surface'] = t1w_tal_noscale_skin
 
                                 
                     # perform non-linear registration

@@ -19,88 +19,9 @@ import json
 from ipl.minc_tools    import mincTools,mincError
 
 # 
-from ipl.lp.pipeline        import standard_pipeline
-#from ipl.lp.iter_pipeline   import iter_step
+from ipl.lp.pipeline        import standard_pipeline, default_pipeline_options
 from ipl.lp.structures      import MriScan,MriTransform,MriQCImage,MriAux
 from ipl.lp.structures      import save_pipeline_output,load_pipeline_output
-
-from scoop import futures, shared
-
-
-default_pipeline_parameters= { 
-                    # 0 iteration
-                    'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
-                    'model_dir': '/opt/minc/share/icbm152_model_09c',
-                    't1w_nuc':   {},
-                    't2w_nuc':   {},
-                    'pdw_nuc':   {},
-                    'beast':     { 'beastlib':  '/opt/minc/share/beast-library-1.1' },
-                    'tissue_classify': {},
-                    'lobe_segment': {},
-                    'nl':        False,
-                    'lobes':     False,
-                    'cls'  :     False,
-                    'qc':        True,
-                    'denoise':   {},
-                    't1w_stx':   {
-                        'type':'elx',
-                        'resample':False,
-                        #'options': {
-                            #'levels': 2,
-                            #'conf':  {'2':1000,'1':1000}, 
-                            #'blur':  {'2':4, '1': 2 }, 
-                            #'shrink':{'2':4, '1': 2 },
-                            #'convergence':'1.e-8,20',
-                            #'cost_function':'MI',
-                            #'cost_function_par':'1,32,random,0.3',
-                            #'transformation':'similarity[ 0.3 ]',
-                            #}
-                    },
-                    'nl_reg': {
-                        'type':'ants',
-                        'start': 16,
-                        'level': 2,
-                        'options': {
-                            'conf':{'16':100,'8':100,'4':20,'2':10},
-                            'blur':{'16':16,'8':8,'4':4,'2':2},
-                            'shrink':{'16':16,'8':8,'4':4,'2':2},
-                            'cost_function':'CC',
-                            'cost_function_par':'1,3,Regular,1.0',
-                        }
-                    }
-                }
-
-preprocessing_pipeline_parameters={
-                    # 0 iteration
-                    'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
-                    'model_dir': '/opt/minc/share/icbm152_model_09c',
-                    't1w_nuc':   {'distance':50},
-                    't1w_clp':   {},
-                    't2w_nuc':   {'distance':50},
-                    'pdw_nuc':   {'distance':50},
-                    'beast':     { 'beastlib':  '/opt/minc/share/beast-library-1.1' },
-                    'tissue_classify': {},
-                    'lobe_segment': {},
-                    'nl':        False,
-                    'lobes':     False,
-                    'cls'  :     False,
-                    'qc':        True,
-                    'denoise':   {'anlm':True, },
-                    't1w_stx':   {
-                        'type':'elx' ,
-                        'resample':False,
-                        #'options': {
-                            #'levels': 2,
-                            #'conf':  {'2':1000,'1':1000}, 
-                            #'blur':  {'2':4, '1': 2 }, 
-                            #'shrink':{'2':4, '1': 2 },
-                            #'convergence':'1.e-8,20',
-                            #'cost_function':'MI',
-                            #'cost_function_par':'1,32,random,0.3',
-                            #'transformation':'similarity[ 0.3 ]',
-                            #}
-                    }
-                }
 
 
 
@@ -180,9 +101,9 @@ def parse_options():
 
 def main():
     options = parse_options()
-    pipeline_parameters=default_pipeline_parameters
-    pipeline_info={}
-    modalities=options.modalities.split(',')
+    pipeline_parameters = default_pipeline_options
+    pipeline_info = {}
+    modalities = options.modalities.split(',')
     try:
         if options.options is not None:
             try:
@@ -259,7 +180,11 @@ def main():
             if options.debug:
                 print(repr(inputs))
             
-            run_pipeline=[]
+            run_pipeline = []
+
+            # only needed for parallel execution
+            from scoop import futures, shared
+
             for (i, s) in enumerate(inputs):
                 output_dir=options.output+os.sep+s['subject']+os.sep+s['visit']
                 manual_dir=None
