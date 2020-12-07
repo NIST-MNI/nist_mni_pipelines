@@ -981,6 +981,7 @@ def standard_pipeline(info,
                                 #ascii_binary cortex.obj
                                 minc.command(['ascii_binary', t1w_tal_noscale_cortex.fname])
                             iter_summary['cortex_surface'] = t1w_tal_noscale_cortex
+                            iter_summary['t1w_tal_noscale_mask'] = t1w_tal_noscale_masked
                             
                         if surfaces_parameters.get('skin',False) :
                             with mincTools(verbose=2) as minc:
