@@ -370,10 +370,10 @@ def save_ibis_summary(iter_summary,
                         replace_main_image_name = iter_summary['t1w_tal_noscale'].name,
                         replace_mask_path = os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']),
                         replace_mask_name = iter_summary['t1w_tal_noscale_mask'].name,
-                        replace_cortex_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_cortex'].fname, iter_summary['output_dir']),
-                        replace_cortex_surface_name = iter_summary['t1w_tal_noscale_cortex'].name,
-                        replace_skin_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']),
-                        replace_skin_surface_name = iter_summary['t1w_tal_noscale_skin'].name
+                        replace_cortex_surface_path = os.path.relpath(iter_summary['cortex_surface'].fname, iter_summary['output_dir']),
+                        replace_cortex_surface_name = iter_summary['cortex_surface'].name,
+                        replace_skin_surface_path = os.path.relpath(iter_summary['skin_surface'].fname, iter_summary['output_dir']),
+                        replace_skin_surface_name = iter_summary['skin_surface'].name
                         )
 
     file_out = open(fname, "wt")
