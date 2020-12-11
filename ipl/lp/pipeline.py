@@ -14,6 +14,9 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError,temp_files
 
+#Hippocampus and ventricle segmentation
+from ipl.segment import *
+
 # local stuff
 from .structures   import *
 from .preprocess   import *
@@ -23,15 +26,437 @@ from .resample     import *
 from .segment      import *
 from .qc           import *
 from .aqc          import *
-from .ibis         import save_ibis_summary
+
+# for xml manipulation
+from string import Template
+
+def save_ibis_summary(iter_summary,
+                 fname):
+    """
+    Save a scene containing the volumes calculated by the pipeline.
+    The volumes are the registered head image, the brain mask, the cortex
+    surface, and the skin surface. The scene is stored in fname.
+
+    Arguments: iter_summary Dictionary containing all the filenames
+               fname Path of the output scene file
+    """
+
+    #Set xml structure
+
+    default_xml = Template("""<!DOCTYPE configML>
+<configuration>
+ <SaveScene>
+  <IbisVersion value="3.0.0  Dev"/>
+  <IbisRevision value="4a50db1"/>
+  <Version value="6.0"/>
+  <NextObjectID value="8"/>
+  <NumberOfSceneObjects value="9"/>
+  <ObjectList>
+   <ObjectInScene_0>
+    <ObjectClass value="WorldObject"/>
+    <FullFileName value="none"/>
+    <ObjectID value="-2"/>
+    <ParentID value="-1"/>
+    <ObjectName value="World"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="0"/>
+    <ObjectManagedBySystem value="1"/>
+    <ObjectHidden value="0"/>
+    <AllowHiding value="0"/>
+    <ObjectDeletable value="0"/>
+    <NameChangeable value="0"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="0"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+   </ObjectInScene_0>
+   <ObjectInScene_1>
+    <ObjectClass value="TripleCutPlaneObject"/>
+    <FullFileName value="none"/>
+    <ObjectID value="-3"/>
+    <ParentID value="-2"/>
+    <ViewPlanes value="1 1 1 "/>
+    <PlanesPosition value="-9.0635992929070994e+00 -2.8457999184123580e+01 2.7191258146407492e+01 "/>
+    <SliceThickness value="1"/>
+    <SliceMixMode>
+     <NumberOfElements value="2"/>
+     <Element_0 value="2"/>
+     <Element_1 value="2"/>
+    </SliceMixMode>
+    <BlendingModeIndices>
+     <NumberOfElements value="2"/>
+     <Element_0 value="2"/>
+     <Element_1 value="2"/>
+    </BlendingModeIndices>
+   </ObjectInScene_1>
+   <ObjectInScene_2>
+    <ObjectClass value="VolumeRenderingObject"/>
+    <FullFileName value="none"/>
+    <ObjectID value="-5"/>
+    <ParentID value="-2"/>
+    <ObjectName value="PRISM Volume Render"/>
+    <AllowChildren value="0"/>
+    <AllowChangeParent value="0"/>
+    <ObjectManagedBySystem value="1"/>
+    <ObjectHidden value="1"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="0"/>
+    <NameChangeable value="0"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="0"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <IsAnimating value="0"/>
+    <SamplingDistance value="1.0000000000000000e+00"/>
+    <ShowInteractionWidget value="0"/>
+    <InteractionWidgetLine value="0"/>
+    <InteractionPoint1 value="0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 "/>
+    <InteractionPoint2 value="2.0000000000000000e+02 0.0000000000000000e+00 0.0000000000000000e+00 "/>
+    <RayInitShaderTypeName value="None"/>
+    <StopConditionShaderTypeName value="ERT alpha 99%"/>
+    <ImageSlots>
+     <NumberOfElements value="1"/>
+     <Element_0>
+      <VolumeEnabled value="1"/>
+      <VolumeIs16Bits value="0"/>
+      <LinearSampling value="1"/>
+      <ShaderContributionTypeName value="Add"/>
+      <LastImageObjectId value="0"/>
+      <ColorTransferFunction>
+       <NbColorPoints value="2"/>
+       <ColorPoint_0 value="0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+       <ColorPoint_1 value="2.5500000000000000e+02 1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+      </ColorTransferFunction>
+      <OpacityTransferFunction>
+       <NbPoints value="2"/>
+       <Point_0 value="1.1316568047337279e+00 4.0000000000000001e-02 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+       <Point_1 value="2.5349112426035504e+02 9.7599999999999998e-01 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+      </OpacityTransferFunction>
+     </Element_0>
+    </ImageSlots>
+   </ObjectInScene_2>
+   <ObjectInScene_3>
+    <ObjectClass value="ImageObject"/>
+    <FullFileName value="./$replace_main_image_path"/>
+    <ObjectID value="0"/>
+    <ParentID value="-2"/>
+    <ObjectName value="$replace_main_image_name"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="1"/>
+    <ObjectManagedBySystem value="0"/>
+    <ObjectHidden value="0"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="1"/>
+    <NameChangeable value="1"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="1"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <LabelImage value="0"/>
+    <ViewOutline value="0"/>
+    <LutIndex value="0"/>
+    <LutRange value="-9.3311071395874023e+00 3.1488708496093750e+02 "/>
+    <IntensityFactor value="9.8999999999999999e-01"/>
+    <VolumeRenderingEnabled value="0"/>
+    <ColorWindow value="1.0000000000000000e+00"/>
+    <ColorLevel value="5.0000000000000000e-01"/>
+    <EnableShading value="0"/>
+    <Ambiant value="1.0000000000000001e-01"/>
+    <Diffuse value="6.9999999999999996e-01"/>
+    <Specular value="2.0000000000000001e-01"/>
+    <SpecularPower value="1.0000000000000000e+01"/>
+    <EnableGradientOpacity value="1"/>
+    <AutoSampleDistance value="1"/>
+    <SampleDistance value="1.0000000000000000e+00"/>
+    <ShowVolumeClippingBox value="0"/>
+    <VolumeRenderingBounds value="-9.6000000000000000e+01 9.6000000000000000e+01 -1.3200000000000000e+02 9.6000000000000000e+01 -7.8000000000000000e+01 1.1400000000000000e+02 "/>
+    <ScalarOpacity>
+     <NbPoints value="2"/>
+     <Point_0 value="0.0000000000000000e+00 0.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+     <Point_1 value="2.5500000000000000e+02 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+    </ScalarOpacity>
+    <GradientOpacity>
+     <NbPoints value="2"/>
+     <Point_0 value="0.0000000000000000e+00 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+     <Point_1 value="2.5500000000000000e+02 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+    </GradientOpacity>
+    <ColorTransferFunction>
+     <NbColorPoints value="2"/>
+     <ColorPoint_0 value="0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+     <ColorPoint_1 value="2.5500000000000000e+02 1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+    </ColorTransferFunction>
+   </ObjectInScene_3>
+   <ObjectInScene_4>
+    <ObjectClass value="ImageObject"/>
+    <FullFileName value="./$replace_mask_path"/>
+    <ObjectID value="1"/>
+    <ParentID value="-2"/>
+    <ObjectName value="$replace_mask_name"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="1"/>
+    <ObjectManagedBySystem value="0"/>
+    <ObjectHidden value="0"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="1"/>
+    <NameChangeable value="1"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="1"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <LabelImage value="0"/>
+    <ViewOutline value="0"/>
+    <LutIndex value="0"/>
+    <LutRange value="-9.2964763641357422e+00 1.7405364990234375e+02 "/>
+    <IntensityFactor value="9.8999999999999999e-01"/>
+    <VolumeRenderingEnabled value="0"/>
+    <ColorWindow value="1.0000000000000000e+00"/>
+    <ColorLevel value="5.0000000000000000e-01"/>
+    <EnableShading value="0"/>
+    <Ambiant value="1.0000000000000001e-01"/>
+    <Diffuse value="6.9999999999999996e-01"/>
+    <Specular value="2.0000000000000001e-01"/>
+    <SpecularPower value="1.0000000000000000e+01"/>
+    <EnableGradientOpacity value="1"/>
+    <AutoSampleDistance value="1"/>
+    <SampleDistance value="1.0000000000000000e+00"/>
+    <ShowVolumeClippingBox value="0"/>
+    <VolumeRenderingBounds value="-9.6000000000000000e+01 9.6000000000000000e+01 -1.3200000000000000e+02 9.6000000000000000e+01 -7.8000000000000000e+01 1.1400000000000000e+02 "/>
+    <ScalarOpacity>
+     <NbPoints value="2"/>
+     <Point_0 value="0.0000000000000000e+00 0.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+     <Point_1 value="2.5500000000000000e+02 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+    </ScalarOpacity>
+    <GradientOpacity>
+     <NbPoints value="2"/>
+     <Point_0 value="0.0000000000000000e+00 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+     <Point_1 value="2.5500000000000000e+02 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+    </GradientOpacity>
+    <ColorTransferFunction>
+     <NbColorPoints value="2"/>
+     <ColorPoint_0 value="0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+     <ColorPoint_1 value="2.5500000000000000e+02 1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 5.0000000000000000e-01 0.0000000000000000e+00 "/>
+    </ColorTransferFunction>
+   </ObjectInScene_4>
+   <ObjectInScene_5>
+    <ObjectClass value="PolyDataObject"/>
+    <FullFileName value="./$replace_cortex_surface_path"/>
+    <ObjectID value="2"/>
+    <ParentID value="-2"/>
+    <ObjectName value="$replace_cortex_surface_name"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="1"/>
+    <ObjectManagedBySystem value="0"/>
+    <ObjectHidden value="1"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="1"/>
+    <NameChangeable value="1"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="1"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <RenderingMode value="2"/>
+    <LutIndex value="0"/>
+    <ScalarsVisible value="0"/>
+    <VertexColorMode value="0"/>
+    <ScalarSourceObjectId value="-1"/>
+    <Opacity value="1.0000000000000000e+00"/>
+    <ObjectColor value="1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <CrossSectionVisible value="0"/>
+    <ClippingEnabled value="0"/>
+    <ClippingPlanesOrientation value="1 1 1 "/>
+    <ShowTexture value="0"/>
+    <TextureFileName value=""/>
+   </ObjectInScene_5>
+   <ObjectInScene_6>
+    <ObjectClass value="PolyDataObject"/>
+    <FullFileName value="./$replace_skin_surface_path"/>
+    <ObjectID value="4"/>
+    <ParentID value="-2"/>
+    <ObjectName value="$replace_skin_surface_name"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="1"/>
+    <ObjectManagedBySystem value="0"/>
+    <ObjectHidden value="1"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="1"/>
+    <NameChangeable value="1"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="1"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <RenderingMode value="2"/>
+    <LutIndex value="0"/>
+    <ScalarsVisible value="0"/>
+    <VertexColorMode value="0"/>
+    <ScalarSourceObjectId value="-1"/>
+    <Opacity value="1.0000000000000000e+00"/>
+    <ObjectColor value="1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <CrossSectionVisible value="0"/>
+    <ClippingEnabled value="0"/>
+    <ClippingPlanesOrientation value="1 1 1 "/>
+    <ShowTexture value="0"/>
+    <TextureFileName value=""/>
+   </ObjectInScene_6>
+   <ObjectInScene_7>
+    <ObjectClass value="PolyDataObject"/>
+    <FullFileName value="./$replace_hippocampus_surface_path"/>
+    <ObjectID value="6"/>
+    <ParentID value="-2"/>
+    <ObjectName value="$replace_hippocampus_surface_name"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="1"/>
+    <ObjectManagedBySystem value="0"/>
+    <ObjectHidden value="1"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="1"/>
+    <NameChangeable value="1"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="1"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <RenderingMode value="2"/>
+    <LutIndex value="0"/>
+    <ScalarsVisible value="0"/>
+    <VertexColorMode value="0"/>
+    <ScalarSourceObjectId value="-1"/>
+    <Opacity value="1.0000000000000000e+00"/>
+    <ObjectColor value="1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <CrossSectionVisible value="0"/>
+    <ClippingEnabled value="0"/>
+    <ClippingPlanesOrientation value="1 1 1 "/>
+    <ShowTexture value="0"/>
+    <TextureFileName value=""/>
+   </ObjectInScene_7>
+   <ObjectInScene_8>
+    <ObjectClass value="PolyDataObject"/>
+    <FullFileName value="./$replace_ventricle_surface_path"/>
+    <ObjectID value="7"/>
+    <ParentID value="-2"/>
+    <ObjectName value="$replace_ventricle_surface_name"/>
+    <AllowChildren value="1"/>
+    <AllowChangeParent value="1"/>
+    <ObjectManagedBySystem value="0"/>
+    <ObjectHidden value="1"/>
+    <AllowHiding value="1"/>
+    <ObjectDeletable value="1"/>
+    <NameChangeable value="1"/>
+    <ObjectListable value="1"/>
+    <AllowManualTransformEdit value="1"/>
+    <LocalTransform value="1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <RenderingMode value="2"/>
+    <LutIndex value="0"/>
+    <ScalarsVisible value="0"/>
+    <VertexColorMode value="0"/>
+    <ScalarSourceObjectId value="-1"/>
+    <Opacity value="1.0000000000000000e+00"/>
+    <ObjectColor value="1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+00 "/>
+    <CrossSectionVisible value="0"/>
+    <ClippingEnabled value="0"/>
+    <ClippingPlanesOrientation value="1 1 1 "/>
+    <ShowTexture value="0"/>
+    <TextureFileName value=""/>
+   </ObjectInScene_8>
+  </ObjectList>
+  <Plugins>
+   <USAcquisitionDoubleView/>
+   <SEEGAtlas/>
+  </Plugins>
+  <SceneManager>
+   <CurrentObjectID value="7"/>
+   <ReferenceObjectID value="0"/>
+   <ViewBackgroundColor value="0.0000000000000000e+00 0.0000000000000000e+00 4.9803921568627452e-01 "/>
+   <View3DBackgroundColor value="0.0000000000000000e+00 0.0000000000000000e+00 4.9803921568627452e-01 "/>
+   <Views>
+    <NumberOfViews value="4"/>
+    <View_0>
+     <ViewID value="-2"/>
+     <ViewType value="2"/>
+     <Name value="Transverse"/>
+     <Position value="0.0000000000000000e+00 -1.8000000000000000e+01 5.9383439472723376e+02 "/>
+     <FocalPoint value="0.0000000000000000e+00 -1.8000000000000000e+01 1.8000000000000000e+01 "/>
+     <Scale value="6.3166315072106393e+01"/>
+     <ViewUp value="0.0000000000000000e+00 1.0000000000000000e+00 0.0000000000000000e+00 "/>
+     <ViewAngle value="3.0000000000000000e+01"/>
+    </View_0>
+    <View_1>
+     <ViewID value="-3"/>
+     <ViewType value="3"/>
+     <Name value="ThreeD"/>
+     <Position value="5.2109475696103266e+02 -1.2685995307647572e+02 4.8483440068776019e+01 "/>
+     <FocalPoint value="0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 "/>
+     <Scale value="2.5980762113533160e+02"/>
+     <ViewUp value="0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+     <ViewAngle value="3.0000000000000000e+01"/>
+    </View_1>
+    <View_2>
+     <ViewID value="-5"/>
+     <ViewType value="0"/>
+     <Name value="Sagittal"/>
+     <Position value="-5.7583439472723376e+02 -1.8000000000000000e+01 1.8000000000000000e+01 "/>
+     <FocalPoint value="0.0000000000000000e+00 -1.8000000000000000e+01 1.8000000000000000e+01 "/>
+     <Scale value="9.5406885948819266e+01"/>
+     <ViewUp value="0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+     <ViewAngle value="3.0000000000000000e+01"/>
+    </View_2>
+    <View_3>
+     <ViewID value="-4"/>
+     <ViewType value="1"/>
+     <Name value="Coronal"/>
+     <Position value="0.0000000000000000e+00 -5.4255375505322445e+02 1.8000000000000000e+01 "/>
+     <FocalPoint value="0.0000000000000000e+00 -1.8000000000000000e+01 1.8000000000000000e+01 "/>
+     <Scale value="6.5009256279320482e+01"/>
+     <ViewUp value="0.0000000000000000e+00 0.0000000000000000e+00 1.0000000000000000e+00 "/>
+     <ViewAngle value="3.0000000000000000e+01"/>
+    </View_3>
+   </Views>
+  </SceneManager>
+  <AxesHidden value="0"/>
+  <CursorVisible value="1"/>
+  <CutPlanesCursorColor_r value="50"/>
+  <CutPlanesCursorColor_g value="50"/>
+  <CutPlanesCursorColor_b value="50"/>
+  <QuadViewWindow>
+   <CurrentViewWindow value="1"/>
+   <ViewExpanded value="0"/>
+  </QuadViewWindow>
+  <Plugins>
+   <GeneratedSurface/>
+   <LabelVolumeToSurfaces/>
+   <LandmarkRegistrationObject/>
+   <PRISMVolumeRender/>
+   <USAcquisitionDoubleView/>
+   <SEEGAtlas/>
+  </Plugins>
+ </SaveScene>
+</configuration>
+    """)
+
+    #Replace correspoding image names in the xml scene
+
+    xml_modified = default_xml.substitute(
+                        replace_main_image_path = os.path.relpath(iter_summary['t1w_tal_noscale'].scan, iter_summary['output_dir']),
+                        replace_main_image_name = iter_summary['t1w_tal_noscale'].name,
+                        replace_mask_path = os.path.relpath(iter_summary['t1w_tal_noscale_masked'].scan, iter_summary['output_dir']),
+                        replace_mask_name = iter_summary['t1w_tal_noscale_masked'].name,
+                        replace_cortex_surface_path = os.path.relpath(iter_summary['cortex_surface'].fname, iter_summary['output_dir']),
+                        replace_cortex_surface_name = iter_summary['cortex_surface'].name,
+                        replace_skin_surface_path = os.path.relpath(iter_summary['skin_surface'].fname, iter_summary['output_dir']),
+                        replace_skin_surface_name = iter_summary['skin_surface'].name,
+                        replace_hippocampus_surface_path = os.path.relpath(iter_summary['hippocampus_surface'].fname, iter_summary['output_dir']),
+                        replace_hippocampus_surface_name = iter_summary['hippocampus_surface'].name,
+                        replace_ventricle_surface_path = os.path.relpath(iter_summary['ventricle_surface'].fname, iter_summary['output_dir']),
+                        replace_ventricle_surface_name = iter_summary['ventricle_surface'].name
+                        )
+
+    file_out = open(fname, "wt")
+    file_out.write(xml_modified)
+    file_out.close()
 
 default_pipeline_options = {
                 'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
                 'model_dir': '/opt/minc/share/icbm152_model_09c',
 
+                'fusion_library_hc_description': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621',
+                'fusion_hc_parameters': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
+                'fusion_library_ve_description': '/data/ipl/scratch08/vfonov/ad_ventricles/vent_library_v2',
+                'fusion_ve_parameters': '/data/ipl/scratch08/vfonov/ad_ventricles/vent_options_v2_f10.json',
+
                 't1w_nuc':   {"distance":200.0},
                 'add_nuc':   {"distance":200.0},
-                
+
                 't1w_clp':   {},
                 'add_clp':   {},
 
@@ -98,7 +523,7 @@ def standard_pipeline(info,
 
     Argumets: t1w_scan `MriScan` for T1w scan
             output_dir string pointing to output directory
-            
+
     Kyword arguments:
             work_dir string pointing to work directory , default None - use output_dir
     """
@@ -107,7 +532,7 @@ def standard_pipeline(info,
             if options is None:
                 # try to use default options for 1.5T scan
                 options = default_pipeline_options
-                
+
             # setup parameters
             subject_id       = info['subject']
             timepoint_id     = info.get('visit', None)
@@ -176,9 +601,9 @@ def standard_pipeline(info,
             clp_parameters     = options.get('t1w_clp',{})
             stx_parameters     = options.get('t1w_stx',{})
 
-            surfaces_parameters = options.get('surfaces', 
-                                  {'skin':True, 'cortex':True})
-            
+            surfaces_parameters = options.get('surfaces',
+                                  {'skin':True, 'cortex':True, 'hippocampus':True, 'ventricle': True})
+
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
             stx_disable        = stx_parameters.get('disable',False)
@@ -229,12 +654,23 @@ def standard_pipeline(info,
             t1w_tal=MriScan(prefix=tal_dir, name='tal_'+dataset_id, modality='t1w')
             t1w_tal_fld=MriScan(prefix=tal_dir, name='tal_fld_'+dataset_id, modality='t1w') # to xform nonuniformity correction field into stx space
 
-            t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'full_head_image',modality='t1w')
-
-            t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'brain_image',modality='t1w')
-
-            t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'cortex_surface', suffix='.obj')
-            t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'skin_surface', suffix='.obj')
+            #This section is added just to use simpler image names when ibis_output is true
+            if ibis_output:
+                t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'_full_head_image',modality='t1w')
+                ct_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'_ct_image',modality='ct')              
+                t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'_brain_image',modality='t1w')
+                t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
+                t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
+                t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
+                t1w_tal_noscale_ventricle=MriAux(prefix=obj_dir, name=dataset_id+'_ventricle_surface', suffix='.obj')
+                t1w_masked=MriScan(prefix=clp_dir, name=dataset_id+'_brain_image', modality='t1w')
+            else:
+                t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
+                t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
+                t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name='tal_noscale_hippocampus'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_ventricle=MriAux(prefix=obj_dir, name='tal_noscale_ventricle'+dataset_id, suffix='.obj')
 
             t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
@@ -558,7 +994,7 @@ def standard_pipeline(info,
                                     corr_xfm=corr_xfm,
                                     parameters=add_stx_parameters)
 
-                        iter_summary["add_tal"].append(tal)
+                        iter_summary["add_tal"].append(tal)                        
 
                 if run_qc is not None and run_qc.get('t1w_stx',True):
                     draw_qc_stx(t1w_tal,model_outline,qc_tal,options=run_qc)
@@ -605,20 +1041,22 @@ def standard_pipeline(info,
                             parameters=options.get('t1w_stx',{}))
                     t1w_tal.mask=None
                     pass
-                    
+
                 # create unscaled version
                 if create_unscaled:
                     xfm_remove_scale(t1w_tal_xfm, t1w_tal_noscale_xfm, unscale=unscale_xfm)
                     iter_summary["t1w_tal_noscale_xfm"]=t1w_tal_noscale_xfm
                     #warp scan to create unscaled version
                     warp_scan(t1w_clp, model_t1w, t1w_tal_noscale, transform=t1w_tal_noscale_xfm, corr_xfm=corr_t1w)
-                    # warping mask from tal space to unscaled tal space
+                    # warping mask from tal space to unscaled tal space 
                     warp_mask(t1w_tal, model_t1w, t1w_tal_noscale, transform=unscale_xfm)
                     iter_summary["t1w_tal_noscale"]=t1w_tal_noscale
-                 
+
                     if surfaces_parameters.get('skin',False) \
-                       or surfaces_parameters.get('cortex',False) :
-                        # do skin & cortex processing here
+                        or surfaces_parameters.get('cortex',False) \
+                            or surfaces_parameters.get('hippocampus',False) \
+                                or surfaces_parameters.get('ventricle',False):
+                        # do skin, cortex, hippocampus, and ventricle processing here
 
                         if surfaces_parameters.get('cortex',False) :
                             with mincTools(verbose=2) as minc:
@@ -631,7 +1069,9 @@ def standard_pipeline(info,
                                 minc.command(['ascii_binary', t1w_tal_noscale_cortex.fname])
                             iter_summary['cortex_surface'] = t1w_tal_noscale_cortex
                             iter_summary['t1w_tal_noscale_mask'] = t1w_tal_noscale_masked
-                            
+                            iter_summary['t1w_masked'] = t1w_masked
+                            iter_summary['t1w_tal_noscale_masked'] = t1w_tal_noscale_masked
+
                         if surfaces_parameters.get('skin',False) :
                             with mincTools(verbose=2) as minc:
                                 #start with t1w_tal_noscale, then blur it.
@@ -643,7 +1083,44 @@ def standard_pipeline(info,
                                 minc.command(['ascii_binary', t1w_tal_noscale_skin.fname])
                             iter_summary['skin_surface'] = t1w_tal_noscale_skin
 
-                                
+                        if surfaces_parameters.get('hippocampus',False) :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale and then segment hippocampus
+                                tmp_work = minc.tmp('tmp_work')
+                                tmp_output = minc.tmp('tmp_output')
+                                fusion_library_hc_description = SegLibrary(options['fusion_library_hc_description'])
+                                fusion_hc_parameters = json.load(open(options['fusion_hc_parameters']))
+                                fusion_segment(input_scan= t1w_tal_noscale.scan,
+                                            library_description=fusion_library_hc_description,
+                                            output_segment=tmp_output,
+                                            parameters=fusion_hc_parameters,
+                                            work_dir=tmp_work,
+                                            fuse_variant='hc',
+                                            regularize_variant='reg',
+                                            cleanup = True)
+                                minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
+                                minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
+                            iter_summary['hippocampus_surface'] = t1w_tal_noscale_hippocampus
+
+                        if surfaces_parameters.get('ventricle',False) :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale and then segment ventricle
+                                tmp_work = minc.tmp('tmp_work')
+                                tmp_output = minc.tmp('tmp_output')
+                                fusion_library_ve_description = SegLibrary(options['fusion_library_ve_description'])
+                                fusion_ve_parameters = json.load(open(options['fusion_ve_parameters']))
+                                fusion_segment(input_scan= t1w_tal_noscale.scan,
+                                            library_description=fusion_library_ve_description,
+                                            output_segment=tmp_output,
+                                            parameters=fusion_ve_parameters,
+                                            work_dir=tmp_work,
+                                            fuse_variant='ve',
+                                            regularize_variant='reg',
+                                            cleanup = True)
+                                minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_ventricle.fname,'0'])
+                                minc.command(['ascii_binary', t1w_tal_noscale_ventricle.fname])
+                            iter_summary['ventricle_surface'] = t1w_tal_noscale_ventricle
+
                     # perform non-linear registration
                 if run_nl:
                     nl_registration(t1w_tal, model_t1w, nl_xfm,
@@ -699,10 +1176,10 @@ def standard_pipeline(info,
 
                     iter_summary["lob_volumes"]=     lob_volumes
                     iter_summary["lob_volumes_json"]=lob_volumes_json
-            
+
             # TODO: figure out when this is needed
             if ibis_output:
-              save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this 
+              save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this
             else:
               save_summary(iter_summary, summary_file.fname) # to build scene.xml for IBIS
             return iter_summary

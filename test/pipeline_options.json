@@ -2,6 +2,10 @@
     "model":     "mni_icbm152_t1_tal_nlin_sym_09c",
     "model_dir": "/ipl/quarantine/models/icbm152_model_09c",
     "beast":     { "beastlib":  "/ipl/quarantine/models/beast"},
+    "fusion_library_hc_description": "/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621",
+    "fusion_hc_parameters": "/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json",
+    "fusion_library_ve_description": "/data/ipl/scratch08/vfonov/ad_ventricles/vent_library_v2",
+    "fusion_ve_parameters": "/data/ipl/scratch08/vfonov/ad_ventricles/vent_options_v2_f10.json",
 
     "mri_3t":    false,
     "qc":        true,
@@ -19,5 +23,38 @@
 
     "nl":        false,
     "cls":       false,
-    "lobes":     false
+    "lobes":     false,
+    "ibis_output": true,
+
+    "add": {
+           "model":     "mni_icbm152_t1_tal_nlin_sym_09c",
+           "model_dir": "/ipl/quarantine/models/icbm152_model_09c",
+
+           "mri_3t":    false,
+           "qc":        {"big":true},
+           "aqc":       {},
+           "t1w_clp":   null,
+           "t1w_nuc":   null,
+           "denoise":   null,
+              
+           "t1w_stx":   {
+                        "type":"elx",
+                        "options":  {
+                                    "metric":    "AdvancedMattesMutualInformation",
+                                    "optimizer": "AdaptiveStochasticGradientDescent",
+                                    "transform": "EulerTransform"
+                                    },
+                                    "resample": false
+                        },               
+            "nl_reg":    null,
+              
+             
+            "tissue_classify": null,
+            "lobe_segment": null,
+            "beast":     null,
+              
+            "nl":        false,
+            "cls":       false,
+            "lobes":     false
+            }
 }
