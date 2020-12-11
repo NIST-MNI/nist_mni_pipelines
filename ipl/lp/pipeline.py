@@ -229,12 +229,12 @@ def standard_pipeline(info,
             t1w_tal=MriScan(prefix=tal_dir, name='tal_'+dataset_id, modality='t1w')
             t1w_tal_fld=MriScan(prefix=tal_dir, name='tal_fld_'+dataset_id, modality='t1w') # to xform nonuniformity correction field into stx space
 
-            t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'full_head_image',modality='t1w')
+            t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'_full_head_image',modality='t1w')
 
-            t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'brain_image',modality='t1w')
+            t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'_brain_image',modality='t1w')
 
-            t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'cortex_surface', suffix='.obj')
-            t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'skin_surface', suffix='.obj')
+            t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
+            t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
 
             t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
