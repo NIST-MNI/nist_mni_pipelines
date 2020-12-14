@@ -33,7 +33,7 @@ from .analysis         import *
 
 
 def fusion_segment( input_scan,
-                    library_description,
+                    library_description={},
                     output_segment,
                     input_mask = None,
                     parameters = {},
