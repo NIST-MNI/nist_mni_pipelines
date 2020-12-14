@@ -1004,14 +1004,12 @@ def standard_pipeline(info,
                                 #start with t1w_tal_noscale and then segment hippocampus
                                 tmp_work = minc.tmp('tmp_work')
                                 tmp_output = minc.tmp('tmp_output')
-                                command_hippocampus_seg = ('python -m scoop -n 1 /data/ipl/scratch08/vfonov/adni_jens/nihpd_pipeline/python/iplScoopFusionSegmentation.py'
-                                    +' --segment /data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621'
-                                    +' --input  ' + t1w_tal_noscale.scan
-                                    +' --work ' + tmp_work
-                                    +' --output ' + tmp_output
-                                    +' --options /data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json'
-                                    +' --cleanup')
-                                os.system(command_hippocampus_seg)
+                                fusion_segment(input_scan= t1w_tal_noscale.scan, 
+                                            library_description='/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621',
+                                            output_segment=tmp_output,
+                                            parameters='/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
+                                            work_dir=tmp_work,
+                                            cleanup = True)
                                 minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
                                 minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
                             iter_summary['hippocampus_surface'] = t1w_tal_noscale_hippocampus
