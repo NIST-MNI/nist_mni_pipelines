@@ -177,7 +177,7 @@ def standard_pipeline(info,
             stx_parameters     = options.get('t1w_stx',{})
 
             surfaces_parameters = options.get('surfaces', 
-                                  {'skin':True, 'cortex':True})
+                                  {'skin':True, 'cortex':True, 'hippocampus':True})
             
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
@@ -235,6 +235,7 @@ def standard_pipeline(info,
 
             t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
             t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
+            t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
 
             t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
@@ -617,8 +618,9 @@ def standard_pipeline(info,
                     iter_summary["t1w_tal_noscale"]=t1w_tal_noscale
                  
                     if surfaces_parameters.get('skin',False) \
-                       or surfaces_parameters.get('cortex',False) :
-                        # do skin & cortex processing here
+                        or surfaces_parameters.get('cortex',False) \ 
+                            or surfaces_parameters.get('hippocampus',False):
+                        # do skin, cortex, and hippocampus processing here
 
                         if surfaces_parameters.get('cortex',False) :
                             with mincTools(verbose=2) as minc:
@@ -643,6 +645,22 @@ def standard_pipeline(info,
                                 minc.command(['ascii_binary', t1w_tal_noscale_skin.fname])
                             iter_summary['skin_surface'] = t1w_tal_noscale_skin
 
+                        if surfaces_parameters.get('hippocampus',False) :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale and then segment hippocampus
+                                tmp_work = minc.tmp('tmp_work')
+                                tmp_output = minc.tmp('tmp_output')
+                                command_hippocampus_seg = 'python -m scoop -n 1 /data/ipl/scratch08/vfonov/adni_jens/nihpd_pipeline/python/iplScoopFusionSegmentation.py'
+                                    +' --segment /data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621'
+                                    +' --input  ' + t1w_tal_noscale.scan
+                                    +' --work ' + tmp_work
+                                    +' --output ' + tmp_output
+                                    +' --options /data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json'
+                                    +' --cleanup'
+                                os.system(command_hippocampus_seg)
+                                minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
+                                minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
+                            iter_summary['hippocampus_surface'] = t1w_tal_noscale_hippocampus
                                 
                     # perform non-linear registration
                 if run_nl:
