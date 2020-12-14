@@ -386,7 +386,7 @@ default_pipeline_options = {
 
                 't1w_nuc':   {"distance":200.0},
                 'add_nuc':   {"distance":200.0},
-                
+
                 't1w_clp':   {},
                 'add_clp':   {},
 
@@ -452,7 +452,7 @@ def standard_pipeline(info,
 
     Argumets: t1w_scan `MriScan` for T1w scan
             output_dir string pointing to output directory
-            
+
     Kyword arguments:
             work_dir string pointing to work directory , default None - use output_dir
     """
@@ -461,7 +461,7 @@ def standard_pipeline(info,
             if options is None:
                 # try to use default options for 1.5T scan
                 options = default_pipeline_options
-                
+
             # setup parameters
             subject_id       = info['subject']
             timepoint_id     = info.get('visit', None)
@@ -529,9 +529,9 @@ def standard_pipeline(info,
             clp_parameters     = options.get('t1w_clp',{})
             stx_parameters     = options.get('t1w_stx',{})
 
-            surfaces_parameters = options.get('surfaces', 
+            surfaces_parameters = options.get('surfaces',
                                   {'skin':True, 'cortex':True, 'hippocampus':True})
-            
+
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
             stx_disable        = stx_parameters.get('disable',False)
@@ -957,7 +957,7 @@ def standard_pipeline(info,
                             parameters=options.get('t1w_stx',{}))
                     t1w_tal.mask=None
                     pass
-                    
+
                 # create unscaled version
                 if create_unscaled:
                     xfm_remove_scale(t1w_tal_xfm, t1w_tal_noscale_xfm, unscale=unscale_xfm)
@@ -967,9 +967,9 @@ def standard_pipeline(info,
                     # warping mask from tal space to unscaled tal space
                     warp_mask(t1w_tal, model_t1w, t1w_tal_noscale, transform=unscale_xfm)
                     iter_summary["t1w_tal_noscale"]=t1w_tal_noscale
-                 
+
                     if surfaces_parameters.get('skin',False) \
-                        or surfaces_parameters.get('cortex',False) \ 
+                        or surfaces_parameters.get('cortex',False) \
                             or surfaces_parameters.get('hippocampus',False):
                         # do skin, cortex, and hippocampus processing here
 
@@ -984,7 +984,7 @@ def standard_pipeline(info,
                                 minc.command(['ascii_binary', t1w_tal_noscale_cortex.fname])
                             iter_summary['cortex_surface'] = t1w_tal_noscale_cortex
                             iter_summary['t1w_tal_noscale_mask'] = t1w_tal_noscale_masked
-                            
+
                         if surfaces_parameters.get('skin',False) :
                             with mincTools(verbose=2) as minc:
                                 #start with t1w_tal_noscale, then blur it.
@@ -1012,7 +1012,7 @@ def standard_pipeline(info,
                                 minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
                                 minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
                             iter_summary['hippocampus_surface'] = t1w_tal_noscale_hippocampus
-                                
+
                     # perform non-linear registration
                 if run_nl:
                     nl_registration(t1w_tal, model_t1w, nl_xfm,
@@ -1065,7 +1065,7 @@ def standard_pipeline(info,
 
                     iter_summary["lob_volumes"]=     lob_volumes
                     iter_summary["lob_volumes_json"]=lob_volumes_json
-            
+
             # TODO: figure out when this is needed
             save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this to build scene.xml for IBIS
             return iter_summary
