@@ -15,7 +15,7 @@ import traceback
 from ipl.minc_tools import mincTools,mincError,temp_files
 
 #Hippocampus segmentation
-from .segment.fuse import fusion_segment
+from ..segment.fuse import fusion_segment
 
 # local stuff
 from .structures   import *
