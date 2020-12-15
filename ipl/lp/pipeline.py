@@ -443,6 +443,7 @@ default_pipeline_options = {
                     },
 
                 'denoise':   {}, # run standard patch-based denoising
+                'ibis_output': False # export files for IBIS
             }
 
 def standard_pipeline(info,
@@ -472,6 +473,7 @@ def standard_pipeline(info,
             add_scans        = info.get('add', None)
             init_t1w_lin_xfm = info.get('init_t1w_lin_xfm', None)
             manual           = options.get('manual',None)
+            ibis_output      = options.get('ibis_output',False)
 
 
             corr_t1w = info.get('corr_t1w', None)
@@ -630,6 +632,7 @@ def standard_pipeline(info,
             lob_volumes_json=MriAux(prefix=vol_dir,name='vol_'+dataset_id,suffix='.json')
 
             ibis_summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.xml')
+            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.json')
 
 
 
@@ -1074,7 +1077,10 @@ def standard_pipeline(info,
                     iter_summary["lob_volumes_json"]=lob_volumes_json
 
             # TODO: figure out when this is needed
-            save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this to build scene.xml for IBIS
+            if ibis_output:
+              save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this 
+            else:
+              save_summary(iter_summary, summary_file.fname) # to build scene.xml for IBIS
             return iter_summary
 
     except mincError as e:
