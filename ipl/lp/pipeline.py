@@ -232,19 +232,18 @@ def standard_pipeline(info,
             t1w_tal=MriScan(prefix=tal_dir, name='tal_'+dataset_id, modality='t1w')
             t1w_tal_fld=MriScan(prefix=tal_dir, name='tal_fld_'+dataset_id, modality='t1w') # to xform nonuniformity correction field into stx space
 
-            t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
-
-            t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
-
-            t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
-            t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
-            t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name='tal_noscale_hippocampus'+dataset_id, suffix='.obj')
-
-            #t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'_full_head_image',modality='t1w')
-            #t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'_brain_image',modality='t1w')
-            #t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
-            #t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
-            #t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
+            if ibis_output:
+                t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'_full_head_image',modality='t1w')
+                t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'_brain_image',modality='t1w')
+                t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
+                t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
+                t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
+            else:
+                t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
+                t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
+                t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name='tal_noscale_hippocampus'+dataset_id, suffix='.obj')
 
             t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
@@ -659,10 +658,12 @@ def standard_pipeline(info,
                                 #start with t1w_tal_noscale and then segment hippocampus
                                 tmp_work = minc.tmp('tmp_work')
                                 tmp_output = minc.tmp('tmp_output')
+                                fusion_library_description = json.load(open('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621/library.json'))
+                                fusion_parameters = json.load(open('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json'))
                                 fusion_segment(input_scan= t1w_tal_noscale.scan, 
-                                            library_description='/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621/library.json',
+                                            library_description=fusion_library_description,
                                             output_segment=tmp_output,
-                                            parameters='/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
+                                            parameters=fusion_parameters,
                                             work_dir=tmp_work,
                                             cleanup = True)
                                 minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
