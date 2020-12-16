@@ -658,7 +658,7 @@ def standard_pipeline(info,
                                 #start with t1w_tal_noscale and then segment hippocampus
                                 tmp_work = minc.tmp('tmp_work')
                                 tmp_output = minc.tmp('tmp_output')
-                                fusion_library_description = json.load(open('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621/library.json'))
+                                fusion_library_description = SegLibrary('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621')
                                 fusion_parameters = json.load(open('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json'))
                                 fusion_segment(input_scan= t1w_tal_noscale.scan, 
                                             library_description=fusion_library_description,
