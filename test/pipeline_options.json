@@ -19,5 +19,6 @@
 
     "nl":        false,
     "cls":       false,
-    "lobes":     false
+    "lobes":     false,
+    "ibis_output": true
 }
