@@ -2,6 +2,8 @@
     "model":     "mni_icbm152_t1_tal_nlin_sym_09c",
     "model_dir": "/ipl/quarantine/models/icbm152_model_09c",
     "beast":     { "beastlib":  "/ipl/quarantine/models/beast"},
+    "fusion_library_description": "/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621",
+    "fusion_parameters": "/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json",
 
     "mri_3t":    false,
     "qc":        true,
@@ -19,5 +21,6 @@
 
     "nl":        false,
     "cls":       false,
-    "lobes":     false
+    "lobes":     false,
+    "ibis_output": true
 }

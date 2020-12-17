@@ -14,6 +14,9 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError,temp_files
 
+#Hippocampus segmentation
+from ipl.segment import *
+
 # local stuff
 from .structures   import *
 from .preprocess   import *
@@ -384,9 +387,13 @@ default_pipeline_options = {
                 'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
                 'model_dir': '/opt/minc/share/icbm152_model_09c',
 
+                'fusion_library_description': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621',
+                'fusion_parameters': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
+
+
                 't1w_nuc':   {"distance":200.0},
                 'add_nuc':   {"distance":200.0},
-                
+
                 't1w_clp':   {},
                 'add_clp':   {},
 
@@ -453,7 +460,7 @@ def standard_pipeline(info,
 
     Argumets: t1w_scan `MriScan` for T1w scan
             output_dir string pointing to output directory
-            
+
     Kyword arguments:
             work_dir string pointing to work directory , default None - use output_dir
     """
@@ -462,7 +469,7 @@ def standard_pipeline(info,
             if options is None:
                 # try to use default options for 1.5T scan
                 options = default_pipeline_options
-                
+
             # setup parameters
             subject_id       = info['subject']
             timepoint_id     = info.get('visit', None)
@@ -531,9 +538,9 @@ def standard_pipeline(info,
             clp_parameters     = options.get('t1w_clp',{})
             stx_parameters     = options.get('t1w_stx',{})
 
-            surfaces_parameters = options.get('surfaces', 
-                                  {'skin':True, 'cortex':True})
-            
+            surfaces_parameters = options.get('surfaces',
+                                  {'skin':True, 'cortex':True, 'hippocampus':True})
+
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
             stx_disable        = stx_parameters.get('disable',False)
@@ -584,12 +591,18 @@ def standard_pipeline(info,
             t1w_tal=MriScan(prefix=tal_dir, name='tal_'+dataset_id, modality='t1w')
             t1w_tal_fld=MriScan(prefix=tal_dir, name='tal_fld_'+dataset_id, modality='t1w') # to xform nonuniformity correction field into stx space
 
-            t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
-
-            t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
-
-            t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
-            t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
+            if ibis_output:
+                t1w_tal_noscale=MriScan(prefix=tal_dir, name=dataset_id+'_full_head_image',modality='t1w')
+                t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name=dataset_id+'_brain_image',modality='t1w')
+                t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
+                t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
+                t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
+            else:
+                t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
+                t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
+                t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name='tal_noscale_hippocampus'+dataset_id, suffix='.obj')
 
             t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
@@ -959,7 +972,7 @@ def standard_pipeline(info,
                             parameters=options.get('t1w_stx',{}))
                     t1w_tal.mask=None
                     pass
-                    
+
                 # create unscaled version
                 if create_unscaled:
                     xfm_remove_scale(t1w_tal_xfm, t1w_tal_noscale_xfm, unscale=unscale_xfm)
@@ -969,10 +982,11 @@ def standard_pipeline(info,
                     # warping mask from tal space to unscaled tal space
                     warp_mask(t1w_tal, model_t1w, t1w_tal_noscale, transform=unscale_xfm)
                     iter_summary["t1w_tal_noscale"]=t1w_tal_noscale
-                 
+
                     if surfaces_parameters.get('skin',False) \
-                       or surfaces_parameters.get('cortex',False) :
-                        # do skin & cortex processing here
+                        or surfaces_parameters.get('cortex',False) \
+                            or surfaces_parameters.get('hippocampus',False):
+                        # do skin, cortex, and hippocampus processing here
 
                         if surfaces_parameters.get('cortex',False) :
                             with mincTools(verbose=2) as minc:
@@ -985,7 +999,7 @@ def standard_pipeline(info,
                                 minc.command(['ascii_binary', t1w_tal_noscale_cortex.fname])
                             iter_summary['cortex_surface'] = t1w_tal_noscale_cortex
                             iter_summary['t1w_tal_noscale_mask'] = t1w_tal_noscale_masked
-                            
+
                         if surfaces_parameters.get('skin',False) :
                             with mincTools(verbose=2) as minc:
                                 #start with t1w_tal_noscale, then blur it.
@@ -997,7 +1011,25 @@ def standard_pipeline(info,
                                 minc.command(['ascii_binary', t1w_tal_noscale_skin.fname])
                             iter_summary['skin_surface'] = t1w_tal_noscale_skin
 
-                                
+                        if surfaces_parameters.get('hippocampus',False) :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale and then segment hippocampus
+                                tmp_work = minc.tmp('tmp_work')
+                                tmp_output = minc.tmp('tmp_output')
+                                fusion_library_description = SegLibrary(options['fusion_library_description'])
+                                fusion_parameters = json.load(open(options['fusion_parameters']))
+                                fusion_segment(input_scan= t1w_tal_noscale.scan, 
+                                            library_description=fusion_library_description,
+                                            output_segment=tmp_output,
+                                            parameters=fusion_parameters,
+                                            work_dir=tmp_work,
+                                            fuse_variant='hc',
+                                            regularize_variant='reg',
+                                            cleanup = True)
+                                minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
+                                minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
+                            iter_summary['hippocampus_surface'] = t1w_tal_noscale_hippocampus
+
                     # perform non-linear registration
                 if run_nl:
                     nl_registration(t1w_tal, model_t1w, nl_xfm,
@@ -1050,7 +1082,7 @@ def standard_pipeline(info,
 
                     iter_summary["lob_volumes"]=     lob_volumes
                     iter_summary["lob_volumes_json"]=lob_volumes_json
-            
+
             # TODO: figure out when this is needed
             if ibis_output:
               save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this 
