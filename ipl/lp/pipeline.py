@@ -656,8 +656,8 @@ def standard_pipeline(info,
                         if surfaces_parameters.get('hippocampus',False) :
                             with mincTools(verbose=2) as minc:
                                 #start with t1w_tal_noscale and then segment hippocampus
-                                tmp_work = str(minc.tmp('tmp_work'))
-                                tmp_output = str(minc.tmp('tmp_output'))
+                                tmp_work = minc.tmp('tmp_work')
+                                tmp_output = minc.tmp('tmp_output')
                                 fusion_library_description = SegLibrary('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621')
                                 fusion_parameters = json.load(open('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json'))
                                 fusion_segment(input_scan= t1w_tal_noscale.scan, 
@@ -665,6 +665,7 @@ def standard_pipeline(info,
                                             output_segment=tmp_output,
                                             parameters=fusion_parameters,
                                             work_dir=tmp_work,
+                                            fuse_variant='hc',
                                             cleanup = True)
                                 minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
                                 minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
