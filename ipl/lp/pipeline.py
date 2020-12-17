@@ -666,6 +666,7 @@ def standard_pipeline(info,
                                             parameters=fusion_parameters,
                                             work_dir=tmp_work,
                                             fuse_variant='hc',
+                                            regularize_variant='reg',
                                             cleanup = True)
                                 minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
                                 minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
