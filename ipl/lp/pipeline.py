@@ -32,6 +32,10 @@ default_pipeline_options = {
                 'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
                 'model_dir': '/opt/minc/share/icbm152_model_09c',
 
+                'fusion_library_description': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621',
+                'fusion_parameters': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
+
+
                 't1w_nuc':   {"distance":200.0},
                 'add_nuc':   {"distance":200.0},
 
@@ -658,8 +662,8 @@ def standard_pipeline(info,
                                 #start with t1w_tal_noscale and then segment hippocampus
                                 tmp_work = minc.tmp('tmp_work')
                                 tmp_output = minc.tmp('tmp_output')
-                                fusion_library_description = SegLibrary('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621')
-                                fusion_parameters = json.load(open('/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json'))
+                                fusion_library_description = SegLibrary(options[fusion_library_description])
+                                fusion_parameters = json.load(open(options[fusion_parameters]))
                                 fusion_segment(input_scan= t1w_tal_noscale.scan, 
                                             library_description=fusion_library_description,
                                             output_segment=tmp_output,
