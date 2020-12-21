@@ -14,7 +14,7 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError,temp_files
 
-#Hippocampus segmentation
+#Hippocampus and ventricle segmentation
 from ipl.segment import *
 
 # local stuff
@@ -387,9 +387,10 @@ default_pipeline_options = {
                 'model':     'mni_icbm152_t1_tal_nlin_sym_09c',
                 'model_dir': '/opt/minc/share/icbm152_model_09c',
 
-                'fusion_library_description': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621',
-                'fusion_parameters': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
-
+                'fusion_library_hc_description': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_lib_20170621',
+                'fusion_hc_parameters': '/data/ipl/scratch08/vfonov/adni_jens/jens_hc_segment_20170621.json',
+                'fusion_library_ve_description': '/data/ipl/scratch08/vfonov/ad_ventricles/vent_library_v2',
+                'fusion_ve_parameters': '/data/ipl/scratch08/vfonov/ad_ventricles/vent_options_v2_f10.json',
 
                 't1w_nuc':   {"distance":200.0},
                 'add_nuc':   {"distance":200.0},
@@ -539,7 +540,7 @@ def standard_pipeline(info,
             stx_parameters     = options.get('t1w_stx',{})
 
             surfaces_parameters = options.get('surfaces',
-                                  {'skin':True, 'cortex':True, 'hippocampus':True})
+                                  {'skin':True, 'cortex':True, 'hippocampus':True, 'ventricle': True})
 
             create_unscaled    = stx_parameters.get('noscale',False)
             #stx_nuc            = stx_parameters.get('nuc',None)
@@ -597,12 +598,14 @@ def standard_pipeline(info,
                 t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name=dataset_id+'_cortex_surface', suffix='.obj')
                 t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name=dataset_id+'_skin_surface', suffix='.obj')
                 t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
+                t1w_tal_noscale_ventricle=MriAux(prefix=obj_dir, name=dataset_id+'_ventricle_surface', suffix='.obj')
             else:
                 t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
                 t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
                 t1w_tal_noscale_cortex=MriAux(prefix=obj_dir, name='tal_noscale_cortex'+dataset_id, suffix='.obj')
                 t1w_tal_noscale_skin=MriAux(prefix=obj_dir, name='tal_noscale_skin'+dataset_id, suffix='.obj')
                 t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name='tal_noscale_hippocampus'+dataset_id, suffix='.obj')
+                t1w_tal_noscale_ventricle=MriAux(prefix=obj_dir, name='tal_noscale_ventricle'+dataset_id, suffix='.obj')
 
             t1w_tal_par=MriAux(prefix=tal_dir,name='tal_par_t1w_'+dataset_id) # for elastics only...
             t1w_tal_log=MriAux(prefix=tal_dir,name='tal_log_t1w_'+dataset_id)
@@ -985,8 +988,9 @@ def standard_pipeline(info,
 
                     if surfaces_parameters.get('skin',False) \
                         or surfaces_parameters.get('cortex',False) \
-                            or surfaces_parameters.get('hippocampus',False):
-                        # do skin, cortex, and hippocampus processing here
+                            or surfaces_parameters.get('hippocampus',False) \
+                                or surfaces_parameters.get('ventricle',False):
+                        # do skin, cortex, hippocampus, and ventricle processing here
 
                         if surfaces_parameters.get('cortex',False) :
                             with mincTools(verbose=2) as minc:
@@ -1016,12 +1020,12 @@ def standard_pipeline(info,
                                 #start with t1w_tal_noscale and then segment hippocampus
                                 tmp_work = minc.tmp('tmp_work')
                                 tmp_output = minc.tmp('tmp_output')
-                                fusion_library_description = SegLibrary(options['fusion_library_description'])
-                                fusion_parameters = json.load(open(options['fusion_parameters']))
-                                fusion_segment(input_scan= t1w_tal_noscale.scan, 
-                                            library_description=fusion_library_description,
+                                fusion_library_hc_description = SegLibrary(options['fusion_library_hc_description'])
+                                fusion_hc_parameters = json.load(open(options['fusion_hc_parameters']))
+                                fusion_segment(input_scan= t1w_tal_noscale.scan,
+                                            library_description=fusion_library_hc_description,
                                             output_segment=tmp_output,
-                                            parameters=fusion_parameters,
+                                            parameters=fusion_hc_parameters,
                                             work_dir=tmp_work,
                                             fuse_variant='hc',
                                             regularize_variant='reg',
@@ -1029,6 +1033,25 @@ def standard_pipeline(info,
                                 minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_hippocampus.fname,'0'])
                                 minc.command(['ascii_binary', t1w_tal_noscale_hippocampus.fname])
                             iter_summary['hippocampus_surface'] = t1w_tal_noscale_hippocampus
+
+                        if surfaces_parameters.get('ventricle',False) :
+                            with mincTools(verbose=2) as minc:
+                                #start with t1w_tal_noscale and then segment ventricle
+                                tmp_work = minc.tmp('tmp_work')
+                                tmp_output = minc.tmp('tmp_output')
+                                fusion_library_description = SegLibrary(options['fusion_library_ve_description'])
+                                fusion_parameters = json.load(open(options['fusion_ve_parameters']))
+                                fusion_segment(input_scan= t1w_tal_noscale.scan,
+                                            library_description=fusion_library_ve_description,
+                                            output_segment=tmp_output,
+                                            parameters=fusion_ve_parameters,
+                                            work_dir=tmp_work,
+                                            fuse_variant='ve',
+                                            regularize_variant='reg',
+                                            cleanup = True)
+                                minc.command(['marching_cubes',tmp_output+'_seg.mnc',t1w_tal_noscale_ventricle.fname,'0'])
+                                minc.command(['ascii_binary', t1w_tal_noscale_ventricle.fname])
+                            iter_summary['ventricle_surface'] = t1w_tal_noscale_ventricle
 
                     # perform non-linear registration
                 if run_nl:
@@ -1085,7 +1108,7 @@ def standard_pipeline(info,
 
             # TODO: figure out when this is needed
             if ibis_output:
-              save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this 
+              save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this
             else:
               save_summary(iter_summary, summary_file.fname) # to build scene.xml for IBIS
             return iter_summary
