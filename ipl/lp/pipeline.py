@@ -325,7 +325,7 @@ def save_ibis_summary(iter_summary,
     <FullFileName value="./$replace_ventricle_surface_path"/>
     <ObjectID value="7"/>
     <ParentID value="-2"/>
-    <ObjectName value="replace_ventricle_surface_name"/>
+    <ObjectName value="$replace_ventricle_surface_name"/>
     <AllowChildren value="1"/>
     <AllowChangeParent value="1"/>
     <ObjectManagedBySystem value="0"/>
