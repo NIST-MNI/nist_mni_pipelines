@@ -590,7 +590,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         #with mincTools() as m:
             #classes_number=int(m.execute_w_output(['mincstats', '-q', '-max',local_model.seg ]).rstrip("\n"))+1
 
-        library_description = SegLibrary()
+        library_description = SegLibrary(prefix=output)
         # library models
         library_description.model          = model.scan
         library_description.model_mask     = model.mask

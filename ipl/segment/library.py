@@ -92,7 +92,7 @@ class SegLibrary(yaml.YAMLObject):
                          'map', 'label_map', 'nl_samples_avail', 'modalities',
                          'classes_number' }
 
-    def __init__(self, path=None ):
+    def __init__(self, path=None, prefix=None ):
         # compatibility info 
         self.local_model = None
         self.local_model_mask = None
@@ -196,6 +196,12 @@ class SegLibrary(yaml.YAMLObject):
         """
         return self.get(item, default=None)
 
+    def __setitem__(self, item, val):
+        """
+        compatibility interface
+        """
+        return self.set(item, val)
+
     def get(self, item, default=None):
       try:
         if item in self.__dict__:
@@ -216,6 +222,28 @@ class SegLibrary(yaml.YAMLObject):
         traceback.print_exc(file=sys.stderr)
         raise
 
+    def set(self, item, val):
+      try:
+        if item in SegLibrary._rel_paths:
+            self.__dict__[item] = os.path.relpath(val, self.prefix)
+        elif item in SegLibrary._abs_paths:
+            if val[0] != os.sep:
+                self.__dict__[item] = os.path.relpath(val, self.prefix)
+            else:
+                self.__dict__[item] = val
+        # TODO: verify
+        elif item in SegLibrary._abs_paths_lst:
+            self.__dict__[item] = [ ( os.path.relpath(i, self.prefix) if i[0] != os.sep else i) for i in val]
+        elif item in SegLibrary._rel_paths_lst:
+            self.__dict__[item] = [ ( os.path.relpath(i, self.prefix) if i[0] != os.sep else i) for i in val]
+        else:
+            self.__dict__[item] = val
+      except:
+        print("error getting {}".format(item))
+        traceback.print_exc(file=sys.stderr)
+        raise
+
+
     @classmethod
     def from_yaml(cls, loader, node):
         dat = loader.construct_mapping(node)
@@ -226,7 +254,7 @@ class SegLibrary(yaml.YAMLObject):
     @classmethod
     def to_yaml(cls, dumper, data):
         return dumper.represent_mapping(cls.yaml_tag,
-             {k: data.__dict__[k] for k in data.__dict__.keys() & SegLibrary._all_visible_tags}
+             { k: (data.__dict__[k] for k in data.__dict__.keys() & SegLibrary._all_visible_tags}
         )
 
 
