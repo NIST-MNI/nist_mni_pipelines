@@ -855,17 +855,17 @@ def standard_pipeline(info,
                         add_model_name         = add_options.get('model'  ,model_name)
 
                         add_stx_parameters     = add_options.get('{}_stx'    .format(c.modality),add_stx_parameters)
-                        add_model_dir      = add_options.get('{}_model_dir'.format(c.modality),add_model_dir)
-                        add_model_name     = add_options.get('{}_model'  .format(c.modality),add_model_name)
+                        add_model_dir          = add_options.get('{}_model_dir'.format(c.modality),add_model_dir)
+                        add_model_name         = add_options.get('{}_model'  .format(c.modality),add_model_name)
 
-                        add_model=MriScan(scan=add_model_dir+os.sep+add_model_name+'.mnc',
+                        add_model = MriScan(scan=add_model_dir+os.sep+add_model_name+'.mnc',
                                         mask=model_t1w.mask)
 
                         add_stx_nuc = add_stx_parameters.get('nuc',None)
                         add_stx_clp = add_stx_parameters.get('clp',None)
 
 
-                        stx_xfm=MriTransform(prefix=tal_dir, name='xfm_'+c.modality+'_'+dataset_id)
+                        stx_xfm = MriTransform(prefix=tal_dir, name='xfm_'+c.modality+'_'+dataset_id)
 
                         clp=iter_summary["add_clp"][i]
                         xfm=iter_summary["add_xfm"][i]
