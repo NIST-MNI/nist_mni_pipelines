@@ -370,10 +370,10 @@ def save_ibis_summary(iter_summary,
                         replace_main_image_name = iter_summary['t1w_tal_noscale'].name,
                         replace_mask_path = os.path.relpath(iter_summary['t1w_tal_noscale_mask'].scan, iter_summary['output_dir']),
                         replace_mask_name = iter_summary['t1w_tal_noscale_mask'].name,
-                        replace_cortex_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_cortex'].fname, iter_summary['output_dir']),
-                        replace_cortex_surface_name = iter_summary['t1w_tal_noscale_cortex'].name,
-                        replace_skin_surface_path = os.path.relpath(iter_summary['t1w_tal_noscale_skin'].fname, iter_summary['output_dir']),
-                        replace_skin_surface_name = iter_summary['t1w_tal_noscale_skin'].name
+                        replace_cortex_surface_path = os.path.relpath(iter_summary['cortex_surface'].fname, iter_summary['output_dir']),
+                        replace_cortex_surface_name = iter_summary['cortex_surface'].name,
+                        replace_skin_surface_path = os.path.relpath(iter_summary['skin_surface'].fname, iter_summary['output_dir']),
+                        replace_skin_surface_name = iter_summary['skin_surface'].name
                         )
 
     file_out = open(fname, "wt")
@@ -440,6 +440,7 @@ default_pipeline_options = {
                     },
 
                 'denoise':   {}, # run standard patch-based denoising
+                'ibis_output': False # export files for IBIS
             }
 
 def standard_pipeline(info,
@@ -469,6 +470,7 @@ def standard_pipeline(info,
             add_scans        = info.get('add', None)
             init_t1w_lin_xfm = info.get('init_t1w_lin_xfm', None)
             manual           = options.get('manual',None)
+            ibis_output      = options.get('ibis_output',False)
 
 
             corr_t1w = info.get('corr_t1w', None)
@@ -620,6 +622,7 @@ def standard_pipeline(info,
             lob_volumes_json=MriAux(prefix=vol_dir,name='vol_'+dataset_id,suffix='.json')
 
             ibis_summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.xml')
+            summary_file=MriAux(prefix=work_dir,name='summary_'+dataset_id,suffix='.json')
 
 
 
@@ -981,6 +984,7 @@ def standard_pipeline(info,
                                 #ascii_binary cortex.obj
                                 minc.command(['ascii_binary', t1w_tal_noscale_cortex.fname])
                             iter_summary['cortex_surface'] = t1w_tal_noscale_cortex
+                            iter_summary['t1w_tal_noscale_mask'] = t1w_tal_noscale_masked
                             
                         if surfaces_parameters.get('skin',False) :
                             with mincTools(verbose=2) as minc:
@@ -1048,7 +1052,10 @@ def standard_pipeline(info,
                     iter_summary["lob_volumes_json"]=lob_volumes_json
             
             # TODO: figure out when this is needed
-            save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this to build scene.xml for IBIS
+            if ibis_output:
+              save_ibis_summary(iter_summary, ibis_summary_file.fname) # use this 
+            else:
+              save_summary(iter_summary, summary_file.fname) # to build scene.xml for IBIS
             return iter_summary
 
     except mincError as e:
