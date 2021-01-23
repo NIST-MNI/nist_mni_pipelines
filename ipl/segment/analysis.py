@@ -45,7 +45,6 @@ def calc_similarity_stats( input_ground_truth,
         sim = m.execute_w_output( 
             [ 'volume_similarity', input_ground_truth, input_segmentation,'--csv'] 
                                 ).split("\n")
-        
         ka={}
         se={}
         sp={}
@@ -57,13 +56,16 @@ def calc_similarity_stats( input_ground_truth,
                 l=int(q[0])
 
                 if relabel is not None:
-                    l=relabel[str(l)]
+                    if str(l) in relabel:
+                       l=relabel[str(l)]
+                    elif l in relabel:
+                       l=relabel[l]
 
                 ka[l] = float( q[1] )
                 se[l] = float( q[2] )
                 sp[l] = float( q[3] )
                 js[l] = float( q[4] )
-                
+
         stats['ka']=ka
         stats['se']=se
         stats['sp']=sp

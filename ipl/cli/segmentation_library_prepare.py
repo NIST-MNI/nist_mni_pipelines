@@ -131,7 +131,7 @@ def main():
         create_parameters={}
         try:
             with open(options.create,'r') as f:
-                create_parameters = yaml.load(f)
+                create_parameters = yaml.safe_load(f)
         except:
             print("Error loading configuration:{} {}\n".format(options.create,sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
@@ -151,7 +151,7 @@ def main():
         cv_parameters={}
         try:
             with open(options.cv, 'r') as f:
-                cv_parameters = yaml.load(f)
+                cv_parameters = yaml.safe_load(f)
         except:
             print("Error loading configuration:{}\n{}".format(options.cv,sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
@@ -161,7 +161,7 @@ def main():
         if options.train_ec is not None:
             try:
                 with open(options.train_ec, 'r') as f:
-                    ec_parameters = yaml.load(f)
+                    ec_parameters = yaml.safe_load(f)
             except:
                 print("Error loading configuration:{}\n{}".format(options.train_ec,sys.exc_info()[0]),file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
@@ -174,7 +174,7 @@ def main():
         if options.options is not None:
             try:
                 with open(options.options, 'r') as f:
-                    segmentation_parameters = yaml.load(f)
+                    segmentation_parameters = yaml.safe_load(f)
             except :
                 print("Error loading configuration:{}\n{}".format(options.options,sys.exc_info()[0]),file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
@@ -198,7 +198,7 @@ def main():
         segmentation_parameters = {}
 
         with open(options.train_ec,'r') as f:
-            ec_parameters = yaml.load(f)
+            ec_parameters = yaml.safe_load(f)
 
         if options.options is not None:
             with open(options.options,'r') as f:

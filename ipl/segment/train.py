@@ -374,8 +374,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     init_xfm=lin_xfm[j]
                 
                 if local_reg_type=='elx' or local_reg_type=='elastix' :
-                    results.append( futures.submit( 
-                        elastix_registration, i, local_model, bbox_lin_xfm[j], 
+                    results.append( futures.submit(
+                        elastix_registration, i, local_model, bbox_lin_xfm[j],
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         parameters=local_reg_opts,
@@ -384,8 +384,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         use_mask=local_reg_use_mask
                         ) )
                 elif local_reg_type=='ants' or local_reg_ants:
-                    results.append( futures.submit( 
-                        linear_registration, i, local_model, bbox_lin_xfm[j], 
+                    results.append( futures.submit(
+                        linear_registration, i, local_model, bbox_lin_xfm[j],
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         reg_type=local_reg_type,
@@ -398,9 +398,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 else:
                     if not do_initial_register:
-                        init_xfm=identity_xfm # to avoid strange initialization errors 
-                        
-                    results.append( futures.submit( 
+                        init_xfm=identity_xfm # to avoid strange initialization errors
+                    results.append( futures.submit(
                         linear_registration, i, local_model, bbox_lin_xfm[j], 
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,

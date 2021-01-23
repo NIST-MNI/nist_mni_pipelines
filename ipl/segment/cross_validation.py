@@ -96,7 +96,7 @@ def run_segmentation_experiment( input_scan,
                 json.dump(segmentation_parameters,f,indent=1)
         
         (output_file, output_info) = fusion_segment(
-                    input_scan, 
+                    input_scan,
                     segmentation_library,
                     output_experiment,
                     input_mask=mask,
@@ -110,7 +110,7 @@ def run_segmentation_experiment( input_scan,
                     cleanup=cleanup,
                     presegment=presegment)
         
-        stats = calc_similarity_stats( input_seg, output_file, 
+        stats = calc_similarity_stats( input_seg, output_file,
                                        output_stats = output_experiment+'_stats.csv',
                                        use_labels   = output_info['used_labels'],
                                        relabel      = relabel )

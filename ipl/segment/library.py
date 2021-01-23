@@ -254,7 +254,7 @@ class SegLibrary(yaml.YAMLObject):
     @classmethod
     def to_yaml(cls, dumper, data):
         return dumper.represent_mapping(cls.yaml_tag,
-             { k: (data.__dict__[k] for k in data.__dict__.keys() & SegLibrary._all_visible_tags}
+             { k: data.__dict__[k] for k in (data.__dict__.keys() & SegLibrary._all_visible_tags) }
         )
 
 

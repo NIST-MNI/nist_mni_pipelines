@@ -148,7 +148,7 @@ def ants_linear_register(
         
           if winsorize_intensity is not None:
             if isinstance(winsorize_intensity, dict):
-                cmd.extend(['--winsorize-image-intensities',winsorize_intensity.get('low',5),winsorize_intensity.get('high',95)])
+                cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',0.05)),str(winsorize_intensity.get('high',0.95))])
             else:
                 cmd.append('--winsorize-image-intensities')
               
@@ -312,7 +312,7 @@ def non_linear_register_ants2(
         
         winsorize_intensity=parameters.get('winsorize-image-intensities',None)
         
-        cmd=['antsRegistration','--minc','-a','--dimensionality','3']
+        cmd=['antsRegistration','--minc','1','-a','--dimensionality','3']
 
 
         (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
@@ -354,7 +354,7 @@ def non_linear_register_ants2(
             
         if winsorize_intensity is not None:
             if isinstance(winsorize_intensity, dict):
-                cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',1)),str(winsorize_intensity.get('high',99))])
+                cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low', 0.01)),str(winsorize_intensity.get('high',0.99))])
             else:
                 cmd.append( '--winsorize-image-intensities')
             
@@ -454,7 +454,7 @@ def linear_register_ants2(
         intialize_fixed        = parameters.get('initialize_fixed',None)
         intialize_moving       = parameters.get('intialize_moving',None)
         
-        cmd=['antsRegistration','--collapse-output-transforms', '0', '--minc','-a','--dimensionality','3']
+        cmd=['antsRegistration','--collapse-output-transforms', '0', '--minc','1','-a','--dimensionality','3']
 
         (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
         
@@ -507,7 +507,7 @@ def linear_register_ants2(
 
         if winsorize_intensity is not None:
             if isinstance(winsorize_intensity, dict):
-                cmd.extend(['--winsorize-image-intensities',winsorize_intensity.get('low',1),winsorize_intensity.get('high',99)])
+                cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',0.01)),str(winsorize_intensity.get('high',0.99))])
             else:
                 cmd.append('--winsorize-image-intensities')
             

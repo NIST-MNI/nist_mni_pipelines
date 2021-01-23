@@ -42,20 +42,20 @@ def linear_registration(
     try:
         _init_xfm=None
         _init_xfm_f=None
-        
+
         if init_xfm is not None:
             _init_xfm=init_xfm.xfm
             if symmetric:
                 _init_xfm_f=init_xfm.xfm_f
-                
-        print("Registering options: {}".format(repr(linreg)))
-        print("Registering sample  :{}".format(repr(sample)))
-        print("Registering model   :{}".format(repr(model)))
-        
+        print("Linear registration:{} obj:{} ants:{} symmetric:{}".format(reg_type,objective,ants,symmetric))
+        print("\toptions: {}".format(repr(linreg)))
+        print("\tsample  :{}".format(repr(sample)))
+        print("\tmodel   :{}".format(repr(model)))
+
         with mincTools() as m:
             
             #TODO: check more files?
-            if not m.checkfiles(inputs=[sample.scan], outputs=[output_xfm.xfm]):  return 
+            if not m.checkfiles(inputs=[sample.scan], outputs=[output_xfm.xfm]):  return
             
             #if _init_xfm is None:
             #    _init_xfm=_init_xfm_f=m.tmp('identity.xfm')
@@ -83,25 +83,27 @@ def linear_registration(
             _output_xfm_f=output_xfm.xfm_f
 
             if bbox:
-                print("Running in bbox!\n\n\n")
+                print("Running in bbox! _init_xfm={} _init_xfm_f={}\n\n\n".format(_init_xfm,_init_xfm_f))
                 scan=m.tmp('scan.mnc')
                 m.resample_smooth(sample.scan, scan, like=model.scan, transform=_init_xfm)
-                if sample.mask is not None and (not use_mask):
+                if sample.mask is not None and use_mask:
                     mask=m.tmp('mask.mnc')
                     m.resample_labels(sample.mask, mask, like=model.scan, transform=_init_xfm)
                 _init_xfm=None
                 close=True
                 _output_xfm=m.tmp('output.xfm')
-                
+
                 if symmetric:
                     scan_f=m.tmp('scan_f.mnc')
                     m.resample_smooth(sample.scan_f, scan_f, like=model.scan, transform=_init_xfm_f)
-                    if sample.mask_f is not None and (not use_mask):
+                    if sample.mask_f is not None and  use_mask:
                         mask_f=m.tmp('mask_f.mnc')
                         m.resample_labels(sample.mask_f, mask_f, like=model.scan, transform=_init_xfm_f)
                     _init_xfm_f=None
                     _output_xfm_f=m.tmp('output_f.xfm')
-                    
+
+                #os.system('cp -v {} {} {} {} ./'.format(scan,mask,scan_f,mask_f))
+
             if symmetric:
                 if ants:
                     ipl.ants_registration.linear_register_ants2(
@@ -114,6 +116,7 @@ def linear_registration(
                         parameters=linreg,
                         close=close,
                         downsample=downsample,
+                        verbose=0
                         )
                     ipl.ants_registration.linear_register_ants2(
                         scan_f,
@@ -125,6 +128,7 @@ def linear_registration(
                         parameters=linreg,
                         close=close,
                         downsample=downsample,
+                        verbose=0
                         )
                 else:
                     ipl.registration.linear_register(
@@ -189,12 +193,12 @@ def linear_registration(
                     shutil.copyfile(_output_xfm,output_xfm.xfm)
                     if symmetric:
                         shutil.copyfile(_output_xfm_f,output_xfm.xfm_f)
-                        
+
             if output_invert_xfm is not None:
                 m.xfminvert(output_xfm.xfm, output_invert_xfm.xfm)
                 if symmetric:
                     m.xfminvert(output_xfm.xfm_f, output_invert_xfm.xfm_f)
-            
+
             if output_sample is not None: 
                 m.resample_smooth(sample.scan, output_sample.scan, 
                                   transform=output_xfm.xfm, 
@@ -220,7 +224,7 @@ def linear_registration(
                                           order=resample_order, 
                                           like=model.scan, 
                                           baa=resample_baa)
-                    
+
         return True
     except mincError as e:
         print("Exception in linear_registration:{}".format(str(e)))
@@ -291,7 +295,7 @@ def elastix_registration(
             if bbox:
                 scan=m.tmp('scan.mnc')
                 m.resample_smooth(sample.scan, scan, like=model.scan, transform=_init_xfm)
-                if sample.mask is not None and (not use_mask):
+                if sample.mask is not None and use_mask:
                     mask=m.tmp('mask.mnc')
                     m.resample_labels(sample.mask, mask, like=model.scan, transform=_init_xfm)
                 _init_xfm=None
@@ -301,7 +305,7 @@ def elastix_registration(
                 if symmetric:
                     scan_f=m.tmp('scan_f.mnc')
                     m.resample_smooth(sample.scan_f, scan_f, like=model.scan, transform=_init_xfm_f)
-                    if sample.mask_f is not None and (not use_mask):
+                    if sample.mask_f is not None and use_mask:
                         mask_f=m.tmp('mask_f.mnc')
                         m.resample_labels(sample.mask_f, mask_f, like=model.scan, transform=_init_xfm_f)
                     _init_xfm_f=None
