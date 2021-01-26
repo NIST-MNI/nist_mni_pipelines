@@ -596,6 +596,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         library_description.model_add      = model.add
         
         library_description.local_model      = local_model.scan
+
         library_description.local_model_add  = local_model.add
         library_description.local_model_mask = local_model.mask
         library_description.local_model_seg  = local_model.seg
@@ -609,11 +610,11 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
         library_description.classes_number = classes_number
         library_description.nl_samples_avail = do_nonlinear_register
         library_description.modalities = modalities+1
-        
+
         largest_label = max(library_description.map.values(), key=lambda p: int(p))
-        
+
         library_description.seg_datatype = 'short'
-        
+
         if largest_label <= 255:
             library_description.seg_datatype = 'byte'
 
@@ -661,7 +662,6 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
 
                 library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
 
-        #save_library_info( library_description, output)
         library_description.save(output)
         # cleanup
         if cleanup:

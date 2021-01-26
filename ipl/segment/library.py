@@ -67,8 +67,7 @@ class SegLibrary(yaml.YAMLObject):
     yaml_tag = '!SegLibrary'
     yaml_loader = yaml.SafeLoader
 
-    _rel_paths = {
-                  'local_model',
+    _rel_paths = {'local_model',
                   'local_model_mask',
                   'local_model_flip',
                   'local_model_mask_flip',
@@ -77,8 +76,7 @@ class SegLibrary(yaml.YAMLObject):
                   'gco_energy',
                   'local_model_ovl',
                   'local_model_sd',
-                  'local_model_avg',
-                  ''}
+                  'local_model_avg'}
 
     _rel_paths_lst = {'local_model_add', 'local_model_add_flip'}
 
@@ -93,7 +91,7 @@ class SegLibrary(yaml.YAMLObject):
                          'classes_number' }
 
     def __init__(self, path=None, prefix=None ):
-        # compatibility info 
+        # compatibility info
         self.local_model = None
         self.local_model_mask = None
         self.local_model_flip = None,
@@ -119,7 +117,7 @@ class SegLibrary(yaml.YAMLObject):
         self.nl_samples_avail = False
         self.seg_datatype = 'byte'
         # from file:
-        self.prefix = None
+        self.prefix = prefix
         if path is not None:
             self.load(path)
 
@@ -148,6 +146,16 @@ class SegLibrary(yaml.YAMLObject):
             self.library[i].prefix = self.prefix
 
     def save(self, path, name='library.yaml'):
+        #HACK: make some paths relative to the prefix
+        for i in SegLibrary._rel_paths:
+           if i in self.__dict__:
+             self.__dict__[i] = os.path.relpath(self.__dict__[i], path)
+
+
+        for i in SegLibrary._rel_paths_lst:
+           if i in self.__dict__:
+             self.__dict__[i] = [os.path.relpath(j, path) for j in self.__dict__[i]]
+
         with open(path + os.sep + name, 'w') as f:
             f.write( yaml.dump( self ) )
 
@@ -223,23 +231,24 @@ class SegLibrary(yaml.YAMLObject):
         raise
 
     def set(self, item, val):
+      # TODO: remove
       try:
-        if item in SegLibrary._rel_paths:
+        if item in SegLibrary._rel_paths and self.prefix is not None:
             self.__dict__[item] = os.path.relpath(val, self.prefix)
-        elif item in SegLibrary._abs_paths:
+        elif item in SegLibrary._abs_paths and self.prefix is not None:
             if val[0] != os.sep:
                 self.__dict__[item] = os.path.relpath(val, self.prefix)
             else:
                 self.__dict__[item] = val
-        # TODO: verify
         elif item in SegLibrary._abs_paths_lst:
             self.__dict__[item] = [ ( os.path.relpath(i, self.prefix) if i[0] != os.sep else i) for i in val]
         elif item in SegLibrary._rel_paths_lst:
             self.__dict__[item] = [ ( os.path.relpath(i, self.prefix) if i[0] != os.sep else i) for i in val]
         else:
             self.__dict__[item] = val
+
       except:
-        print("error getting {}".format(item))
+        print("error setting {}".format(item))
         traceback.print_exc(file=sys.stderr)
         raise
 
@@ -278,13 +287,13 @@ def save_library_info(library_description, output, name='library.json'):
                   'gco_energy']:
             if tmp_library_description[i] is not None: 
                 tmp_library_description[i] = os.path.relpath(tmp_library_description[i],output)
-                
+
         for (j, i) in enumerate(tmp_library_description['local_model_add']):
             tmp_library_description['local_model_add'][j] = os.path.relpath(i, output)
 
         for (j, i) in enumerate(tmp_library_description['local_model_add_flip']):
             tmp_library_description['local_model_add_flip'][j] = os.path.relpath(i, output)
-            
+
         for i in ['model', 'model_mask']:
             # if it starts with the same prefix, remove it
             if os.path.dirname(tmp_library_description[i]) == output \
