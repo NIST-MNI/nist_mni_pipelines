@@ -647,7 +647,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             else:
                 ss.extend([bbox_lin_xfm[j].xfm])
 
-            library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
+            library_description.library.append( LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
 
             if build_symmetric:
                 ss = [i.scan_f, i.seg_f]
@@ -660,7 +660,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 else:
                     ss.extend([bbox_lin_xfm[j].xfm_f])
 
-                library_description.library.append(LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
+                library_description.library.append( LibEntry(lst=ss, ent_id=i.name, relpath=output, prefix=output))
 
         library_description.save(output)
         # cleanup

@@ -152,10 +152,10 @@ def run_segmentation_experiment( input_scan,
             output_info['presegment']=presegment
 
         with open(output_experiment+'_out.json','w') as f:
-            json.dump(output_info,f,indent=1, cls=MRIEncoder)
+            json.dump(output_info,f,indent=1, cls=LIBEncoder)
             
         with open(output_experiment+'_stats.json','w') as f:
-            json.dump(stats,f,indent=1, cls=MRIEncoder)
+            json.dump(stats,f,indent=1, cls=LIBEncoder)
 
         return (stats, output_info)
 
@@ -488,10 +488,10 @@ def cv_fusion_segment( cv_parameters,
         max_error_maps(all_error_maps,output_results_all['max_error'])
         
         with open(cv_output, 'w') as f:
-            json.dump(stat_results, f, indent=1 )
+            json.dump(stat_results, f, indent=1, cls=LIBEncoder )
 
         with open(res_output, 'w') as f:
-            json.dump(output_results_all, f, indent=1, cls=MRIEncoder)
+            json.dump(output_results_all, f, indent=1, cls=LIBEncoder)
 
         return stat_results
     else:

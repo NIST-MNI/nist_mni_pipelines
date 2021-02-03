@@ -143,11 +143,11 @@ def main():
             print("Error in library generation {}".format(sys.exc_info()[0]),file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             exit(1)
-        
+
     elif options.cv is not None and \
          options.library is not None and \
          options.output is not None:
- 
+
         cv_parameters={}
         try:
             with open(options.cv, 'r') as f:

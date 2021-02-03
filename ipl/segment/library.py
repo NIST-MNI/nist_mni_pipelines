@@ -28,6 +28,7 @@ class LibEntry(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
 
     def __init__(self, lst=None, prefix='.', ent_id=None, relpath=None):
+        super().__init__()
         if relpath is None:
             self.lst = lst
         else:# make relative paths
@@ -90,7 +91,8 @@ class SegLibrary(yaml.YAMLObject):
                          'map', 'label_map', 'nl_samples_avail', 'modalities',
                          'classes_number' }
 
-    def __init__(self, path=None, prefix=None ):
+    def __init__(self, path=None, prefix=None, name=None ):
+        super().__init__()
         # compatibility info
         self.local_model = None
         self.local_model_mask = None
@@ -119,7 +121,7 @@ class SegLibrary(yaml.YAMLObject):
         # from file:
         self.prefix = prefix
         if path is not None:
-            self.load(path)
+            self.load(path,name=name)
 
     def load(self, path, name=None):
         if name is None:
@@ -391,5 +393,15 @@ def make_segmented_label_list(library_description, symmetric=False):
     return list(used_labels)
 
 
+class LIBEncoder( MRIEncoder ):
+    def __init__(self):
+        super().__init__()
+
+    def default(self, obj):
+        if isinstance(obj, LibEntry):
+            return {'lst': obj.lst, 'id': obj.ent_id}
+        elif isinstance(obj, SegLibrary):
+            return { k: obj.__dict__[k] for k in (obj.__dict__.keys() & SegLibrary._all_visible_tags) }
+        return super().default(self, obj)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
