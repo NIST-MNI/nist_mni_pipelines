@@ -394,14 +394,11 @@ def make_segmented_label_list(library_description, symmetric=False):
 
 
 class LIBEncoder( MRIEncoder ):
-    def __init__(self):
-        super().__init__()
-
     def default(self, obj):
         if isinstance(obj, LibEntry):
             return {'lst': obj.lst, 'id': obj.ent_id}
         elif isinstance(obj, SegLibrary):
             return { k: obj.__dict__[k] for k in (obj.__dict__.keys() & SegLibrary._all_visible_tags) }
-        return super().default(self, obj)
+        return super().default(obj)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

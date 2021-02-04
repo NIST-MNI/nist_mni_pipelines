@@ -5,6 +5,8 @@ import csv
 import copy
 import json
 import random
+import yaml
+
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
