@@ -41,10 +41,10 @@ from ipl.longitudinal.lng_classification import pipeline_lng_classification
 from ipl.longitudinal.vbm                import pipeline_vbm
 from ipl.longitudinal.dbm                import pipeline_lngDBM
 
-# 
+#
 from ipl.longitudinal.add                import pipeline_run_add_tp,pipeline_run_add
 
-# to be deprecated 
+# to be deprecated
 from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 
 # parallel processing
@@ -74,81 +74,81 @@ def launchPipeline(options):
     '''
 
     _opts    = {}
-    
+
     if options.json is not None:
         with open(options.json,'r') as f:
             _opts=json.load(f)
-        
+
         # population options if empty:
         if 'modelname' in _opts:
             options.modelname=_opts['modelname']
-            
+
         if 'modeldir' in _opts:
             options.modeldir=_opts['modeldir']
-        
+
         #if 'temporalregu' in _opts:
             #options.temporalregu=_opts['temporalregu']
         options.temporalregu = False # VF: not implemented in the public release
-    
+
         if 'skullreg' in _opts:
             options.skullreg=_opts['skullreg']
-            
+
         if 'large_atrophy' in _opts:
             options.large_atrophy=_opts['large_atrophy']
-            
+
         if 'manual' in _opts:
             options.manual=_opts['manual']
-            
+
         if 'mask_n3' in _opts:
             options.mask_n3=_opts['mask_n3']
-            
+
         if 'n4' in _opts:
             options.n4=_opts['n4']
-            
+
         if 'les' in _opts:
             options.les=_opts['les']
-            
+
         if 'dobiascorr' in _opts:
             options.dobiascorr=_opts['dobiascorr']
-            
+
         if 'geo' in _opts:
             options.geo=_opts['geo']
-            
+
         if 'dodbm' in _opts:
             options.dodbm=_opts['dodbm']
-            
+
         if 'lngcls' in _opts:
             options.lngcls=_opts['lngcls']
-            
+
         if 'donl' in _opts:
             options.donl=_opts['donl']
-            
+
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
-        
-        
+
+
         if 'vbm_options' in _opts:
             options.vbm_blur = _opts['vbm_options'].get('vbm_blur',4.0)
             options.vbm_res  = _opts['vbm_options'].get('vbm_res',2 )
             options.vbm_nl   = _opts['vbm_options'].get('vbm_nl',None)
             options.dovbm    = True
-        
+
         if 'linreg' in _opts:
             options.linreg = _opts['linreg']
-            
+
         if 'add' in _opts:
             options.add = _opts['add']
 
         if 'rigid' in _opts:
             options.rigid = _opts['rigid']
-            
+
         # TODO: add more options
     # patients dictionary
     patients = {}
 
     # open list
     # create output dir
-    
+
     # load additional steps and store them inside option structure
     # if they are strings
     # otherwise assume they are already loaded properly
@@ -166,14 +166,14 @@ def launchPipeline(options):
             exit(1)
 
     options.add=_add
-    
+
     mkdir(options.output)
     options.output = os.path.abspath(options.output) + os.sep  # always use abs paths for sge
     if options.workdir is not None:
         options.workdir = os.path.abspath(options.workdir) + os.sep  # always use abs paths for sge
         if not os.path.exists(options.workdir):
           os.makedirs(options.workdir)
-    
+
     # for each patient
     with open(options.list) as p:
         for line in p:
@@ -207,12 +207,12 @@ def launchPipeline(options):
 
                 patients[id].patientdir = options.output + os.sep + id + os.sep
                 mkdir(patients[id].patientdir)
-                
+
                 if options.workdir is None:
                     patients[id].workdir = patients[id].patientdir + os.sep + 'tmp' + os.sep
                     mkdir(patients[id].workdir)
                 else:
-                    patients[id].workdir=options.workdir 
+                    patients[id].workdir=options.workdir
 
                 if options.manual is not None:
                     patients[id].manualdir = options.manual + os.sep + id + os.sep
@@ -228,7 +228,7 @@ def launchPipeline(options):
                     print( ' -- PICKLE already exists!! ')
                     print( '    TODO: compare options, now skipping!! ')
                     continue
-    
+
                 # file storing the output of the processing
 
                 patients[id].logfile = patients[id].patientdir + id + '.log'
@@ -256,7 +256,7 @@ def launchPipeline(options):
                 patients[id].dodbm    = options.dodbm
                 patients[id].dovbm    = options.dovbm
                 patients[id].deface   = options.deface
-                
+
                 patients[id].mri3T    = options.mri3T
                 patients[id].fast     = options.fast
                 patients[id].temporalregu = options.temporalregu
@@ -266,12 +266,12 @@ def launchPipeline(options):
                 patients[id].linreg   = options.linreg
                 patients[id].rigid    = options.rigid
                 patients[id].add      = options.add
-                
-                patients[id].vbm_options = { 'vbm_fwhm':options.vbm_blur, 
-                                             'vbm_resolution':options.vbm_res, 
+
+                patients[id].vbm_options = { 'vbm_fwhm':options.vbm_blur,
+                                             'vbm_resolution':options.vbm_res,
                                              'vbm_nl_level':options.vbm_nl,
                                              'vbm_nl_method':'minctracc' }
-                
+
                 #if options.sym == True:
                     #patients[id].nl_method = 'bestsym1stepnlreg.pl'
 
@@ -346,50 +346,50 @@ def launchPipeline(options):
             # end of adding timepoint
             print('{} - {}'.format(id,visit) )
             # store patients in the pickle
-        
+
     if options.pe is None: # use SCOOP to run all subjects in parallel
         pickles = []
-    
+
         for (id, i) in patients.items():
             # writing the pickle file
             if not os.path.exists(i.pickle):
                 i.write(i.pickle)
             pickles.append(i.pickle)
-    
+
         jobs=[futures.submit(runPipeline,i) for i in pickles] # assume workdir is properly set in pickle...
         futures.wait(jobs, return_when=futures.ALL_COMPLETED)
         print('All subjects finished:%d' % len(jobs))
-        
-    else: # USE SGE to submit one job per subject, using required peslots 
+
+    else: # USE SGE to submit one job per subject, using required peslots
         pickles = []
-        
+
         for (id, i) in patients.items():
             # writing the pickle file
-            slots=opts.peslots
-            # don't submit jobs with too many requested slots, when only limited number of 
+            slots=options.peslots
+            # don't submit jobs with too many requested slots, when only limited number of
             # timepoints is available
-            
+
             if len(i)<slots:
                 slots=len(i)
             if slots<1:
                 slots=1
-            
+
             if not os.path.exists(i.pickle):
                 i.write(i.pickle)
-                
-            
+
+
             # tell python to use SCOOP module to run program
-            comm=['unset PE_HOSTFILE'] # HACK SCOOP not to rely on PE setting to prevent it from SSHing 
+            comm=['unset PE_HOSTFILE'] # HACK SCOOP not to rely on PE setting to prevent it from SSHing
             comm.extend(['export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={}'.format(slots)])
             comm.extend(['export OMP_NUM_THREADS={}'.format(slots)])
             comm.extend(['export OMP_DYNAMIC=TRUE'])
             comm.extend(['python -m scoop -n {} {} -p {}'.format(str(slots),os.path.abspath(sys.argv[0]),i.pickle)])
-            
-            qsub_pe(comm,opts.pe, 
-                    opts.peslots,
+
+            qsub_pe(comm,options.pe,
+                    options.peslots,
                     name='LNG_{}'.format(str(id)),
                     logfile=i.patientdir+os.sep+str(id)+".sge.log",
-                    queue=opts.queue)
+                    queue=options.queue)
 
 def runTimePoint_FirstStage(tp, patient):
     '''
@@ -398,7 +398,7 @@ def runTimePoint_FirstStage(tp, patient):
     '''
 
     print( 'runTimePoint_FirstStage %s %s' % (patient.id, tp))
-    
+
     try:
         # preprocessing
         # ##############
@@ -443,7 +443,7 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
 
         pipeline_stx2_skullstripping(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
-        
+
         print("pipeline_atlasregistration")
         pipeline_atlasregistration(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
@@ -462,7 +462,7 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         if len(patient.add)>0:
             pipeline_run_add(patient)
             pipeline_run_add_tp(patient,tp)
-        
+
         # vbm images
         # ###########
         pipeline_vbm(patient, tp, vbm_options)
@@ -526,12 +526,12 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         # vbm images
         # ###########
         pipeline_vbm(patient, tp, vbm_options)
-        
+
         if len(patient.add)>0:
             print("Running add step:{}".format(patient.add))
             pipeline_run_add_tp(patient,tp)
-        
-        
+
+
     except mincError as e:
         print("Exception in runTimePoint_FourthStage:{}".format(repr(e)) )
         traceback.print_exc(file=sys.stdout)
@@ -559,12 +559,12 @@ def runPipeline(pickle, workdir=None):
             print(' #### NOT THE SAME PIPELINE VERSION!! ')
             raise IplError('       - Change the pipeline version or restart all processing'
                         )
-        
+
         setFilenames(patient)
         print("Processing:")
         patient.printself()
 
-        
+
         if workdir is not None:
           patient.workdir=workdir
         # prepare qc folder
@@ -581,7 +581,7 @@ def runPipeline(pickle, workdir=None):
         patient.write(patient.pickle)  # copy new images in the pickle
 
         jobs=[]
-        
+
         if len(tps) == 1:
             for tp in tps:
                 runTimePoint_SecondStage( tp, patient, patient.vbm_options  )
@@ -605,7 +605,7 @@ def runPipeline(pickle, workdir=None):
             # non-linear registration of the template to the atlas
             # ##########################
             pipeline_atlasregistration(patient)
-            
+
             if len(patient.add)>0:
                 pipeline_run_add(patient)
 
@@ -629,7 +629,7 @@ def runPipeline(pickle, workdir=None):
             for tp in tps:
                 jobs.append(futures.submit(runTimePoint_FourthStage, tp, patient, patient.vbm_options))
             futures.wait(jobs, return_when=futures.ALL_COMPLETED)
-        
+
         patient.write(patient.pickle)  # copy new images in the pickle
 
         return patient.id
@@ -667,25 +667,25 @@ def parse_options():
     """%(prog)s -l <patients.list> -o <outputdir> [--run]
    or: %(prog)s -p <patient.pickle> [--status|--run]
    or: %(prog)s -h
-   
+
    The list have this structure:
       id,visit,t1w(,t2w,pdw,sex,age,geot1,geot2,lesions)
-      
+
       - id,visit,t1w are mandatory.
       - if the data do not exist, no space should be left
           id,visit,t1w,,,sex,age -> to include sex and age in the pipeline
-   
+
    -- alternative folder:
       It is a folder with the same structure as the processing <alt_folder>/<id>/<timepoint>
       Three types of files can be found here:
           - Clp image  :              clp_manual_<id>_<timepoint>_<sequence>.mnc
           - Initial xfm:              stx_manual_<id>_<timepoint>_<sequence>.xfm
           - Manual mask in stx space: stx_manual_<id>_<timepoint>_mask.mnc
-          If the image exists it will replace part of the processing. 
+          If the image exists it will replace part of the processing.
    """
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                      usage=usage, 
+                                      usage=usage,
                                       description="Longitudinal pipeline")
 
 
@@ -694,21 +694,21 @@ def parse_options():
     group.add_argument('-l', '--list', dest='list',
                      help='CSV file with the list of subjects: (format) id,visit,t1w,t2w,pdw,sex,age,geot1,geot2,lesions'
                      )
-    
+
     group.add_argument('-o', '--output-dir', dest='output',
                      help='Output dir')
-                     
+
 
     group = group.add_argument_group('Pipeline options ',
                          ' Options to start processing')
-    
+
     group.add_argument('-j', '--json', dest='json',
                      help='Json file with processing options',
                      default=None)
-    
+
     group.add_argument('-w', '--work-dir', dest='workdir',
                      help='Work dir',default=None)
-                     
+
     group = parser.add_argument_group('Processing options ')
 
     group.add_argument(
@@ -728,11 +728,11 @@ def parse_options():
         action='store_true',
         default=False,
         )
-    
+
     group.add_argument(
-        "-I", 
-        "--inpaint", 
-        dest="inpaint", 
+        "-I",
+        "--inpaint",
+        dest="inpaint",
         help="Inpaint T1W images based on the lesion mask",
         action="store_true",
         default=False)
@@ -745,12 +745,12 @@ def parse_options():
         action='store_false',
         default=True,
         )
-    
+
     group.add_argument('-3', '--3T', dest='mri3T',
                      help='Parameters for 3T scans', action='store_true',
                      default=False
                      )
-    
+
     group.add_argument(
         '-L',
         '--lngcls',
@@ -759,15 +759,15 @@ def parse_options():
         action='store_true',
         default=False,
         )
-    
+
     group.add_argument(
-        "-1", 
-        "--onlyt1", 
-        dest="onlyt1", 
+        "-1",
+        "--onlyt1",
+        dest="onlyt1",
         help="Use only T1 in classification",
         action="store_true",
         default=False)
-    
+
     group.add_argument(
         '--DBM',
         dest='dodbm',
@@ -775,7 +775,7 @@ def parse_options():
         action='store_true',
         default=False,
         )
-        
+
     group.add_argument(
         '--VBM',
         dest='dovbm',
@@ -783,27 +783,27 @@ def parse_options():
         action='store_true',
         default=False,
         )
-    
+
     group.add_argument(
         '--vbm_blur',
         dest='vbm_blur',
         help='VBM blurring',
         default=4.0,
         )
-    
+
     group.add_argument(
         '--vbm_res',
         dest='vbm_res',
         help='VBM resolution',
         default=2.0,
         )
-    
+
     group.add_argument(
         '--vbm_nl_level',
         dest='vbm_nl',
         help='VBM nl level'
         )
-    
+
 
     # group.add_argument("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
 
@@ -822,7 +822,7 @@ def parse_options():
         action='store_false',
         default=False,
         )
-    
+
     group.add_argument(
         '--n4',
         dest='n4',
@@ -830,7 +830,7 @@ def parse_options():
         action='store_true',
         default=False,
         )
-    
+
     group.add_argument(
         '--noles',
         dest='les',
@@ -849,20 +849,20 @@ def parse_options():
                      help='Directory with the model ',
                      default='/ipl/quarantine/models/icbm152_model_09c/'
                      )
-    
+
     group.add_argument('--model-name', dest='modelname',
                      help='Model name',
                      default='mni_icbm152_t1_tal_nlin_sym_09c')
-    
+
     group.add_argument('--beast-dir', dest='beastdir',
-                     help='Directory with the beast library ', 
+                     help='Directory with the beast library ',
                      default='/ipl/quarantine/models/beast')
 
     #group.add_argument( '--sym', dest='sym',
                      #help='Use symmetric minctracc (NOT YET)')
 
     # group.add_argument('-4', '--4Dregu', dest='temporalregu',
-    #                  help="Use 4D regularization for the individual template creation with a linear regressor ('linear' or 'taylor' serie decomposition)", 
+    #                  help="Use 4D regularization for the individual template creation with a linear regressor ('linear' or 'taylor' serie decomposition)",
     #                  default=False)
 
     group.add_argument(
@@ -945,7 +945,7 @@ def parse_options():
         action='store_true',
         default=False,
         )
-        
+
     group.add_argument('-f', '--fast', dest='fast',
                      help='Fast mode : quick & dirty mostly for testing pipeline'
                      , action='store_true')
@@ -953,10 +953,10 @@ def parse_options():
     group.add_argument('--pe', dest='pe',
                      help='Submit jobs using parallel environment'
                      )
-                     
+
     group.add_argument('--peslots', dest='peslots',
                      help='PE slots ', default=4, type=int)
-    
+
     group.add_argument('-q','--queue', dest='queue',
                      help='Specify SGE queue for submission'
                      )
