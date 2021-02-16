@@ -35,7 +35,7 @@ else:
 class IplError(Exception):
     def __init__(self, value=''):
         self.value = value
-        
+
     def __str__(self):
         return "IplError({})".format(repr(self.value))
 
@@ -112,7 +112,7 @@ def execute(
     logfile=None,
     verbose=True,
     ):
-    """ 
+    """
       Execute a command line waiting for the end of it. Use command() instead of execute
 
       commdandline: either a string or a list containg the command line
@@ -147,9 +147,9 @@ def execute(
 
 
 def cmdWoutput(commandline, clfile=None, verbose=True):
-    """ 
+    """
       Execute a command line, the output is return as a string
-      
+
       This is useful to obtain information from the command line (e.x. when using mincinfo)
 
       commdandline: either a string or a list containg the command line
@@ -258,7 +258,7 @@ def command(
       clfile : save the executed command line in a text file
       logfile: save the execution output in a text file
       verbose: if false no message will appear
-      outputlines: store the output as a string 
+      outputlines: store the output as a string
       timecheck: The command won't be executed if the output exists and is newer than the input file.
 
 
@@ -319,7 +319,7 @@ def changename(
     ):
     """
       Create name from the original minc image
-      extension: None: does not change extension; 
+      extension: None: does not change extension;
   """
 
     tmp = name
@@ -356,7 +356,7 @@ def changename(
         tmp = tmp + extension
 
     return tmp
-    
+
 def qsub_pe(
     comm,
     pe,
@@ -366,7 +366,7 @@ def qsub_pe(
     depends=None,
     queue=None
     ):
-    """ 
+    """
     Send the job into the sge queue using paralle environment
     TODO: improve dependencies and so on
     """
@@ -382,7 +382,7 @@ def qsub_pe(
             '-V', '-pe', pe, str(peslots)
             ]
         path = ''
-        
+
         if logfile is not None:
             path = os.path.abspath(logfile)
             qsub_comm.extend(['-o', path])
@@ -390,7 +390,7 @@ def qsub_pe(
             qsub_comm.extend(['-hold_jid', depends])
         if queue is not None:
             qsub_comm.extend(['-q', queue])
-        
+
         print(' - Name    ' + name)
         print(' - PE      ' + pe)
         print(' - PESLOTS ' + str(peslots))
@@ -399,13 +399,14 @@ def qsub_pe(
 
         cmds="#!/bin/bash\nhostname\n"
         cmds+="\n".join(comm)+"\n"
-        
+
         p=subprocess.Popen(qsub_comm,
                 stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT)
 
-        p.communicate(cmds)
+        p.communicate(cmds.encode())
         # TODO: check error code?
+        # Encoded cmds to bytes solved the TypeError -SoF
     finally:
         pass
 
@@ -417,7 +418,7 @@ def qsub(
     logfile=None,
     depends=None,
     ):
-    """ 
+    """
     Send the job into the sge queue
     TODO: improve dependencies and so on
   """
