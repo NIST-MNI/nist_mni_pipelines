@@ -663,6 +663,7 @@ def standard_pipeline(info,
                 t1w_tal_noscale_hippocampus=MriAux(prefix=obj_dir, name=dataset_id+'_hippocampus_surface', suffix='.obj')
                 t1w_tal_noscale_ventricle=MriAux(prefix=obj_dir, name=dataset_id+'_ventricle_surface', suffix='.obj')
                 t1w_masked=MriScan(prefix=clp_dir, name=dataset_id+'_brain_image', modality='t1w')
+
             else:
                 t1w_tal_noscale=MriScan(prefix=tal_dir, name='tal_noscale_'+dataset_id,modality='t1w')
                 t1w_tal_noscale_masked=MriScan(prefix=tal_dir, name='tal_noscale_masked_'+dataset_id,modality='t1w')
