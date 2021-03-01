@@ -42,10 +42,10 @@ def alpha_blend(si, so, ialpha, oalpha):
     """Perform alpha-blending
     """
     si_rgb =   si[..., :3]
-    si_alpha = si[..., 3]*ialpha
+    si_alpha = si[...,  3]*ialpha
     
     so_rgb =   so[..., :3]
-    so_alpha = so[..., 3]*oalpha
+    so_alpha = so[...,  3]*oalpha
     
     out_alpha = si_alpha + so_alpha * (1. - si_alpha)
     
@@ -65,7 +65,7 @@ def max_blend(si,so):
     return np.maximum(si,so)
 
 def over_blend(si,so, ialpha, oalpha):
-    """Perform max-blending
+    """Perform over-blending
     """
     si_rgb =   si[..., :3]
     si_alpha = si[..., 3]*ialpha
@@ -75,7 +75,7 @@ def over_blend(si,so, ialpha, oalpha):
     
     out_alpha = np.maximum(si_alpha ,  so_alpha )
     
-    out_rgb = si_rgb * (si_alpha[..., None]-so_alpha[..., None]) + so_rgb * so_alpha[..., None] 
+    out_rgb = si_rgb * (si_alpha[..., None] - so_alpha[..., None]) + so_rgb * so_alpha[..., None] 
     
     out = np.zeros_like(si)
     out[..., :3] = out_rgb 
@@ -93,7 +93,7 @@ def qc(
     title=None,
     image_cmap='gray',
     mask_cmap='red',
-    samples=5,
+    samples=6,
     mask_bg=None,
     use_max=False,
     use_over=False,
@@ -102,7 +102,8 @@ def qc(
     dpi=100,
     ialpha=0.8,
     oalpha=0.2,
-    format=None
+    format=None,
+    bg_color=None
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -117,7 +118,8 @@ def qc(
         image_cmap -- (optional) color map name for image, 
                        possibilities: red, green,blue and anything from matplotlib
         mask_cmap -- (optional) color map for mask, default red
-        samples -- number of slices to show , default 5
+        samples -- number of slices per dimension to show, default 6
+                   should be even number, becaus it will be split across two rows 
         mask_bg  -- (optional) level for mask to treat as background
         use_max -- (optional) use 'max' colour mixing
         use_over -- (optional) use 'over' colour mixing
@@ -128,21 +130,23 @@ def qc(
         oalpha -- alpha channel for colour mixing of mask image
     """
     
-    #_img=minc.Image(input)
-    #_idata=_img.data
     _img=minc2_file(input)
     _img.setup_standard_order()
     _idata=_img.load_complete_volume(minc2_file.MINC2_FLOAT)
     _idims=_img.representation_dims()
     
     data_shape=_idata.shape
-    spacing=[_idims[0].step,_idims[1].step,_idims[2].step]
+    # order of dimensions in representation dimension is reversed
+    spacing=[_idims[2].step, _idims[1].step, _idims[0].step]
     
     _ovl=None
     _odata=None
     omin=0
     omax=1
-    
+    # setup view
+    columns=samples//2
+    rows=(samples//columns)*3
+
     if mask is not None:
         _ovl=minc2_file(mask)
         _ovl.setup_standard_order()
@@ -173,7 +177,9 @@ def qc(
 
     cm = copy.copy(plt.get_cmap(image_cmap))
     cmo= copy.copy(plt.get_cmap(mask_cmap))
-    cmo.set_bad('k',alpha=0.0)
+
+    cm.set_bad('k', alpha = 1.0)
+    cmo.set_bad('k',alpha = 0.0)
 
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
     oNorm  = colors.Normalize(vmin=omin, vmax=omax)
@@ -183,70 +189,109 @@ def qc(
     aspects = []
     
     # axial slices
-    for j in range(0,samples):
-        i=int( (data_shape[0]/samples)*j+(data_shape[0]%samples)/2 )
+    for j in range(0, samples):
+        i=int(10+(150.0-10.0)*j/(samples-1))
+        i=int(data_shape[0]*i/181.0)
+
         si=scalarMap.to_rgba(_idata[i , : ,:])
 
         if _ovl is not None:
-            so=oscalarMap.to_rgba(_odata[i , : ,:])
-            if use_max: si=max_blend(si,so)
-            elif use_over: si=over_blend(si,so, ialpha, oalpha)
-            else: si=alpha_blend(si, so, ialpha, oalpha)
+            so = oscalarMap.to_rgba(_odata[i , : ,:])
+            if    use_max: si=max_blend(si, so)
+            elif use_over: si=over_blend(si, so, ialpha, oalpha)
+            else:          si=alpha_blend(si, so, ialpha, oalpha)
         slices.append( si )
-        aspects.append( spacing[0]/spacing[1] )
+        aspects.append( spacing[1] / spacing[2] )
+
+    # sagittal slices
+    for j in range(0, samples//2):
+        i=int(28.0+(166.0-28.0)*j/(samples-1))
+        i=int(data_shape[2]*i/193.0)
+
+        si=scalarMap.to_rgba(_idata[: , : , i])
+        if _ovl is not None:
+            so = oscalarMap.to_rgba(_odata[: , : , i])
+            if    use_max: si=max_blend(si,so)
+            elif use_over: si=over_blend(si,so, ialpha, oalpha)
+            else:          si=alpha_blend(si, so, ialpha, oalpha)
+        slices.append( si )
+        aspects.append( spacing[0] / spacing[1] )
+
+    for j in range(samples-1, samples//2-1,-1):
+        i=int(28.0+(166.0-28.0)*j/(samples-1))
+        i=int(data_shape[2]*i/193.0)
+
+        si=scalarMap.to_rgba(_idata[: , : , i])
+        if _ovl is not None:
+            so = oscalarMap.to_rgba(_odata[: , : , i])
+            if    use_max: si=max_blend(si,so)
+            elif use_over: si=over_blend(si,so, ialpha, oalpha)
+            else:          si=alpha_blend(si, so, ialpha, oalpha)
+        slices.append( si )
+        aspects.append( spacing[0] / spacing[1] )
+
     # coronal slices
     for j in range(0,samples):
-        i=int( (data_shape[1]/samples)*j+(data_shape[1]%samples)/2 )
+        i=int(25+(195.0-25.0)*j/(samples-1))
+        i=int(data_shape[1]*i/217.0)
         si=scalarMap.to_rgba(_idata[: , i ,:])
         
         if _ovl is not None:
-            so=oscalarMap.to_rgba(_odata[: , i ,:])
-            if use_max: si=max_blend(si,so)
+            so = oscalarMap.to_rgba(_odata[: , i ,:])
+            if    use_max: si=max_blend(si,so)
             elif use_over: si=over_blend(si,so, ialpha, oalpha)
-            else: si=alpha_blend(si, so, ialpha, oalpha)
+            else:          si=alpha_blend(si, so, ialpha, oalpha)
         slices.append( si )
-        aspects.append( spacing[2]/spacing[0] )
+        aspects.append( spacing[0]/spacing[2] )
+
+    rc={'interactive': False}
+    rc['figure.frameon']=False
+    #rc['aa']=True
+
+    if bg_color is not None:
+         rc['figure.edgecolor']=bg_color
+         rc['figure.facecolor']=bg_color     
+         rc['grid.color']=bg_color
+         #axes.labelcolor
+         #axes.titlecolor
+
+    with matplotlib.rc_context(rc):
+    #with plt.style.context('dark_background'):
+        w, h = plt.figaspect(rows/columns)
+        fig = plt.figure(figsize=(w,h))
+        # if bg_color is not None:
+        #     fig.set_facecolor(bg_color)
+        #     fig.set_edgecolor(bg_color)
+        #    fig.set_frameon(False)
+        #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
+        ax=None
+        imgplot=None
         
-    # sagittal slices
-    for j in range(0,samples):
-        i=int( (data_shape[2]/samples)*j+(data_shape[2]%samples)/2 )
-        si=scalarMap.to_rgba(_idata[: , : , i])
-        if _ovl is not None:
-            so=oscalarMap.to_rgba(_odata[: , : , i])
-            if use_max: si=max_blend(si,so)
-            elif use_over: si=over_blend(si,so, ialpha, oalpha)
-            else: si=alpha_blend(si, so, ialpha, oalpha)
-        slices.append( si )
-        aspects.append( spacing[2]/spacing[1] )
+        print(f"rows:{rows} columns:{columns}")
+        for i,j in enumerate(slices):
+            ax =  plt.subplot2grid( (rows, columns), ( i//columns, i%columns) )
+            # if bg_color is not None:
+            #     ax.set_facecolor(bg_color)
+            imgplot = ax.imshow(j, origin='lower',  cmap=cm, aspect=aspects[i])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.title.set_visible(False)
+
+        # show for the last plot
+        if show_image_bar:
+            cbar = fig.colorbar(imgplot)
         
-    w, h = plt.figaspect(3.0/samples)
-    fig = plt.figure(figsize=(w,h))
-    
-    #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
-    ax=None
-    imgplot=None
-    for i,j in enumerate(slices):
-        ax =  plt.subplot2grid( (3, samples), (  int( i/samples) , i%samples) )
-        imgplot = ax.imshow(j,origin='lower',cmap=cm, aspect=aspects[i])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.title.set_visible(False)
-    # show for the last plot
-    if show_image_bar:
-        cbar = fig.colorbar(imgplot)
-    
-    
-    if title is not None:
-        plt.suptitle(title,fontsize=20)
-        plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
-    else:
-        plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
-    
-    #fig.tight_layout()
-    #plt.show()
-    plt.savefig(output, bbox_inches='tight', dpi=dpi,format=format)
-    plt.close()
-    plt.close('all')
+        if title is not None:
+            plt.suptitle(title,fontsize=20)
+            plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
+        else:
+            plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
+
+        # , facecolor=fig.get_facecolor(), edgecolor='none')
+        plt.savefig(output, bbox_inches='tight', dpi=dpi, format=format)
+        plt.close()
+        plt.close('all')
+
 
 def qc_field_contour(
     input,
@@ -254,25 +299,30 @@ def qc_field_contour(
     image_range=None,
     title=None,
     image_cmap='gray',
-    samples=5,
+    samples=6,
     show_image_bar=False, # TODO:implement this?
     dpi=100,
-    format=None
-    
+    format=None,
+    bg_color=None
     ):
     """show field contours
     """
-    
+
+
     _img=minc2_file(input)
     _img.setup_standard_order()
     _idata=_img.load_complete_volume(minc2_file.MINC2_FLOAT)
     _idims=_img.representation_dims()
     
     data_shape=_idata.shape
-    spacing=[_idims[0].step,_idims[1].step,_idims[2].step]
+    # order of dimensions in representation dimension is reversed
+    spacing=[_idims[2].step, _idims[1].step, _idims[0].step]
+    columns=samples//2
+    rows=(samples//columns)*3
     
     slices=[]
-    
+    aspects = []
+
     # setup ranges
     vmin=vmax=0.0
     if image_range is not None:
@@ -283,52 +333,77 @@ def qc_field_contour(
         vmax=np.nanmax(_idata)
 
     cm = plt.get_cmap(image_cmap)
-
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
-    
     scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
-    
+
     for j in range(0,samples):
-        i=(data_shape[0]/samples)*j+(data_shape[0]%samples)/2
+        i=int(10+(150.0-10.0)*j/(samples-1))
+        i=int(data_shape[0]*i/181.0)
+
         si=_idata[i , : ,:]
         slices.append( si )
+        aspects.append( spacing[1] / spacing[2] )
         
-    for j in range(0,samples):
-        i=(data_shape[1]/samples)*j+(data_shape[1]%samples)/2
-        si=_idata[: , i ,:]
-        slices.append( si )
-        
-    for j in range(0,samples):
-        i=(data_shape[2]/samples)*j+(data_shape[2]%samples)/2
+    for j in range(0, samples//2):
+        i=int(28.0+(166.0-28.0)*j/(samples-1))
+        i=int(data_shape[2]*i/193.0)
         si=_idata[: , : , i]
         slices.append( si )
-    
-    w, h = plt.figaspect(3.0/samples)
-    fig = plt.figure(figsize=(w,h))
-    
-    #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
-    ax=None
-    imgplot=None
-    for i,j in enumerate(slices):
-        ax =  plt.subplot2grid( (3, samples), (i/samples, i%samples) )
-        imgplot = ax.contour(j,origin='lower', cmap=cm, norm=cNorm, levels=np.linspace(vmin,vmax,20))
-        #plt.clabel(imgplot, inline=1, fontsize=8)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.title.set_visible(False)
-    # show for the last plot
-    if show_image_bar:
-        cbar = fig.colorbar(imgplot)
-    
-    
-    if title is not None:
-        plt.suptitle(title,fontsize=20)
-        plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
-    else:
-        plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
-    
-    plt.savefig(output, bbox_inches='tight', dpi=dpi)
-    plt.close('all')
+        aspects.append( spacing[0] / spacing[1] )
+
+    for j in range(samples-1, samples//2-1,-1):
+        i=int(28.0+(166.0-28.0)*j/(samples-1))
+        i=int(data_shape[2]*i/193.0)
+        si=_idata[: , : , i]
+        slices.append( si )
+        aspects.append( spacing[0] / spacing[1] )
+
+    for j in range(0,samples):
+        i=int(25+(195.0-25.0)*j/(samples-1))
+        i=int(data_shape[1]*i/217.0)
+        si=_idata[: , i ,:]
+        slices.append( si )
+        aspects.append( spacing[0]/spacing[2] )
+        
+    rc={'interactive': False}
+    rc['figure.frameon']=False
+    if bg_color is not None:
+         rc['figure.edgecolor']=bg_color
+         rc['figure.facecolor']=bg_color     
+         rc['grid.color']=bg_color
+         #axes.labelcolor
+         #axes.titlecolor
+
+    with matplotlib.rc_context(rc):
+
+        w, h = plt.figaspect(rows/columns)
+        fig = plt.figure(figsize=(w,h))
+        
+        #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
+        ax=None
+        imgplot=None
+        for i,j in enumerate(slices):
+            ax =  plt.subplot2grid( (rows, columns), ( i//columns, i%columns) )
+            ax.set_aspect(aspects[i])
+            imgplot = ax.contour(j,origin='lower', cmap=cm, norm=cNorm, levels=np.linspace(vmin,vmax,20))
+            #plt.clabel(imgplot, inline=1, fontsize=8)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.title.set_visible(False)
+
+        # show for the last plot
+        if show_image_bar:
+            cbar = fig.colorbar(imgplot)
+        
+        if title is not None:
+            plt.suptitle(title,fontsize=20)
+            plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
+        else:
+            plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
+        
+        plt.savefig(output, bbox_inches='tight', dpi=dpi)
+        plt.close()
+        plt.close('all')
 
 
 # register custom maps

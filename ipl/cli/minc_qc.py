@@ -34,13 +34,24 @@ def parse_options():
     
     parser.add_argument("--cmap",
                     dest="cmap",
-                    default=None,
+                    default="gray",
                     help="Colour map" )
+
+    parser.add_argument("--mask_cmap",
+                    dest="mask_cmap",
+                    default="hot",
+                    help="Colour map for overlay" )
     
     parser.add_argument("--mask",
                     dest="mask",
                     default=None,
                     help="Add mask" )
+
+    parser.add_argument("--mask-range",type=float,
+                    dest="mask_range",
+                    nargs=2,
+                    default=None,
+                    help="Mask range" )
     
     parser.add_argument("--over",
                     dest="use_over",
@@ -53,6 +64,28 @@ def parse_options():
                     action="store_true",
                     default=False,
                     help="Use max mixing" )
+
+    parser.add_argument("--big",
+                    action="store_true",
+                    default=False,
+                    help="Make big view" )
+
+    parser.add_argument("--bg",
+                    dest="bg",
+                    default=None,
+                    help="Background color" )
+
+    parser.add_argument("--dpi",type=float,
+                    default=100,
+                    help="Target DPI" )
+
+    parser.add_argument("--ialpha",type=float,
+                    default=0.7,
+                    help="Image Alpha (for alpha blending)" )
+
+    parser.add_argument("--oalpha",type=float,
+                    default=0.3,
+                    help="Overlay Alpha (for alpha blending)" )
 
     parser.add_argument("input",
                         help="Input minc file")
@@ -71,9 +104,26 @@ def main():
     options = parse_options()
     if options.input is not None and options.output is not None:
         if options.contour:
-            ipl.minc_qc.qc_field_contour(options.input,options.output,show_image_bar=options.bar,image_cmap=options.cmap)
+            ipl.minc_qc.qc_field_contour(options.input,
+                options.output, show_image_bar=options.bar,
+                image_cmap=options.cmap, dpi=options.dpi,
+                bg_color=options.bg)
         else:
-            ipl.minc_qc.qc(options.input,options.output,mask=options.mask,use_max=options.use_max,use_over=options.use_over,mask_bg=0.5)
+            ipl.minc_qc.qc(options.input,
+                options.output,
+                mask=options.mask,
+                use_max=options.use_max,
+                use_over=options.use_over,
+                mask_bg=0.5,
+                image_cmap=options.cmap,
+                mask_cmap=options.mask_cmap,
+                bg_color=options.bg,
+                samples=20 if options.big else 6,
+                dpi=options.dpi,
+                mask_range=options.mask_range,
+                ialpha=options.ialpha,
+                oalpha=options.oalpha
+                )
     else:
         print("Refusing to run without input data, run --help")
         exit(1)
