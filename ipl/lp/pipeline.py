@@ -254,6 +254,7 @@ def standard_pipeline(info,
             qc_cls= MriQCImage(prefix=qc_dir,name='tal_cls_'+dataset_id)
             qc_lob= MriQCImage(prefix=qc_dir,name='tal_lob_'+dataset_id)
             qc_nu=  MriQCImage(prefix=qc_dir,name='nu_'+dataset_id)
+            qc_nl=  MriQCImage(prefix=qc_dir,name='nl_t1w_'+dataset_id)
 
             # QC files (if requested)
             aqc_tal= MriQCImage(prefix=aqc_dir,name='tal_t1w_'+dataset_id,suffix='')
@@ -648,6 +649,9 @@ def standard_pipeline(info,
                     nl_registration(t1w_tal, model_t1w, nl_xfm,
                                 parameters=options.get('nl_reg',{}))
                     iter_summary["nl_xfm"]=nl_xfm
+                    if run_qc is not None  and run_qc.get('nl',True):
+                        draw_qc_nl(t1w_tal, model_outline, nl_xfm,qc_nl, options=run_qc)
+
 
                 # run tissue classification
                 if run_nl and run_cls:
