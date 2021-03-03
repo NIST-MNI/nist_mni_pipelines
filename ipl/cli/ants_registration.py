@@ -74,7 +74,6 @@ def parse_options():
                         default = '20x20x20x20x20',
                         help="Non-linear iterations ")
 
-    
     parser.add_argument("--cost",
                         default="Mattes",
                         help="Cost Function",
@@ -116,7 +115,16 @@ def parse_options():
     parser.add_argument("--transform",
                         default=None,
                         help="Transform options, default affine[0.1] for linear and SyN[.25,2,0.5] for nonlinear")
-    
+
+    parser.add_argument("--convergence",
+                        default='1.e-8,20',
+                        help="Convergence condition",
+                        )
+
+    parser.add_argument("--hist",
+                        default = False,
+                        help="Use histogram matching ")
+
     options = parser.parse_args()
     return options
 
@@ -132,11 +140,12 @@ def main():
         parameters= { 'conf':  {},
                       'blur':  {}, 
                       'shrink':{}, 
-                      'convergence':'1.e-8,20',
-                      'cost_function':options.cost,
-                      'cost_function_par':options.par,
-                      'use_histogram_matching':False,
-                      'transformation':'affine[ 0.1 ]'
+                      'convergence':           options.convergence,
+                      'cost_function':         options.cost,
+                      'cost_function_par':     options.par,
+                      'use_histogram_matching':options.hist,
+                      'transformation':        'affine[ 0.1 ]',
+                      'winsorize_intensity':  {'low':0.01,'high':0.99}
                     }
         
         if options.nl:
@@ -168,7 +177,7 @@ def main():
         else:
             if options.transform is not None:
                 parameters['transformation']=options.transform
-                
+            
             ipl.ants_registration.linear_register_ants2( 
                     options.source, options.target, 
                     options.output,
