@@ -75,6 +75,16 @@ def parse_options():
                     default=None,
                     help="Background color" )
 
+    parser.add_argument("--fg",
+                    dest="fg",
+                    default=None,
+                    help="Foreground color" )
+
+    parser.add_argument("--title",
+                    dest="title",
+                    default=None,
+                    help="Graph title" )
+
     parser.add_argument("--dpi",type=float,
                     default=100,
                     help="Target DPI" )
@@ -107,7 +117,7 @@ def main():
             ipl.minc_qc.qc_field_contour(options.input,
                 options.output, show_image_bar=options.bar,
                 image_cmap=options.cmap, dpi=options.dpi,
-                bg_color=options.bg)
+                bg_color=options.bg,fg_color=options.fg)
         else:
             ipl.minc_qc.qc(options.input,
                 options.output,
@@ -118,11 +128,13 @@ def main():
                 image_cmap=options.cmap,
                 mask_cmap=options.mask_cmap,
                 bg_color=options.bg,
+                fg_color=options.fg,
                 samples=20 if options.big else 6,
                 dpi=options.dpi,
                 mask_range=options.mask_range,
                 ialpha=options.ialpha,
-                oalpha=options.oalpha
+                oalpha=options.oalpha,
+                title=options.title
                 )
     else:
         print("Refusing to run without input data, run --help")

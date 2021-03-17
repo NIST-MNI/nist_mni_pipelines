@@ -103,7 +103,8 @@ def qc(
     ialpha=0.8,
     oalpha=0.2,
     format=None,
-    bg_color=None
+    bg_color=None,
+    fg_color=None
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -252,6 +253,8 @@ def qc(
          rc['figure.edgecolor']=bg_color
          rc['figure.facecolor']=bg_color     
          rc['grid.color']=bg_color
+    if fg_color is not None:
+         rc['text.color']=fg_color
          #axes.labelcolor
          #axes.titlecolor
 
@@ -303,7 +306,8 @@ def qc_field_contour(
     show_image_bar=False, # TODO:implement this?
     dpi=100,
     format=None,
-    bg_color=None
+    bg_color=None,
+    fg_color=None
     ):
     """show field contours
     """
@@ -371,6 +375,8 @@ def qc_field_contour(
          rc['figure.edgecolor']=bg_color
          rc['figure.facecolor']=bg_color     
          rc['grid.color']=bg_color
+    if fg_color is not None:
+         rc['text.color']=fg_color
          #axes.labelcolor
          #axes.titlecolor
 
