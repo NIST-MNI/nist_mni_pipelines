@@ -11,9 +11,9 @@
     "qc":        true,
 
     "t1w_stx":   {
-	"noscale":true,
-	"type":"-lsq9",
-	"objective":"-nmi"
+  "noscale":true,
+  "type":"-lsq9",
+  "objective":"-nmi"
     },
 
     "nl_reg":    null,
@@ -24,37 +24,5 @@
     "nl":        false,
     "cls":       false,
     "lobes":     false,
-    "ibis_output": true,
-
-    "add": {
-           "model":     "mni_icbm152_t1_tal_nlin_sym_09c",
-           "model_dir": "/ipl/quarantine/models/icbm152_model_09c",
-
-           "mri_3t":    false,
-           "qc":        {"big":true},
-           "aqc":       {},
-           "t1w_clp":   null,
-           "t1w_nuc":   null,
-           "denoise":   null,
-              
-           "t1w_stx":   {
-                        "type":"elx",
-                        "options":  {
-                                    "metric":    "AdvancedMattesMutualInformation",
-                                    "optimizer": "AdaptiveStochasticGradientDescent",
-                                    "transform": "EulerTransform"
-                                    },
-                                    "resample": false
-                        },               
-            "nl_reg":    null,
-              
-             
-            "tissue_classify": null,
-            "lobe_segment": null,
-            "beast":     null,
-              
-            "nl":        false,
-            "cls":       false,
-            "lobes":     false
-            }
+    "ibis_output": true
 }
