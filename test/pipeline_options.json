@@ -11,9 +11,9 @@
     "qc":        true,
 
     "t1w_stx":   {
-	"noscale":true,
-	"type":"-lsq9",
-	"objective":"-nmi"
+  "noscale":true,
+  "type":"-lsq9",
+  "objective":"-nmi"
     },
 
     "nl_reg":    null,
