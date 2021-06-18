@@ -14,6 +14,10 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError,temp_files
 
+# distributed
+import ray
+
+
 # local stuff
 from .structures   import *
 from .preprocess   import *
@@ -88,6 +92,7 @@ default_pipeline_options = {
                 'ibis_output': False # export files for IBIS
             }
 
+@ray.remote
 def standard_pipeline(info,
                       output_dir,
                       options =None,
@@ -306,8 +311,6 @@ def standard_pipeline(info,
 
             if nuc_parameters is not None:
                 # non-uniformity correction
-                print("Running N4")
-
                 estimate_nu(t1w_den, t1w_field,
                             parameters=nuc_parameters,
                             model=model_t1w)

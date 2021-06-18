@@ -24,6 +24,10 @@ from ipl.lp.structures      import MriScan,MriTransform,MriQCImage,MriAux
 from ipl.lp.structures      import save_pipeline_output,load_pipeline_output
 
 
+import ray
+
+ray.init(address='auto')
+
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -182,19 +186,14 @@ def main():
             
             run_pipeline = []
 
-            # only needed for parallel execution
-            from scoop import futures, shared
-
             for (i, s) in enumerate(inputs):
                 output_dir=options.output+os.sep+s['subject']+os.sep+s['visit']
                 manual_dir=None
                 
                 if options.manual is not None:
                     manual_dir=options.manual+os.sep+s['subject']+os.sep+s['visit']
-                
-                
-                run_pipeline.append( futures.submit( 
-                    standard_pipeline,
+                                
+                run_pipeline.append( standard_pipeline.remote(
                         s,
                         output_dir, 
                         options=pipeline_parameters ,
@@ -204,10 +203,8 @@ def main():
             #
             # wait for all to finish
             #
-            futures.wait(run_pipeline, return_when=futures.ALL_COMPLETED)
-
-            for j,i in enumerate(run_pipeline):
-                inputs[j]['output']=i.result()
+            for j,i in enumerate(ray.get(run_pipeline)):
+                inputs[j]['output']=i
 
             save_pipeline_output(inputs,options.output+os.sep+'summary.json')
 
