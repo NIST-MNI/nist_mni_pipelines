@@ -92,6 +92,9 @@ class temp_files(object):
             os.makedirs(self.tempdir)
 
     def __enter__(self):
+        # setup ITK multithreading, to avoid oversubscribing , when OMP_NUM_THREADS is used
+        if 'OMP_NUM_THREADS' in os.environ and 'ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS' not in os.environ:
+            os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=os.environ['OMP_NUM_THREADS']
         return self
 
     def __exit__(
