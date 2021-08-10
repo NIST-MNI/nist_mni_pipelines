@@ -18,6 +18,12 @@ It also need [scoop python module](https://github.com/vfonov/scoop)
 
 ### Dependencies
 Pipeline depends on the minc tools from [minc-toolkit package](http://www.bic.mni.mcgill.ca/ServicesSoftware/ServicesSoftwareMincToolKit)
+
+```shell
+$ conda create -n mni --file ./conda_specfile.txt
+$ conda activate mni
+```
+
 *TODO: add description of dependencies*
 
 ### Installing pipeline scripts
