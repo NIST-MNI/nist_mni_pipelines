@@ -16,8 +16,8 @@ import json
 from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
+
 
 from .filter           import *
 from .structures       import *
@@ -356,8 +356,8 @@ def fuse_segmentations( sample, output, library,
                                 out_seg_ec_errors2  = work_dir+os.sep+dataset_name+'_'+fuse_variant+'_'+regularize_variant+'_'+ec_variant+'_error2_'+str(s)+'.mnc'
                             
                             parts.append(out)
-                            results.append( futures.submit(
-                                errorCorrectionApply, 
+                            results.append( 
+                                errorCorrectionApply.remote(
                                                      ec_input, out, 
                                                      input_mask=train_mask, 
                                                      parameters=ec_options_part,
@@ -368,7 +368,7 @@ def fuse_segmentations( sample, output, library,
                                                      multilabel=classes_number,
                                                      debug_files=[out_seg_ec_errors1,out_seg_ec_errors2] ))
                         
-                        futures.wait(results, return_when=futures.ALL_COMPLETED)
+                        ray.wait(results, num_returns=len(results))
                         merge_segmentations(parts, out_seg_ec, ec_split, ec_options)
         
         return output_info

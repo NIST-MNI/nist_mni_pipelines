@@ -431,7 +431,7 @@ def main():
                 outputs.append( futures.submit( 
                     gen_sample, library, options, source_parameters, j , idx=i , flip=True, pca_grid=pca_grid, pca_int=pca_int) )
         #
-        futures.wait(outputs, return_when=futures.ALL_COMPLETED)
+        ray.wait(outputs,num_returns=len(outputs))
         # generate a new library for augmented samples
         augmented_library = library
 
@@ -439,7 +439,7 @@ def main():
         augmented_library.library = []
 
         for j in outputs:
-            for k in j.result():
+            for k in ray.get(j):
                # remove _scan_xxx.mnc part from id, to indicate that the augmented sample still comes from original ID
                augmented_library.library.append( LibEntry( k, relpath=options.output, ent_id = os.path.basename(k[0]).rsplit('_',2)[0] ) )
 

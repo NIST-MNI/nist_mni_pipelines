@@ -20,8 +20,7 @@ from ipl.minc_tools import mincTools,mincError
 import ipl.segment 
 import ipl.grading 
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
 
 version = '1.0'
 

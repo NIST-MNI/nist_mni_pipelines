@@ -26,6 +26,9 @@ try:
 except:
     pass
 
+
+import ray
+
 def xfmavg(inputs, output, verbose=False):
     # TODO: handle inversion flag correctly
     all_linear=True
@@ -82,6 +85,7 @@ def xfmavg(inputs, output, verbose=False):
     else:
         raise Exception("Mixed XFM files provided as input")
 
+@ray.remote
 def linear_register_step(
     sample,
     model,
@@ -192,7 +196,8 @@ def linear_register_step(
         print("Exception in linear_register_step:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
-        
+
+@ray.remote   
 def non_linear_register_step(
     sample,
     model,
@@ -306,6 +311,7 @@ def non_linear_register_step(
         traceback.print_exc(file=sys.stdout)
         raise
 
+@ray.remote
 def dd_register_step(
     sample,
     model,
@@ -419,7 +425,7 @@ def dd_register_step(
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def ants_register_step(
     sample,
     model,
@@ -534,7 +540,7 @@ def ants_register_step(
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def elastix_register_step(
     sample,
     model,
@@ -650,7 +656,7 @@ def elastix_register_step(
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def average_transforms(
     samples,
     output,
@@ -686,7 +692,7 @@ def average_transforms(
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def non_linear_register_step_regress_std(
     sample,
     model_int,

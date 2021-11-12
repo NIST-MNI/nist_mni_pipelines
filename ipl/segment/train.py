@@ -15,8 +15,8 @@ import copy
 # MINC stuff
 from ipl.minc_tools import mincTools, mincError
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
+
 
 from .filter           import *
 from .structures       import *
@@ -252,11 +252,11 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     shutil.copyfile(input_samples[j].mask, filtered_samples[j].mask)
                 shutil.copyfile(input_samples[j].seg, filtered_samples[j].seg)
                 
-                filter_all.append( futures.submit( 
-                    filter_sample, input_samples[j], filtered_samples[j], pre_filters, model=model
+                filter_all.append( 
+                    filter_sample.remote( input_samples[j], filtered_samples[j], pre_filters, model=model
                     ))
             
-            futures.wait(filter_all, return_when=futures.ALL_COMPLETED)
+            ray.wait(filter_all, num_returns=len(filter_all))
         else:
             filtered_samples=input_samples
             
@@ -282,24 +282,24 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 else:
                     i.mask_f=None
                 
-                flip_all.append( futures.submit( generate_flip_sample, i, labels_datatype=labels_datatype  )  )
+                flip_all.append( generate_flip_sample.remote( i, labels_datatype=labels_datatype  )  )
             
-            futures.wait(flip_all, return_when=futures.ALL_COMPLETED)
+            ray.wait(flip_all, num_returns=len(flip_all))
         
         # 1. run global linear registration if nedded
         if do_initial_register :
             for (j,i) in enumerate(filtered_samples):
                 if inital_reg_type=='elx' or inital_reg_type=='elastix' :
-                    results.append( futures.submit(
-                        elastix_registration, i, model, lin_xfm[j], 
+                    results.append( 
+                        elastix_registration.remote( i, model, lin_xfm[j], 
                         symmetric=build_symmetric, 
                         parameters=inital_reg_options,
                         downsample=inital_reg_downsample,
                         use_mask=inital_reg_use_mask
                         ) )
                 elif inital_reg_type=='ants' or inital_reg_ants:
-                    results.append( futures.submit(
-                        linear_registration, i, model, lin_xfm[j], 
+                    results.append( 
+                        linear_registration.remote( i, model, lin_xfm[j], 
                         symmetric=build_symmetric, 
                         linreg=inital_reg_options,
                         ants=True,
@@ -307,8 +307,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         use_mask=inital_reg_use_mask
                         ) )
                 else:
-                    results.append( futures.submit(
-                        linear_registration, i, model, lin_xfm[j], 
+                    results.append( 
+                        linear_registration.remote( i, model, lin_xfm[j], 
                         symmetric=build_symmetric, 
                         reg_type=inital_reg_type,
                         linreg=inital_reg_options,
@@ -317,7 +317,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         objective=initial_reg_objective
                         ) )
             # TODO: do we really need to wait for result here?
-            futures.wait( results, return_when=futures.ALL_COMPLETED )
+            ray.wait( results, num_returns=len(results) )
             # TODO: determine if we need to resample input files here
             #lin_samples=input_samples
 
@@ -343,8 +343,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     if do_initial_register:
                         xfm=lin_xfm[j]
                     
-                    results.append( futures.submit(
-                        warp_rename_seg, i, model, tmp_lin_samples[j],
+                    results.append( 
+                        warp_rename_seg.remote( i, model, tmp_lin_samples[j],
                             transform=xfm,
                             symmetric=build_symmetric,
                             symmetric_flip=build_symmetric,
@@ -356,7 +356,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                             op_mask=op_mask
                         ) )
             
-                futures.wait(results, return_when=futures.ALL_COMPLETED)
+                ray.wait(results, num_returns=len(results))
                 create_local_model(tmp_lin_samples, model, local_model, extend_boundary=extend_boundary, op=op_mask)
                 
             if not os.path.exists(local_model.scan_f) and build_symmetric and build_symmetric_flip:
@@ -374,8 +374,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     init_xfm=lin_xfm[j]
                 
                 if local_reg_type=='elx' or local_reg_type=='elastix' :
-                    results.append( futures.submit(
-                        elastix_registration, i, local_model, bbox_lin_xfm[j],
+                    results.append( 
+                        elastix_registration.remote( i, local_model, bbox_lin_xfm[j],
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         parameters=local_reg_opts,
@@ -384,8 +384,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         use_mask=local_reg_use_mask
                         ) )
                 elif local_reg_type=='ants' or local_reg_ants:
-                    results.append( futures.submit(
-                        linear_registration, i, local_model, bbox_lin_xfm[j],
+                    results.append( 
+                        linear_registration.remote( i, local_model, bbox_lin_xfm[j],
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         reg_type=local_reg_type,
@@ -399,8 +399,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 else:
                     if not do_initial_register:
                         init_xfm=identity_xfm # to avoid strange initialization errors
-                    results.append( futures.submit(
-                        linear_registration, i, local_model, bbox_lin_xfm[j], 
+                    results.append( 
+                        linear_registration.remote( i, local_model, bbox_lin_xfm[j], 
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         reg_type=local_reg_type,
@@ -413,7 +413,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
 
             # TODO: do we really need to wait for result here?
-            futures.wait(results, return_when=futures.ALL_COMPLETED )
+            ray.wait(results, num_returns=len(results) )
         else:
             bbox_lin_xfm=lin_xfm
         
@@ -430,8 +430,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             if do_initial_local_register or do_initial_register:
                 xfm=bbox_lin_xfm[j]
             #
-            results.append( futures.submit(
-                warp_rename_seg, i, local_model, final_samples[j],
+            results.append( 
+                warp_rename_seg.remote( i, local_model, final_samples[j],
                     transform=xfm,
                     symmetric=build_symmetric,
                     symmetric_flip=build_symmetric,
@@ -443,7 +443,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     op_mask=op_mask
                 ))
                     
-        futures.wait(results, return_when=futures.ALL_COMPLETED)
+        ray.wait(results,num_returns=len(results))
     
         results=[]
         for (j, i) in enumerate(filtered_samples):
@@ -451,8 +451,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             if do_initial_local_register or do_initial_register:
                 xfm=bbox_lin_xfm[j]
             
-            results.append( futures.submit(
-                warp_sample, i, local_model, final_samples[j],
+            results.append( 
+                warp_sample.remote( i, local_model, final_samples[j],
                     transform=xfm,
                     symmetric=build_symmetric,
                     symmetric_flip=build_symmetric,
@@ -460,7 +460,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     filters=post_filters,
                     ))
 
-        futures.wait(results, return_when=futures.ALL_COMPLETED)
+        ray.wait(results, num_returns=len(results))
 
         if create_patch_norm_lib:
             create_patch_norm_db( final_samples, patch_norm_db, 
@@ -475,8 +475,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 i.mask=None
 
                 if nonlinear_register_type=='elx' or nonlinear_register_type=='elastix' :
-                    results.append( futures.submit(
-                        elastix_registration, 
+                    results.append( 
+                        elastix_registration.remote(
                             i,
                             local_model, 
                             final_transforms[j],
@@ -491,8 +491,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                             downsample=nlreg_downsample
                         ) )
                 elif nonlinear_register_type=='ants' or do_nonlinear_register_ants:
-                    results.append( futures.submit(
-                        non_linear_registration, 
+                    results.append( 
+                        non_linear_registration.remote(
                             i,
                             local_model, 
                             final_transforms[j],
@@ -507,8 +507,8 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                             downsample=nlreg_downsample
                         ) )
                 else:
-                    results.append( futures.submit(
-                        non_linear_registration, 
+                    results.append( 
+                        non_linear_registration.remote(
                             i,
                             local_model, 
                             final_transforms[j],
@@ -524,7 +524,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 final_samples[j].mask=None
             # TODO: do we really need to wait for result here?
-            futures.wait(results, return_when=futures.ALL_COMPLETED)
+            ray.wait(results, num_returns=len(results))
 
             with mincTools() as m:
                 # a hack, to replace a rough model with a new one

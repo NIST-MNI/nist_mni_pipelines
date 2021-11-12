@@ -15,7 +15,7 @@ except ImportError:
     # minc2_simple not available :(
     have_minc2_simple=False
 
-
+import ray
 
 def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
     # faster then mincaverage for large number of samples
@@ -81,7 +81,7 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
         vol_sd=np.sqrt(vol_sd).astype(np.float)
         o_sd.save_complete_volume(vol_sd)
 
-
+@ray.remote
 def generate_flip_sample(input):
     '''generate flipped version of sample'''
     with mincTools() as m:
@@ -92,7 +92,7 @@ def generate_flip_sample(input):
             
     return True
     
-    
+@ray.remote 
 def normalize_sample(input,
                      output,
                      model,
@@ -112,7 +112,7 @@ def normalize_sample(input,
     output.mask=input.mask
     return output
 
-
+@ray.remote
 def average_samples(
     samples,
     output,
@@ -199,7 +199,8 @@ def average_samples(
         print("Exception in average_samples:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
-    
+
+@ray.remote
 def average_stats(
     avg,
     sd,
@@ -222,7 +223,7 @@ def average_stats(
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def calculate_diff_bias_field(sample, model, output, symmetric=False, distance=100, n4=False ):
     try:
         with mincTools() as m:
@@ -256,7 +257,7 @@ def calculate_diff_bias_field(sample, model, output, symmetric=False, distance=1
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def average_bias_fields(samples, output, symmetric=False ):
     try:
         with mincTools() as m:
@@ -281,7 +282,7 @@ def average_bias_fields(samples, output, symmetric=False ):
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def resample_and_correct_bias(
         sample,
         transform,
@@ -334,6 +335,7 @@ def resample_and_correct_bias(
         traceback.print_exc(file=sys.stdout)
         raise
 
+@ray.remote
 def apply_linear_model(
     lin_model,
     parameters,
@@ -362,7 +364,7 @@ def apply_linear_model(
         raise
 
 
-
+@ray.remote
 def build_approximation(int_model, 
                         geo_model ,
                         parameters_int, 
@@ -436,7 +438,7 @@ Displacement_Volume = {};
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def voxel_regression(int_design_matrix,
                 def_design_matrix,
                 int_estimate,
@@ -554,7 +556,7 @@ def voxel_regression(int_design_matrix,
         traceback.print_exc(file=sys.stdout)
         raise
         
-        
+@ray.remote    
 def average_stats_regression(
     current_int_model, current_def_model,
     int_residual, def_residual,

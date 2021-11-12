@@ -17,8 +17,8 @@ import yaml
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-# scoop parallel execution
-from scoop import futures, shared
+
+import ray
 
 from .filter           import *
 from .structures       import *
@@ -638,8 +638,8 @@ def fusion_segment( input_scan,
                 for (i,j) in enumerate(selected_library):
                     # TODO: make clever usage of precomputed transform if available
                     if pairwise_register_type=='elx' or pairwise_register_type=='elastix' :
-                        results.append( futures.submit(
-                            elastix_registration, 
+                        results.append( 
+                            elastix_registration.remote(
                             bbox_sample,
                             selected_library_scan[i],
                             selected_library_xfm2[i],
@@ -653,8 +653,8 @@ def fusion_segment( input_scan,
                             resample_baa=resample_baa
                             ) )
                     elif pairwise_register_type=='ants' or do_pairwise_ants:
-                        results.append( futures.submit(
-                            non_linear_registration, 
+                        results.append( 
+                            non_linear_registration.remote(
                             bbox_sample,
                             selected_library_scan[i],
                             selected_library_xfm2[i],
@@ -668,8 +668,8 @@ def fusion_segment( input_scan,
                             resample_baa=resample_baa
                             ) )
                     else:
-                        results.append( futures.submit(
-                            non_linear_registration, 
+                        results.append( 
+                            non_linear_registration.remote(
                             bbox_sample,
                             selected_library_scan[i],
                             selected_library_xfm2[i],
@@ -689,8 +689,8 @@ def fusion_segment( input_scan,
                         # TODO: make clever usage of precomputed transform if available
                         
                         if pairwise_register_type == 'elx' or pairwise_register_type == 'elastix':
-                            results.append( futures.submit(
-                                elastix_registration, 
+                            results.append( 
+                                elastix_registration.remote(
                                 bbox_sample,
                                 selected_library_scan_f[i],
                                 selected_library_xfm2_f[i],
@@ -705,8 +705,8 @@ def fusion_segment( input_scan,
                                 resample_baa=resample_baa
                                 ) )
                         elif pairwise_register_type=='ants' or do_pairwise_ants:
-                            results.append( futures.submit(
-                                non_linear_registration, 
+                            results.append( 
+                                non_linear_registration.remote(
                                 bbox_sample,
                                 selected_library_scan_f[i],
                                 selected_library_xfm2_f[i],
@@ -721,8 +721,8 @@ def fusion_segment( input_scan,
                                 resample_baa=resample_baa
                                 ) )
                         else:
-                            results.append( futures.submit(
-                                non_linear_registration, 
+                            results.append( 
+                                non_linear_registration.remote(
                                 bbox_sample,
                                 selected_library_scan_f[i],
                                 selected_library_xfm2_f[i],
@@ -737,7 +737,7 @@ def fusion_segment( input_scan,
                                 resample_baa=resample_baa
                                 ) )
                 # TODO: do we really need to wait for result here?
-                futures.wait(results, return_when=futures.ALL_COMPLETED)
+                ray.wait(results, num_returns=len(results))
             else: # use precomputer transformations
                 
                 results=[]
@@ -748,8 +748,8 @@ def fusion_segment( input_scan,
                     if library_nl_samples_avail:
                         lib_xfm=selected_library_xfm[i]
                         
-                    results.append( futures.submit( 
-                        concat_resample,
+                    results.append( 
+                        concat_resample.remote(
                         selected_library_scan[i],
                         lib_xfm ,
                         nonlinear_xfm,
@@ -764,8 +764,8 @@ def fusion_segment( input_scan,
                         if library_nl_samples_avail:
                             lib_xfm=selected_library_xfm_f[i]
 
-                        results.append( futures.submit(
-                            concat_resample,
+                        results.append( 
+                            concat_resample.remote(
                             selected_library_scan_f[i],
                             lib_xfm,
                             nonlinear_xfm,
@@ -775,7 +775,7 @@ def fusion_segment( input_scan,
                             flip=True
                             ) )
                 # TODO: do we really need to wait for result here?
-                futures.wait(results, return_when=futures.ALL_COMPLETED)
+                ray.wait(results, num_returns=len(results))
         else: # no library generated
             selected_library=[]
             selected_library_f=[]
@@ -790,8 +790,8 @@ def fusion_segment( input_scan,
 
         print(local_model        )
 
-        results.append(futures.submit(
-            fuse_segmentations,
+        results.append(
+            fuse_segmentations.remote(
             bbox_sample,
             sample_seg,
             selected_library_warped2, 
@@ -808,8 +808,8 @@ def fusion_segment( input_scan,
             ))
 
         if segment_symmetric:
-            results.append( futures.submit(
-                fuse_segmentations,
+            results.append( 
+                fuse_segmentations.remote(
                 bbox_sample,
                 sample_seg,
                 selected_library_warped2_f, 
@@ -825,11 +825,11 @@ def fusion_segment( input_scan,
                 regularize_variant=regularize_variant
                 ))
 
-        futures.wait(results, return_when=futures.ALL_COMPLETED)
+        ray.wait(results, num_returns=len(results))
 
-        output_info['fuse']=results[0].result()
+        output_info['fuse']=ray.get(results[0])
         if segment_symmetric:
-            output_info['fuse_f']=results[1].result()
+            output_info['fuse_f']=ray.get(results[1])
 
         if qc_options:
             # generate QC images

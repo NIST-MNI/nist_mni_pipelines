@@ -24,8 +24,11 @@ from .registration     import average_transforms
 from .registration     import non_linear_register_step_regress_std
 from .resample         import concat_resample_nl
 
-from scoop import futures, shared
+import ray
 
+
+
+@ray.remote
 def regress(
     samples,
     initial_model=None,
@@ -168,8 +171,7 @@ def regress(
                             previous_def=prev_def_estimate[i]
                         
                         r.append(
-                            futures.submit(
-                                non_linear_register_step_regress_std,
+                                non_linear_register_step_regress_std.remote(
                                 s,
                                 current_int_model,
                                 current_def_model,
@@ -189,7 +191,7 @@ def regress(
                         #int_estimate.append(sample_int)
 
                     # wait for jobs to finish
-                    futures.wait(r, return_when=futures.ALL_COMPLETED)
+                    ray.wait(r, num_returns=len(r))
                     avg_inv_transform=None
 
                     if debias:
@@ -207,7 +209,7 @@ def regress(
                         c=MriDataset(prefix=it_prefix,iter=it,name=s.name)
                         x=MriTransform(name=s.name+'_corr',prefix=it_prefix,iter=it)
                         
-                        corr.append(futures.submit(concat_resample_nl, 
+                        corr.append(concat_resample_nl.remote(
                             s, def_estimate[i], avg_inv_transform, 
                             c, x,
                             current_int_model,
@@ -219,12 +221,12 @@ def regress(
                         corr_transforms.append(x)
                         corr_samples.append(c)
 
-                    futures.wait(corr, return_when=futures.ALL_COMPLETED)
+                    ray.wait(corr, num_returns=len(corr))
 
                     # 4. perform regression and create new estimate
                     # 5. calculate residulas (?)
                     # 4+5
-                    result=futures.submit(voxel_regression,
+                    result=voxel_regression.remote(
                                         int_design_matrix, def_design_matrix,
                                         corr_samples,      corr_transforms,    
                                         next_int_model,    next_def_model,     
@@ -234,7 +236,7 @@ def regress(
                                         qc=qc
                                         )
                     
-                    futures.wait([result], return_when=futures.ALL_COMPLETED)
+                    ray.wait([result])
 
                     # 6. cleanup
                     if cleanup :
@@ -265,7 +267,7 @@ def regress(
                 current_def_model=next_def_model
                 
                
-                result=futures.submit(average_stats_regression,
+                result=average_stats_regression.remote(
                                       current_int_model, current_def_model,
                                       int_residual, def_residual  )
                 residuals.append(result)
@@ -284,7 +286,7 @@ def regress(
                 prev_def_estimate=corr_transforms # have to use adjusted def estimate
 
         # copy output to the destination
-        futures.wait(residuals, return_when=futures.ALL_COMPLETED)
+        ray.wait(residuals, num_returns=len(residuals))
         with open(prefix+os.sep+'stats.txt','w') as f:
             for s in residuals:
                 f.write("{}\n".format(s.result()))
@@ -355,7 +357,6 @@ def regress_csv(input_csv,
         initial_int_model.protect=True
         initial_def_model=None
         
-
     if work_prefix is not None and not os.path.exists(work_prefix):
         os.makedirs(work_prefix)
 

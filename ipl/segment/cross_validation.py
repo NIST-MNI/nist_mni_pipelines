@@ -11,8 +11,7 @@ import yaml
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
 
 from .fuse             import *
 from .structures       import *
@@ -227,8 +226,8 @@ def loo_cv_fusion_segment(validation_library,
         experiment_segmentation_library.library=[ _i for _i in segmentation_library.library if _i[0].find(n)<0 ]
         
         if (cv_iter is None) or (i == cv_iter):
-            results.append( futures.submit( 
-                run_segmentation_experiment, 
+            results.append( 
+                run_segmentation_experiment.remote(
                 validation_sample, validation_segment, 
                 experiment_segmentation_library,
                 output_experiment,
@@ -249,14 +248,14 @@ def loo_cv_fusion_segment(validation_library,
                                   output_experiment+'_out.json') )
     
     print("Waiting for {} jobs".format(len(results)))
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
+    ray.wait(results, num_returns=len(results))
     
     stat_results=[]
     output_results=[]
     
     if cv_iter is None:
-        stat_results  = [ _i.result()[0] for _i in results ]
-        output_results= [ _i.result()[1] for _i in results ]
+        stat_results  = [ ray.get(_i)[0] for _i in results ]
+        output_results= [ ray.get(_i)[1] for _i in results ]
     elif cv_iter==-1:
         # TODO: load from json files
         for _i in results_json:
@@ -357,8 +356,8 @@ def full_cv_fusion_segment(validation_library,
                 presegment = k[2]
                 shift = 3
             
-            results.append( futures.submit( 
-                run_segmentation_experiment, validation_sample, validation_segment, 
+            results.append( 
+                run_segmentation_experiment.remote( validation_sample, validation_segment, 
                 experiment_segmentation_library,
                 output_experiment,
                 segmentation_parameters=segmentation_parameters,
@@ -374,9 +373,10 @@ def full_cv_fusion_segment(validation_library,
                 train_list=_validation_library
                 ))
                 
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
-    stat_results   = [ i.result()[0] for i in results ]
-    output_results = [ i.result()[1] for i in results ]
+    ray.wait(results, num_returns=len(results))
+
+    stat_results   = [ ray.get(i)[0] for i in results ]
+    output_results = [ ray.get(i)[1] for i in results ]
     
     return ( stat_results, output_results )
 
@@ -481,10 +481,10 @@ def cv_fusion_segment( cv_parameters,
             output_results_all['error_maps'][i]=out_avg
             all_error_maps.append(out_avg)
             maps=[ k['error_maps'][i] for k in output_results ]
-            results.append(futures.submit(
-                average_error_maps,maps,out_avg))
+            results.append(
+                average_error_maps.remote(maps,out_avg))
         
-        futures.wait(results, return_when=futures.ALL_COMPLETED)
+        ray.wait(results, num_returns=len(results))
 
         output_results_all['max_error']=output+os.sep+cv_variant+'_max_error.mnc'.format(i)
         max_error_maps(all_error_maps,output_results_all['max_error'])

@@ -22,7 +22,7 @@ import ipl.registration
 
 from .general import *
 
-from scoop import futures, shared
+import ray
 
 version = '1.1'
 
@@ -33,12 +33,13 @@ version = '1.1'
 
 def pipeline_linearlngtemplate(patient):
     try:
-        # make a vector with all otuput images
+        # make a vector with all output images
 
         outputImages = [patient.template['linear_template'],
                         patient.template['linear_template_mask'],
                         patient.template['stx2_xfm']]
 
+        
         # tp.clp2['t1'],
         for (i, tp) in patient.items():
             outputImages.extend([tp.stx2_xfm['t1'], 
@@ -270,7 +271,7 @@ def linearlngtemplate_v11(patient):
 
         work_prefix = patient.workdir+os.sep+'lin'
 
-        output=generate_linear_model(samples, model=atlas, mask=atlas_mask, options=options, work_prefix=work_prefix)
+        output = generate_linear_model(samples, model=atlas, mask=atlas_mask, options=options, work_prefix=work_prefix)
 
         # copy output ... 
         shutil.copyfile(output['model'].scan,   patient.template['linear_template'])
@@ -302,11 +303,11 @@ def linearlngtemplate_v11(patient):
             if patient.dobiascorr:
                 biascorr=output['biascorr'][k]
             # Here we are relying on the time point order (1) - see above
-            jobs.append(futures.submit(post_process, patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid))
-
+            jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid))
             k+=1
+        
         # wait for all substeps to finish
-        futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+        ray.wait(jobs, num_returns=len(jobs))
         
         # cleanup temporary files
         shutil.rmtree(work_prefix)

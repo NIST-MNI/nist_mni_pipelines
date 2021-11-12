@@ -15,8 +15,7 @@ import json
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
 
 from .filter           import *
 from .structures       import *
@@ -44,10 +43,10 @@ def preselect(sample,
         column = 4 + lib_add_n
         
     for (i, j) in enumerate(library):
-        results.append(futures.submit(
-            calculate_similarity, sample, MriDataset(scan=j[column]), method=method, mask=mask, flip=flip, step=step
+        results.append(
+            calculate_similarity.remote( sample, MriDataset(scan=j[column]), method=method, mask=mask, flip=flip, step=step
             ))
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
+    ray.wait(results, num_returns=len(results))
         
     val=[ (j.result(), library[i] ) for (i,j) in enumerate(results)]
     

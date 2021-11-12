@@ -75,9 +75,9 @@ def generate_ldd_average(
                 if s.mask is not None:
                     s.mask_f=prefix+os.sep+'flip'+os.sep+'mask_'+os.path.basename(s.scan)
 
-                flip_all.append( futures.submit( generate_flip_sample,s )  )
+                flip_all.append( generate_flip_sample.remote(s )  )
 
-            futures.wait(flip_all, return_when=futures.ALL_COMPLETED)
+            ray.wait(flip_all,num_returns=len(flip_all))
         # go through all the iterations
         it=0
         for (i,p) in enumerate(protocol):
@@ -122,7 +122,7 @@ def generate_ldd_average(
                     fwd_transforms.append(sample_xfm)
 
                 # wait for jobs to finish
-                futures.wait(transforms, return_when=futures.ALL_COMPLETED)
+                ray.wait(transforms,num_returns=len(transforms))
 
                 if cleanup and it>1 :
                     # remove information from previous iteration
@@ -146,19 +146,19 @@ def generate_ldd_average(
                     c=MriDataset(prefix=it_prefix,iter=it,name=s.name)
                     x=LDDMriTransform(name=s.name+'_corr',prefix=it_prefix,iter=it)
 
-                    corr.append(futures.submit(concat_resample_ldd, s,
+                    corr.append(concat_resample_ldd.remote( s,
                         fwd_transforms[i], avg_inv_transform, c, x, current_model.scan,
                         symmetric=symmetric, qc=qc ))
 
                     corr_transforms.append(x)
                     corr_samples.append(c)
 
-                futures.wait(corr, return_when=futures.ALL_COMPLETED)
+                ray.wait(corr,num_returns=len(corr))
 
                 # 4 average resampled samples to create new estimate
 
-                result=futures.submit(average_samples, corr_samples, next_model, next_model_sd, symmetric=symmetric)
-                futures.wait([result], return_when=futures.ALL_COMPLETED)
+                result=average_samples.remote( corr_samples, next_model, next_model_sd, symmetric=symmetric)
+                ray.wait([result],num_returns=len([result]))
                 
 
                 if cleanup:
@@ -173,11 +173,11 @@ def generate_ldd_average(
                 current_model=next_model
                 current_model_sd=next_model_sd
 
-                result=futures.submit(average_stats, next_model, next_model_sd)
+                result=average_stats.remote( next_model, next_model_sd)
                 sd.append(result)
 
         # copy output to the destination
-        futures.wait(sd, return_when=futures.ALL_COMPLETED)
+        ray.wait(sd,num_returns=len(sd))
         with open(prefix+os.sep+'stats.txt','w') as f:
             for s in sd:
                 f.write("{}\n".format(s.result()))

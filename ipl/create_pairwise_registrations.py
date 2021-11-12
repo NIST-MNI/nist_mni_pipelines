@@ -289,7 +289,7 @@ if __name__ == '__main__':
         for (k,t) in enumerate(model_results['xfm']):
             if i!=k:
                 if not os.path.exists(output+os.sep+'A_{:02d}_{:02d}_map.xfm'.format(i,k) ) :
-                    rr.append( futures.submit( generate_xfm_model,i,k,
+                    rr.append( generate_xfm_model.remote(i,k,
                                 j['xfm'],t['xfm'],
                                 mri[i],mri[k],
                                 mask[i],mask[k],
@@ -297,7 +297,7 @@ if __name__ == '__main__':
                                 output+os.sep+'A_{:02d}_{:02d}'.format(i,k) ) )
                             
                 if not os.path.exists(output+os.sep+'B_{:02d}_{:02d}_map.xfm'.format(i,k) ) :
-                    rr.append( futures.submit( generate_xfm_direct_minctracc,i,k,
+                    rr.append( generate_xfm_direct_minctracc.remote(i,k,
                                 mri[i],mri[k],
                                 mask[i],mask[k],
                                 seg[i],seg[k],
@@ -305,32 +305,32 @@ if __name__ == '__main__':
                                 step=2) )
 
                 if not os.path.exists(output+os.sep+'C_{:02d}_{:02d}_map.xfm'.format(i,k) ) :
-                    rr.append( futures.submit( generate_xfm_direct_ANTS_CC,i,k,
+                    rr.append( generate_xfm_direct_ANTS_CC.remote(i,k,
                                 mri[i],mri[k],
                                 mask[i],mask[k],
                                 seg[i],seg[k],
                                 output+os.sep+'C_{:02d}_{:02d}'.format(i,k) ) )
 
                 if not os.path.exists( output+os.sep+'D_{:02d}_{:02d}_map.xfm'.format(i,k) ) :
-                    rr.append( futures.submit( generate_xfm_direct_ANTS_MI,i,k,
+                    rr.append( generate_xfm_direct_ANTS_MI.remote(i,k,
                                 mri[i],mri[k],
                                 mask[i],mask[k],
                                 seg[i],seg[k],
                                 output+os.sep+'D_{:02d}_{:02d}'.format(i,k) ) )
                             
                 if not os.path.exists( output+os.sep+'E_{:02d}_{:02d}_map.xfm'.format(i,k) ) :
-                    rr.append( futures.submit( generate_xfm_direct_elastix_cc,i,k,
+                    rr.append( generate_xfm_direct_elastix_cc.remote(i,k,
                                 mri[i],mri[k],
                                 mask[i],mask[k],
                                 seg[i],seg[k],
                                 output+os.sep+'E_{:02d}_{:02d}'.format(i,k) ) )
 
                 if not os.path.exists( output+os.sep+'F_{:02d}_{:02d}_map.xfm'.format(i,k) ) :
-                    rr.append( futures.submit( generate_xfm_direct_elastix_mi,i,k,
+                    rr.append( generate_xfm_direct_elastix_mi.remote(i,k,
                                 mri[i],mri[k],
                                 mask[i],mask[k],
                                 seg[i],seg[k],
                                 output+os.sep+'F_{:02d}_{:02d}'.format(i,k) ) )
                 
-    futures.wait(rr, return_when=futures.ALL_COMPLETED)
+    ray.wait(rr,num_returns=len(rr))
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
