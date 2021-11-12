@@ -104,6 +104,7 @@ class LngOptions:
     pass
 
 # apply additional processing steps
+@ray.remote
 def post_process(patient, i, tp, transform, biascorr, rigid=False):
     # bias in stx space
     modelt1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
