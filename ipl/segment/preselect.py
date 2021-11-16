@@ -48,7 +48,7 @@ def preselect(sample,
             ))
     ray.wait(results, num_returns=len(results))
         
-    val=[ (j.result(), library[i] ) for (i,j) in enumerate(results)]
+    val=[ (ray.get(j), library[i] ) for (i,j) in enumerate(results)]
     
     val_sorted=sorted(val, key=lambda s: s[0] )
 

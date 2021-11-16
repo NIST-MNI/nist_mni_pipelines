@@ -289,7 +289,7 @@ def regress(
         ray.wait(residuals, num_returns=len(residuals))
         with open(prefix+os.sep+'stats.txt','w') as f:
             for s in residuals:
-                f.write("{}\n".format(s.result()))
+                f.write("{}\n".format(ray.get(s)))
 
 
         with open(prefix+os.sep+'results_final.json','w') as f:

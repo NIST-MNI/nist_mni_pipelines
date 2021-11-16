@@ -180,7 +180,7 @@ def generate_ldd_average(
         ray.wait(sd,num_returns=len(sd))
         with open(prefix+os.sep+'stats.txt','w') as f:
             for s in sd:
-                f.write("{}\n".format(s.result()))
+                f.write("{}\n".format(ray.get(s)))
 
         results={
                 'model':      current_model,

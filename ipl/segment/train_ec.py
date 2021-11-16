@@ -142,7 +142,7 @@ def train_ec_loo( segmentation_library,
                 
                 # now pre-fill training library with freshly pre-processed samples
                 for (_i, _j) in enumerate(results2):
-                    print("{} - done ".format(_j.result()[1]['bbox_sample'].seg))
+                    print("{} - done ".format(ray.get(_j)[1]['bbox_sample'].seg))
                     # raise("Not FINISHED!")
                     sample_id = os.path.basename(train_list[_i][0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                     # include into the training list
@@ -154,7 +154,7 @@ def train_ec_loo( segmentation_library,
                         match = segmentation_library.library[train_list_i[0]]
                         
                         train = match[0:2]
-                        train.append(_j.result()[1]['bbox_sample'].seg)
+                        train.append(ray.get(_j)[1]['bbox_sample'].seg)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                     elif len(train_list_i) == 2:
@@ -164,7 +164,7 @@ def train_ec_loo( segmentation_library,
                         match = segmentation_library.library[train_list_i[0]]
                         
                         train = match[0:2]
-                        train.append(_j.result()[1]['bbox_sample'].seg)
+                        train.append(ray.get(_j)[1]['bbox_sample'].seg)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                         
@@ -172,7 +172,7 @@ def train_ec_loo( segmentation_library,
                         match = segmentation_library.library[train_list_i[1]]
                         
                         train = match[0:2]
-                        train.append(_j.result()[1]['bbox_sample'].seg_f)
+                        train.append(ray.get(_j)[1]['bbox_sample'].seg_f)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                     else:
@@ -310,7 +310,7 @@ def train_ec_loo( segmentation_library,
                 train_segment=j[1]
                 train_add=j[2:2+modalities]
                 train_mask=local_model_mask
-                auto_segment=results[i].result()[0]
+                auto_segment=ray.get(results[i])[0]
                 
                 # TODO: use the subject-specific mask somehow?
                 if ec_border_mask:

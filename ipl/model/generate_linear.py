@@ -188,7 +188,7 @@ def generate_linear_average(
         # 4 average resampled samples to create new estimate
         if it>skip and it<stop_early:
             result=average_samples.remote( corr_samples, next_model, next_model_sd, 
-                symmetric=symmetric, symmetrize=symmetric,median=use_median )
+                symmetric=symmetric, symmetrize=symmetric, median=use_median )
 
         if cleanup :
             # remove previous template estimate
