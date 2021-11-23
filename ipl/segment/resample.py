@@ -73,7 +73,7 @@ def resample_split_segmentations(input, output,xfm=None, like=None, order=4, inv
     
     ray.wait(results, num_returns=len(results))
 
-
+@ray.remote
 def warp_rename_seg( sample, model, output, 
                     transform=None, 
                     symmetric=False, 
@@ -162,7 +162,7 @@ def warp_rename_seg( sample, model, output,
         traceback.print_exc( file=sys.stdout) 
         raise
 
-
+@ray.remote
 def warp_sample( sample,
                  model, 
                  output,
@@ -258,7 +258,7 @@ def warp_sample( sample,
         traceback.print_exc( file=sys.stdout)
         raise
 
-
+@ray.remote
 def warp_model_mask( model,
                  output,
                  transform=None,
@@ -299,7 +299,7 @@ def warp_model_mask( model,
         raise
 
 
-
+@ray.remote
 def concat_resample(lib_scan,
                     xfm_lib,
                     xfm_sample,

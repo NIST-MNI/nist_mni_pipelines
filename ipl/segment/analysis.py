@@ -15,6 +15,7 @@ import json
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
+import ray
 
 def calc_similarity_stats( input_ground_truth, 
                            input_segmentation, 
@@ -120,7 +121,7 @@ def create_error_map(input_ground_truth,
         traceback.print_exc( file=sys.stdout)
         raise
 
-
+@ray.remote
 def average_error_maps(maps, out_avg):
     try:
         with mincTools( verbose=2 ) as m:
@@ -136,6 +137,7 @@ def average_error_maps(maps, out_avg):
         raise
 
 
+@ray.remote
 def max_error_maps(maps, out_max):
     try:
         with mincTools( verbose=2 ) as m:

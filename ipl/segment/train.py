@@ -30,6 +30,20 @@ from .library          import *
 def inv_dict(d):
     return { v:k for (k,v) in d.items() }
 
+@ray.remote
+def _elastix_registration(*args,**kwargs):
+    elastix_registration(*args,**kwargs)
+
+
+@ray.remote
+def _linear_registration(*args,**kwargs):
+    linear_registration(*args,**kwargs)
+
+
+@ray.remote
+def _non_linear_registration(*args,**kwargs):
+    non_linear_registration(*args,**kwargs)
+
 
 def generate_library(parameters, output, debug=False, cleanup=False, work_dir=None):
     '''Actual generation of the segmentation library'''
@@ -291,7 +305,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
             for (j,i) in enumerate(filtered_samples):
                 if inital_reg_type=='elx' or inital_reg_type=='elastix' :
                     results.append( 
-                        elastix_registration.remote( i, model, lin_xfm[j], 
+                        _elastix_registration.remote( i, model, lin_xfm[j], 
                         symmetric=build_symmetric, 
                         parameters=inital_reg_options,
                         downsample=inital_reg_downsample,
@@ -299,7 +313,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 elif inital_reg_type=='ants' or inital_reg_ants:
                     results.append( 
-                        linear_registration.remote( i, model, lin_xfm[j], 
+                        _linear_registration.remote( i, model, lin_xfm[j], 
                         symmetric=build_symmetric, 
                         linreg=inital_reg_options,
                         ants=True,
@@ -308,7 +322,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 else:
                     results.append( 
-                        linear_registration.remote( i, model, lin_xfm[j], 
+                        _linear_registration.remote( i, model, lin_xfm[j], 
                         symmetric=build_symmetric, 
                         reg_type=inital_reg_type,
                         linreg=inital_reg_options,
@@ -375,7 +389,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                 
                 if local_reg_type=='elx' or local_reg_type=='elastix' :
                     results.append( 
-                        elastix_registration.remote( i, local_model, bbox_lin_xfm[j],
+                        _elastix_registration.remote( i, local_model, bbox_lin_xfm[j],
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         parameters=local_reg_opts,
@@ -385,7 +399,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 elif local_reg_type=='ants' or local_reg_ants:
                     results.append( 
-                        linear_registration.remote( i, local_model, bbox_lin_xfm[j],
+                        _linear_registration.remote( i, local_model, bbox_lin_xfm[j],
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         reg_type=local_reg_type,
@@ -400,7 +414,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                     if not do_initial_register:
                         init_xfm=identity_xfm # to avoid strange initialization errors
                     results.append( 
-                        linear_registration.remote( i, local_model, bbox_lin_xfm[j], 
+                        _linear_registration.remote( i, local_model, bbox_lin_xfm[j], 
                         init_xfm=init_xfm,
                         symmetric=build_symmetric,
                         reg_type=local_reg_type,
@@ -476,7 +490,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
 
                 if nonlinear_register_type=='elx' or nonlinear_register_type=='elastix' :
                     results.append( 
-                        elastix_registration.remote(
+                        _elastix_registration.remote(
                             i,
                             local_model, 
                             final_transforms[j],
@@ -492,7 +506,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 elif nonlinear_register_type=='ants' or do_nonlinear_register_ants:
                     results.append( 
-                        non_linear_registration.remote(
+                        _non_linear_registration.remote(
                             i,
                             local_model, 
                             final_transforms[j],
@@ -508,7 +522,7 @@ def generate_library(parameters, output, debug=False, cleanup=False, work_dir=No
                         ) )
                 else:
                     results.append( 
-                        non_linear_registration.remote(
+                        _non_linear_registration.remote(
                             i,
                             local_model, 
                             final_transforms[j],

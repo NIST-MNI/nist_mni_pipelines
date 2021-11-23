@@ -32,6 +32,18 @@ from .library          import *
 from .analysis         import *
 
 
+@ray.remote
+def _fuse_segmentations(*args,**kwargs):
+    fuse_segmentations(*args,**kwargs)
+
+@ray.remote
+def _non_linear_registration(*args,**kwargs):
+    non_linear_registration(*args,**kwargs)
+
+@ray.remote
+def _elastix_registration(*args,**kwargs):
+    elastix_registration(*args,**kwargs)
+
 def fusion_segment( input_scan,
                     library_description,
                     output_segment,
@@ -298,7 +310,7 @@ def fusion_segment( input_scan,
             else:
                 sample.mask_f=None
             
-            generate_flip_sample(sample)
+            ray.wait([generate_flip_sample.remote(sample)])
 
         if presegment is None:
             sample.seg = None
@@ -405,13 +417,13 @@ def fusion_segment( input_scan,
             bbox_sample.seg=None
             bbox_sample.seg_f=None
         
-        warp_sample(sample, local_model, bbox_sample,
+        ray.wait([warp_sample.remote(sample, local_model, bbox_sample,
                     transform=bbox_linear_xfm,
                     symmetric=segment_symmetric,
                     symmetric_flip=segment_symmetric,# need to flip symmetric dataset
                     resample_order=resample_order,
                     filters=post_filters,
-                    )
+                    )])
         
         if sample.seg is not None:
             _lut = None
@@ -420,14 +432,14 @@ def fusion_segment( input_scan,
                 _lut=invert_lut(library_description.get("map",None))
                 _flip_lut=invert_lut(library_description.get("flip_map",None))
 
-            warp_rename_seg( sample, local_model, bbox_sample,
+            ray.wait([warp_rename_seg.remote( sample, local_model, bbox_sample,
                 transform=bbox_linear_xfm,
                 symmetric=segment_symmetric,
                 symmetric_flip=segment_symmetric,
                 lut      = _lut,
                 flip_lut = _flip_lut,
                 resample_order=resample_order,
-                resample_baa=resample_baa)
+                resample_baa=resample_baa)])
 
         output_info['bbox_sample']=bbox_sample
         
@@ -482,17 +494,17 @@ def fusion_segment( input_scan,
             nl_sample.mask=None
             nl_sample.mask_f=None
             
-            warp_sample(bbox_sample, local_model, nl_sample,
+            ray.wait([warp_sample.remote(bbox_sample, local_model, nl_sample,
                         transform=nonlinear_xfm,
                         symmetric=segment_symmetric,
                         resample_order=resample_order,
                         filters=post_filters,
-                        )
+                        )])
             
-            warp_model_mask(local_model, bbox_sample_mask,
+            ray.wait([warp_model_mask.remote(local_model, bbox_sample_mask,
                         transform=nonlinear_xfm,
                         symmetric=segment_symmetric,
-                        resample_order=resample_order)
+                        resample_order=resample_order)])
             
             bbox_sample.mask = bbox_sample_mask.mask
             bbox_sample.mask_f = bbox_sample_mask.mask_f
@@ -639,7 +651,7 @@ def fusion_segment( input_scan,
                     # TODO: make clever usage of precomputed transform if available
                     if pairwise_register_type=='elx' or pairwise_register_type=='elastix' :
                         results.append( 
-                            elastix_registration.remote(
+                            _elastix_registration.remote(
                             bbox_sample,
                             selected_library_scan[i],
                             selected_library_xfm2[i],
@@ -654,7 +666,7 @@ def fusion_segment( input_scan,
                             ) )
                     elif pairwise_register_type=='ants' or do_pairwise_ants:
                         results.append( 
-                            non_linear_registration.remote(
+                            _non_linear_registration.remote(
                             bbox_sample,
                             selected_library_scan[i],
                             selected_library_xfm2[i],
@@ -669,7 +681,7 @@ def fusion_segment( input_scan,
                             ) )
                     else:
                         results.append( 
-                            non_linear_registration.remote(
+                            _non_linear_registration.remote(
                             bbox_sample,
                             selected_library_scan[i],
                             selected_library_xfm2[i],
@@ -690,7 +702,7 @@ def fusion_segment( input_scan,
                         
                         if pairwise_register_type == 'elx' or pairwise_register_type == 'elastix':
                             results.append( 
-                                elastix_registration.remote(
+                                _elastix_registration.remote(
                                 bbox_sample,
                                 selected_library_scan_f[i],
                                 selected_library_xfm2_f[i],
@@ -706,7 +718,7 @@ def fusion_segment( input_scan,
                                 ) )
                         elif pairwise_register_type=='ants' or do_pairwise_ants:
                             results.append( 
-                                non_linear_registration.remote(
+                                _non_linear_registration.remote(
                                 bbox_sample,
                                 selected_library_scan_f[i],
                                 selected_library_xfm2_f[i],
@@ -722,7 +734,7 @@ def fusion_segment( input_scan,
                                 ) )
                         else:
                             results.append( 
-                                non_linear_registration.remote(
+                                _non_linear_registration.remote(
                                 bbox_sample,
                                 selected_library_scan_f[i],
                                 selected_library_xfm2_f[i],
@@ -791,7 +803,7 @@ def fusion_segment( input_scan,
         print(local_model        )
 
         results.append(
-            fuse_segmentations.remote(
+            _fuse_segmentations.remote(
             bbox_sample,
             sample_seg,
             selected_library_warped2, 
@@ -809,7 +821,7 @@ def fusion_segment( input_scan,
 
         if segment_symmetric:
             results.append( 
-                fuse_segmentations.remote(
+                _fuse_segmentations.remote(
                 bbox_sample,
                 sample_seg,
                 selected_library_warped2_f, 
@@ -864,7 +876,7 @@ def fusion_segment( input_scan,
             sample_seg_native = MriDataset(name='seg_' + sample.name+out_variant, prefix=work_dir )
             sample_seg_native2 = MriDataset(name='seg2_' + sample.name+out_variant, prefix=work_dir )
             
-            warp_rename_seg(sample_seg, input_sample, sample_seg_native, 
+            ray.wait([warp_rename_seg.remote(sample_seg, input_sample, sample_seg_native, 
                             transform=bbox_linear_xfm, invert_transform=True, 
                             lut=library_description["map"],
                             symmetric=segment_symmetric,
@@ -873,7 +885,7 @@ def fusion_segment( input_scan,
                             flip_lut=library_description["flip_map"],
                             resample_baa=resample_baa, 
                             resample_order=resample_order,
-                            datatype=seg_datatype )
+                            datatype=seg_datatype )])
             
             output_info['sample_seg_native'] = sample_seg_native
             output_info['used_labels']       = make_segmented_label_list(library_description,symmetric=segment_symmetric)

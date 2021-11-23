@@ -20,6 +20,7 @@ from .train_ec         import *
 from .filter           import *
 from .analysis         import *
 
+@ray.remote
 def run_segmentation_experiment( input_scan,
                                  input_seg,
                                  segmentation_library,
@@ -309,12 +310,9 @@ def full_cv_fusion_segment(validation_library,
         
         if not os.path.exists( ran_file ):
             rem_list = random.sample(validation_library_idx, cv_exclude)
-            
-            with open( ran_file , 'w') as f:
-                json.dump(rem_list,f)
+            json.dump(rem_list,open( ran_file , 'w'))
         else:
-            with open( ran_file ,'r') as f:
-                rem_list = json.load(f)
+            rem_list = json.load(open( ran_file ,'r'))
                 
         # list of subjects 
         rem_items = [validation_library[j] for j in rem_list]
@@ -326,7 +324,6 @@ def full_cv_fusion_segment(validation_library,
         for j in rem_n:
             rem_lib.extend([k for (k, t) in enumerate(segmentation_library.library) if t[0].find(j) >= 0])
             val_lib.extend([k for (k, t) in enumerate(validation_library)           if t[0].find(j) >= 0])
-            
             
         if debug: print(repr(rem_lib))
         rem_lib = set(rem_lib)
@@ -434,7 +431,7 @@ def cv_fusion_segment( cv_parameters,
     output_results = None
 
     if ext:
-        # TODO: move pre-rpcessing here?
+        # TODO: move pre-processing here?
         # pre-process presegmented scans here!
         # we only neeed to re-create left-right flipped segmentation
         pass
@@ -468,7 +465,6 @@ def cv_fusion_segment( cv_parameters,
                                               cv_iter=cv_iter)
 
     # average error maps
-    
     if cv_iter is None or cv_iter == -1:
         results=[]
         output_results_all={'results':output_results}
@@ -487,13 +483,12 @@ def cv_fusion_segment( cv_parameters,
         ray.wait(results, num_returns=len(results))
 
         output_results_all['max_error']=output+os.sep+cv_variant+'_max_error.mnc'.format(i)
-        max_error_maps(all_error_maps,output_results_all['max_error'])
+        ray.wait([max_error_maps.remote(all_error_maps,output_results_all['max_error'])])
         
-        with open(cv_output, 'w') as f:
-            json.dump(stat_results, f, indent=1, cls=LIBEncoder )
+        json.dump(stat_results,       open(cv_output, 'w'),  indent=1, cls=LIBEncoder)
+        json.dump(output_results_all, open(res_output, 'w'), indent=1, cls=LIBEncoder)
 
-        with open(res_output, 'w') as f:
-            json.dump(output_results_all, f, indent=1, cls=LIBEncoder)
+        # TODO: add graphs using maptlotlib
 
         return stat_results
     else:
