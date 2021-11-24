@@ -6,7 +6,9 @@ import copy
 import json
 import random
 import yaml
+import math
 
+import numpy as np
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
@@ -278,8 +280,7 @@ def full_cv_fusion_segment(validation_library,
                            segmentation_library, 
                            output,
                            segmentation_parameters, 
-                           cv_iterations,
-                           cv_exclude,
+                           cv_folds,
                            ec_parameters=None,
                            debug=False,
                            ec_variant='ec',
@@ -288,13 +289,23 @@ def full_cv_fusion_segment(validation_library,
                            regularize_variant='gc',
                            cleanup=False,
                            ext=False,
-                           cv_iter=None):
-    if cv_iter is not None:
-        raise "Not Implemented!"
+                           shuffle=True,
+                           seed=42):
 
-    validation_library_idx=range(len(validation_library))
-    # randomly exlcude samples, repeat 
-    results=[]
+    n_samples = len(validation_library)
+    validation_library_idx = np.arange(n_samples)
+
+    if shuffle:
+        _state = None
+        if seed is not None:
+            _state = np.random.get_state()
+            np.random.seed(seed)
+
+        np.random.shuffle(validation_library_idx)
+
+        if seed is not None:
+            np.random.set_state(_state)
+    
     if not os.path.exists(output):
         try:
             os.makedirs(output)
@@ -302,25 +313,34 @@ def full_cv_fusion_segment(validation_library,
             pass # assume directory was created by competing process
         
     modalities = segmentation_library.modalities-1
-    
-    for i in range( cv_iterations ):
+
+    results=[]
+    # generate folds
+    for i in range( cv_folds ):
         #TODO: save this list in a file
         rem_list = []
-        ran_file = output+os.sep+ ('random_{}_{}.json'.format(cv_variant, i))
+        ran_file = output + os.sep + ('fold_{}_{}.json'.format(cv_variant, i))
         
         if not os.path.exists( ran_file ):
-            rem_list = random.sample(validation_library_idx, cv_exclude)
+
+            #training_samples = np.concatenate((validation_library_idx[0:math.floor(i * n_samples / cv_folds)],
+            #                               validation_library_idx[math.floor((i + 1) * n_samples / cv_folds):n_samples]))
+            testing_samples = validation_library_idx[math.floor(i * n_samples / cv_folds): math.floor((i + 1) * n_samples / cv_folds)]
+
+            rem_list = [int(j) for j in testing_samples]
             json.dump(rem_list,open( ran_file , 'w'))
         else:
             rem_list = json.load(open( ran_file ,'r'))
                 
-        # list of subjects 
+        # list of held-out datasets
         rem_items = [validation_library[j] for j in rem_list]
         
         rem_n = [os.path.basename(j[0]).rsplit('.gz', 1)[0].rsplit('.mnc', 1)[0] for j in rem_items]
         rem_lib = []
         val_lib = []
         
+        # need to exclude hold-out dataset from the segmentation library 
+        # and keep only it in validation library 
         for j in rem_n:
             rem_lib.extend([k for (k, t) in enumerate(segmentation_library.library) if t[0].find(j) >= 0])
             val_lib.extend([k for (k, t) in enumerate(validation_library)           if t[0].find(j) >= 0])
@@ -333,11 +353,12 @@ def full_cv_fusion_segment(validation_library,
         experiment_segmentation_library = copy.deepcopy(segmentation_library)
         
         experiment_segmentation_library.library = \
-            [k for j, k in enumerate(segmentation_library.library) if j not in rem_lib]
+            [k for j, k in enumerate( segmentation_library.library) if j not in rem_lib]
         
         _validation_library = \
             [k for j, k in enumerate( validation_library ) if j not in val_lib ]
         
+        # now go over each item in held-out set and apply segmentation to it
         for j, k in enumerate(rem_items):
             
             output_experiment = output+os.sep+('{}_{}_{}'.format(i, rem_n[j], cv_variant))
@@ -354,20 +375,21 @@ def full_cv_fusion_segment(validation_library,
                 shift = 3
             
             results.append( 
-                run_segmentation_experiment.remote( validation_sample, validation_segment, 
-                experiment_segmentation_library,
-                output_experiment,
-                segmentation_parameters=segmentation_parameters,
-                debug=debug,
-                work_dir=work_dir,
-                ec_parameters=ec_parameters,
-                ec_variant=ec_variant, 
-                fuse_variant=fuse_variant, 
-                regularize_variant=regularize_variant,
-                add=k[shift:shift+modalities],
-                cleanup=cleanup,
-                presegment=presegment,
-                train_list=_validation_library
+                run_segmentation_experiment.remote( 
+                    validation_sample, validation_segment,
+                    experiment_segmentation_library,
+                    output_experiment,
+                    segmentation_parameters=segmentation_parameters,
+                    debug=debug,
+                    work_dir=work_dir,
+                    ec_parameters=ec_parameters,
+                    ec_variant=ec_variant, 
+                    fuse_variant=fuse_variant, 
+                    regularize_variant=regularize_variant,
+                    add=k[shift:shift+modalities],
+                    cleanup=cleanup,
+                    presegment=presegment,
+                    train_list=_validation_library
                 ))
                 
     ray.wait(results, num_returns=len(results))
@@ -396,11 +418,8 @@ def cv_fusion_segment( cv_parameters,
     # TODO: implement more realistic, random schemes
     validation_library = cv_parameters['validation_library']
     
-    # maximum number of iterations
-    cv_iterations = cv_parameters.get('iterations',-1)
-    
-    # number of samples to exclude
-    cv_exclude = cv_parameters.get('cv',1)
+    # number of cv folds, -1 for loo CV
+    cv_folds = cv_parameters.get('iterations',cv_parameters.get('folds',-1))
 
     # use to distinguish different versions of error correction
     ec_variant = cv_parameters.get('ec_variant','ec')
@@ -424,9 +443,6 @@ def cv_fusion_segment( cv_parameters,
         with open(validation_library,'r') as f:
             validation_library = list(csv.reader(f))
         
-    if cv_iter is not None:
-        cv_iter=int(cv_iter)
-
     stat_results = None
     output_results = None
 
@@ -436,8 +452,9 @@ def cv_fusion_segment( cv_parameters,
         # we only neeed to re-create left-right flipped segmentation
         pass
 
-    if cv_iterations==-1 and cv_exclude==1: # simle LOO cross-validation
-        (stat_results, output_results) = loo_cv_fusion_segment(validation_library, 
+    if cv_folds==-1 : # simple LOO cross-validation
+        (stat_results, output_results) = loo_cv_fusion_segment(
+                                             validation_library, 
                                              segmentation_library,
                                              output, segmentation_parameters,
                                              ec_parameters=ec_parameters, 
@@ -447,13 +464,13 @@ def cv_fusion_segment( cv_parameters,
                                              fuse_variant=fuse_variant,
                                              cv_variant=cv_variant,
                                              regularize_variant=regularize_variant,
-                                             ext=ext,
-                                             cv_iter=cv_iter)
+                                             ext=ext)
     else: # arbitrary number of iterations
-        (stat_results, output_results) = full_cv_fusion_segment(validation_library, 
+        (stat_results, output_results) = full_cv_fusion_segment(
+                                              validation_library, 
                                               segmentation_library,
                                               output, segmentation_parameters,
-                                              cv_iterations, cv_exclude,
+                                              cv_folds,
                                               ec_parameters=ec_parameters, 
                                               debug=debug,
                                               cleanup=cleanup,
@@ -461,8 +478,7 @@ def cv_fusion_segment( cv_parameters,
                                               fuse_variant=fuse_variant,
                                               cv_variant=cv_variant,
                                               regularize_variant=regularize_variant,
-                                              ext=ext,
-                                              cv_iter=cv_iter)
+                                              ext=ext)
 
     # average error maps
     if cv_iter is None or cv_iter == -1:
