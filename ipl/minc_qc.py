@@ -104,7 +104,8 @@ def qc(
     oalpha=0.2,
     format=None,
     bg_color=None,
-    fg_color=None
+    fg_color=None,
+    style=None
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -183,6 +184,7 @@ def qc(
     cmo.set_bad('k',alpha = 0.0)
 
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
+    #print("Image range:",vmin,vmax)
     oNorm  = colors.Normalize(vmin=omin, vmax=omax)
     
     scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
@@ -251,38 +253,61 @@ def qc(
 
     if bg_color is not None:
          rc['figure.edgecolor']=bg_color
-         rc['figure.facecolor']=bg_color     
+         rc['figure.facecolor']=bg_color
          rc['grid.color']=bg_color
     if fg_color is not None:
          rc['text.color']=fg_color
          #axes.labelcolor
          #axes.titlecolor
+    #with plt.style.context(style if style is not None else "classic"): 
+
+    if show_image_bar or show_overlay_bar:
+        columns_add=1
+    else:
+        columns_add=0
 
     with matplotlib.rc_context(rc):
-    #with plt.style.context('dark_background'):
-        w, h = plt.figaspect(rows/columns)
+        if style is not None:
+            plt.style.use(style)
+
+        w, h = plt.figaspect(rows/(columns+columns_add))
         fig = plt.figure(figsize=(w,h))
-        # if bg_color is not None:
-        #     fig.set_facecolor(bg_color)
-        #     fig.set_edgecolor(bg_color)
-        #    fig.set_frameon(False)
-        #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
+
+        widths=[1.0/columns]*columns
+        # for color bar
+        if columns_add>0:
+            widths+=[widths[0]/10]
+        
+        grid=gridspec.GridSpec(rows, (columns+columns_add),width_ratios=widths)
+        #subplotspec=gridspec.new_subplotspec(loc, rowspan, colspan)
         ax=None
         imgplot=None
         
         print(f"rows:{rows} columns:{columns}")
         for i,j in enumerate(slices):
-            ax =  plt.subplot2grid( (rows, columns), ( i//columns, i%columns) )
-            # if bg_color is not None:
-            #     ax.set_facecolor(bg_color)
+            ax =  fig.add_subplot(grid[ i//columns, i%columns])
             imgplot = ax.imshow(j, origin='lower',  cmap=cm, aspect=aspects[i])
             ax.set_xticks([])
             ax.set_yticks([])
             ax.title.set_visible(False)
+            ax.set_frame_on(False)
 
-        # show for the last plot
+        # for color bar
         if show_image_bar:
-            cbar = fig.colorbar(imgplot)
+            ax =  fig.add_subplot(grid[ 1:(rows-1), columns])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.title.set_visible(False)
+            ax.set_frame_on(True)
+            cbar = fig.colorbar(scalarMap,cax=ax)
+
+        if show_overlay_bar:
+            ax =  fig.add_subplot(grid[ 1:(rows-1), columns])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.title.set_visible(False)
+            ax.set_frame_on(False)
+            cbar = fig.colorbar(oscalarMap)
         
         if title is not None:
             plt.suptitle(title,fontsize=20)
