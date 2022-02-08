@@ -24,10 +24,10 @@ version = '1.0'
 
 def pipeline_linearatlasregistration(patient, tp):
 
-    if os.path.exists(patient[tp].stx2_xfm['t1']) \
-        and os.path.exists(patient[tp].stx2_mnc['t1']):  # and os.path.exists(patient[tp].stx2_mnc["t2"])
-        print(' -- pipeline_linearatlasregistration exists')
-        return True
+    # if os.path.exists(patient[tp].stx2_xfm['t1']) \
+    #     and os.path.exists(patient[tp].stx2_mnc['t1']):  # and os.path.exists(patient[tp].stx2_mnc["t2"])
+    #     print(' -- pipeline_linearatlasregistration exists')
+    #     return True
 
     if patient.pipeline_version == '1.0':
         linearatlasregistration_v10(patient, tp)  # beast by simon fristed

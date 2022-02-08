@@ -7,9 +7,11 @@
 from __future__ import print_function
 
 import os
+from threading import local
 import traceback
 import json
 import six
+import sys
 
 import argparse
 
@@ -49,7 +51,7 @@ from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 
 # parallel processing
 import ray
-ray.init(address='auto') # address='auto' local_mode=True
+#ray.init(address='auto') # address='auto' local_mode=True
 
 version = '1.0'
 
@@ -590,7 +592,7 @@ def runPipeline(pickle, workdir=None):
 
         if len(tps) == 1:
             for tp in tps:
-                ray.wait(runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  ))
+                ray.wait([runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  )])
         else:
             # create longitudinal template
             # ############################
@@ -967,7 +969,12 @@ def parse_options():
     group.add_argument('-q','--queue', dest='queue',
                      help='Specify SGE queue for submission'
                      )
-
+    group.add_argument('--ray_start',type=int,
+                        help='start local ray instance')
+    group.add_argument('--ray_local',action='store_true',
+                        help='local ray (single process)')
+    group.add_argument('--ray_host',
+                        help='ray host address')
     options = parser.parse_args()
 
     return options
@@ -979,6 +986,16 @@ def main():
     opts = parse_options()
     # VF: disabled in public release
     opts.temporalregu = False
+
+    if opts.ray_start is not None: # HACK?
+        #ray._private.services.address_to_ip = lambda x: '127.0.0.1'
+        ray.init()
+    elif opts.ray_local:
+        ray.init(local_mode=True)
+    elif opts.ray_host is not None:
+        ray.init(address=opts.ray_host+':6379')
+    else:
+        ray.init(address='auto')
 
     if opts.list is not None :
         if opts.output is None:
