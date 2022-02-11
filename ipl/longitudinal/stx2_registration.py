@@ -92,16 +92,24 @@ def linearatlasregistration_v10(patient, tp):
         if 't2' in patient[tp].native:
 
             templatet2 = template.replace('t1', 't2')
+            # adjust the mask
+
+            minc.resample_labels(patient[tp].clp['mask'],
+                                minc.tmp('t2_mask.mnc'),
+                                transform=patient[tp].clp['t2t1xfm'],
+                                invert_transform=True,
+                                like=patient[tp].clp['t2'])
+
             minc.nu_correct(patient[tp].clp['t2'], 
                             output_image=minc.tmp('clp2_t2.mnc'), 
-                            mask=patient[tp].clp['mask'], 
+                            mask=minc.tmp('t2_mask.mnc'), 
                             mri3t=patient.mri3T )
 
             minc.volume_pol(
                 minc.tmp('clp2_t2.mnc'),
                 templatet2,
                 patient[tp].clp2['t2'],
-                source_mask=patient[tp].clp['mask'],
+                source_mask=minc.tmp('t2_mask.mnc'),
                 target_mask=template_mask,
                 datatype='-short' )
 
@@ -118,16 +126,24 @@ def linearatlasregistration_v10(patient, tp):
 
         if 'pd' in patient[tp].native:
             templatepd = template.replace('t1', 'pd')
+
+            # assume pd comes from the dual echo sequence
+            minc.resample_labels(patient[tp].clp['mask'],
+                                minc.tmp('t2_mask.mnc'),
+                                transform=patient[tp].clp['t2t1xfm'],
+                                invert_transform=True,
+                                like=patient[tp].clp['pd'])
+
             minc.nu_correct(patient[tp].clp['pd'], 
                             output_image=minc.tmp('clp2_pd.mnc'), 
-                            mask=patient[tp].clp['mask'], 
+                            mask=minc.tmp('t2_mask.mnc'), 
                             mri3t=patient.mri3T )
 
             minc.volume_pol(
                 minc.tmp('clp2_pd.mnc'),
                 templatet2,
                 patient[tp].clp2['pd'],
-                source_mask=patient[tp].clp['mask'],
+                source_mask=minc.tmp('t2_mask.mnc'),
                 target_mask=template_mask,
                 datatype='-short' )
 
