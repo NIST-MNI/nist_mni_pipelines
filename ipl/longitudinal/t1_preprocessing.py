@@ -17,6 +17,7 @@ from optparse import OptionParser  # to change when python updates in the machin
 from optparse import OptionGroup  # to change when python updates in the machines for argparse
 
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 
 import ipl.registration
 import ipl.ants_registration
@@ -55,14 +56,13 @@ def pipeline_t1preprocessing(patient, tp):
     modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
     with mincTools(  ) as minc:
-        minc.qc(
+        minc_qc.qc(
             patient[tp].stx_mnc['t1'],
             patient[tp].qc_jpg['stx_t1'],
             title=patient[tp].qc_title,
             image_range=[0, 120],
-            mask=modeloutline,
-            big=True,
-            clamp=True,
+            mask=modeloutline,dpi=200,use_max=True,
+            samples=20,bg_color="black",fg_color="white"
             )
     return True
 

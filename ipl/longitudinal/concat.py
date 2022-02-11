@@ -36,8 +36,8 @@ def pipeline_concat(patient, tp):
                 title=patient[tp].qc_title,
                 image_range=[0, 120],
                 mask=atlas_outline,
-                big=True,
-                clamp=True,
+                samples=20,
+                
             )
     return True
     

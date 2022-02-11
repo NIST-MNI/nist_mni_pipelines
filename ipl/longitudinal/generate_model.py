@@ -19,7 +19,7 @@ import shutil
 import os
 import sys
 from ipl.minc_tools import mincTools,mincError
-
+from ipl import minc_qc
 
 class MriSample(object):
 
@@ -138,8 +138,8 @@ class ModelIterationSample(MriSample):
 
     def create_qc_image(self):
         """Create QC image"""
-        with mincTools() as minc:
-            minc.qc(self.mri, self.prefix + '_qc.jpg',mask=self.mask)
+        minc_qc.qc(self.mri, self.prefix + '_qc.jpg',
+            mask=self.mask,bg_color="black",fg_color="white",use_max=True)
 
 
 # read MRI samples from a csv file

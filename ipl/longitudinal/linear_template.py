@@ -16,6 +16,7 @@ import traceback
 from ipl.model.generate_linear             import generate_linear_model
 from ipl.model.registration             import xfmavg
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 
 import ipl.registration
 #import ipl.ants_registration
@@ -64,28 +65,25 @@ def pipeline_linearlngtemplate(patient):
             atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
             # qc linear template
-            minc.qc(
+            minc_qc.qc(
                 patient.template['linear_template'],
                 patient.qc_jpg['linear_template'],
                 title=patient.id,
                 image_range=[0, 120],
-                big=True,
-                clamp=True,
+                samples=20,dpi=200,use_max=True,
                 mask=atlas_outline
                 )
 
             # qc stx2
 
             for (i, tp) in patient.items():
-                minc.qc(
+                minc_qc.qc(
                     tp.stx2_mnc['t1'],
                     tp.qc_jpg['stx2_t1'],
                     title=tp.qc_title,
                     image_range=[0, 120],
-                    mask=atlas_outline,
-                    big=True,
-                    clamp=True,
-                    )
+                    mask=atlas_outline,use_max=True,
+                    samples=20,dpi=200  )
     except mincError as e:
         print("Exception in average_transforms:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)

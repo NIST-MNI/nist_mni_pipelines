@@ -14,6 +14,8 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
+
 import ipl.registration
 import ipl.ants_registration
 import ipl.elastix_registration
@@ -62,16 +64,15 @@ def pipeline_t2pdpreprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_mnc['t2']):
 
         with mincTools( ) as minc:
-            minc.qc(
+            minc_qc.qc(
                 patient[tp].stx_mnc['t1'],
                 patient[tp].qc_jpg['t1t2'],
                 title=patient[tp].qc_title,
                 image_range=[0, 100],
                 mask=patient[tp].stx_mnc['t2'],
-                big=True,
-                clamp=True,
-                red=True,
-                green_mask=True
+                samples=20,dpi=200,use_max=True,
+                image_cmap='red',
+                mask_cmap='green',
                 )
     return True
 
