@@ -142,6 +142,9 @@ def launchPipeline(options):
         if 'rigid' in _opts:
             options.rigid = _opts['rigid']
 
+        if 'nl_ants' in _opts:
+            options.nl_ants = _opts['nl_ants']
+
         # TODO: add more options
     # patients dictionary
     patients = {}
@@ -272,8 +275,9 @@ def launchPipeline(options):
                                              'vbm_nl_level':options.vbm_nl,
                                              'vbm_nl_method':'minctracc' }
 
-                #if options.sym == True:
-                    #patients[id].nl_method = 'bestsym1stepnlreg.pl'
+                if options.nl_ants :
+                    patients[id].nl_method = 'ANTS'
+                    patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
                 # end of creating a patient
 
@@ -804,9 +808,6 @@ def parse_options():
         help='VBM nl level'
         )
 
-
-    # group.add_argument("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
-
     group.add_argument(
         '--nogeo',
         dest='geo',
@@ -898,6 +899,14 @@ def parse_options():
         help='Use lsq6 for linear average',
         action='store_true',
         default=False
+        )
+
+    group.add_argument(
+        '--nl_ants',
+        dest='nl_ants',
+        help='Use ANTs for nonlinear registration',
+        action='store_true',
+        default=False,
         )
 
     group.add_argument(

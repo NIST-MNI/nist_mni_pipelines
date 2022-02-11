@@ -10,6 +10,7 @@ version = '1.0'
 # Atlas registration
 #
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 import ipl.registration
 import ipl.ants_registration
 import ipl.elastix_registration
@@ -40,27 +41,47 @@ def atlasregistration_v10(patient):
         model_t1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
         model_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
 
-        ipl.registration.non_linear_register_full(
-            patient.template['nl_template'],
-            model_t1,
-            patient.nl_xfm,
-            source_mask=patient.template['nl_template_mask'],
-            target_mask=model_mask,
-            level=nl_level,
-            )
+        if patient.nl_method == 'nlfit_s' or patient.nl_method == 'minctracc':
+            ipl.registration.non_linear_register_full(
+                patient.template['nl_template'],
+                model_t1,
+                patient.nl_xfm,
+                source_mask=patient.template['nl_template_mask'],
+                target_mask=model_mask,
+                level=nl_level,
+                )
+        elif patient.nl_method == 'ANTS' or patient.nl_method == 'ants': # ANTs ?
+             ipl.ants_registration.non_linear_register_ants2(
+                    patient.template['nl_template'], model_t1,
+                    patient.nl_xfm,
+                    source_mask=patient.template['nl_template_mask'],
+                    target_mask=model_mask,
+                    level=nl_level,
+                    parameters={'convergence':'1.e-7,10',
+                                'cost_function':'CC',
+                                'cost_function_par':'1,3,Regular,1.0'}
+                    )
+        else:
+            ipl.elastix_registration.register_elastix(
+                    patient.template['nl_template'], model_t1,
+                    patient.nl_xfm,
+                    source_mask=patient.template['nl_template_mask'],
+                    target_mask=model_mask,
+                    nl=True )
         
         # make QC image, similar to linear ones
         if not os.path.exists(patient.qc_jpg['nl_template_nl']):
             atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
             minc.resample_smooth(patient.template['nl_template'],minc.tmp('nl_atlas.mnc'),transform=patient.nl_xfm)
-            minc.qc(
+            minc_qc.qc(
                 minc.tmp('nl_atlas.mnc'),
                 patient.qc_jpg['nl_template_nl'],
                 title=patient.id,
                 image_range=[0, 120],
-                big=True,
-                clamp=True,
-                mask=atlas_outline
+                samples=20,
+                dpi=200,
+                mask=atlas_outline,use_max=True,
+                bg_color='black',fg_color='white'
                 )
         
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
