@@ -129,6 +129,9 @@ def qc(
         dpi -- graphics file DPI, default 100
         ialpha -- alpha channel for colour mixing of main image
         oalpha -- alpha channel for colour mixing of mask image
+        format -- file format override
+        bg_color -- background color
+        fg_color -- foreground color
     """
     
     _img=minc2_file(input)
@@ -285,8 +288,9 @@ def qc(
             cbar = fig.colorbar(imgplot)
         
         if title is not None:
-            plt.suptitle(title,fontsize=20)
-            plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
+            plt.suptitle(title,fontsize=10)
+            #plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
+            plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
         else:
             plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
 
