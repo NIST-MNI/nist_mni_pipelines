@@ -8,7 +8,7 @@
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
-
+from ipl import minc_qc
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -24,10 +24,10 @@ def pipeline_lobe_segmentation(patient, tp):
 
     # lobes qc
     with mincTools() as minc:
-        minc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['lobes'],
+        minc_qc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['lobes'],
                 title=patient[tp].qc_title, image_range=[0,120],
-                mask=patient[tp].stx2_mnc['lobes'],labels_mask=True,
-                big=True,clamp=True   )
+                mask=patient[tp].stx2_mnc['lobes'],dpi=200,use_max=True,
+                samples=20, bg_color="black",fg_color="white"  )
 
     return True
 

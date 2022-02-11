@@ -16,7 +16,7 @@ from optparse import OptionParser  # to change when python updates in the machin
 from optparse import OptionGroup  # to change when python updates in the machines for argparse
 
 from ipl.minc_tools import mincTools,mincError
-
+from ipl import minc_qc
 
 
 # Run preprocessing using patient info
@@ -210,14 +210,13 @@ def skullstripping_v10(params):
                                  transform=params.ns_xfmt1)
 
         if params.qc_stx_mask is not None:
-            minc.qc(
+            minc_qc.qc(
                 params.stxt1,
                 params.qc_stx_mask,
                 title=params.qc_title,
                 image_range=[0, 120],
-                mask=params.stx_mask,
-                big=True,
-                clamp=True,
+                mask=params.stx_mask,dpi=200,use_max=True,
+                samples=20,bg_color="black",fg_color="white"
                 )
 
 if __name__ == '__main__':
