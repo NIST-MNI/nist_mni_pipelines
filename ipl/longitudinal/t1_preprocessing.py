@@ -221,6 +221,17 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
+        # HACK
+        # run redskull segmentation to create skull mask
+        redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth"
+
+        minc.command(['python', 'py_deep_seg/apply_multi_model.py', redskull_model,
+                     '--stride', '32', '--patch', '144', 
+                     '--crop', '8', '--padvol', '16', '--cpu',
+                    patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull']],
+                    inputs=[patient[tp].stx_mnc['t1']],outputs=[patient[tp].stx_mnc['redskull']])
+ 
+        minc.calc([patient[tp].stx_mnc['redskull']],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', patient[tp].stx_mnc['skull'],labels=True)
 
 
 if __name__ == '__main__':

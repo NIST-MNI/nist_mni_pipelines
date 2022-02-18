@@ -398,7 +398,8 @@ def setFilenames(patient):
         os.makedirs(voldir,exist_ok=True)
         lngdir = patient[tp].tpdir + 'lng' + os.sep
         os.makedirs(lngdir,exist_ok=True)
-
+        segdir = patient[tp].tpdir + 'seg' + os.sep
+        os.makedirs(lngdir,exist_ok=True)
         # take the sequences of the patient from the native images
         # this includes t1,t2,pd and t2les
 
@@ -498,7 +499,12 @@ def setFilenames(patient):
         patient[tp].clp2["mask"]       = clp2dir+'clp2_'+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx_mnc["mask"]    = stxdir+"stx_"+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx2_mnc["mask"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_mask.mnc"
-        
+
+        # HACK
+        patient[tp].stx_mnc["redskull"]    = segdir+"stx_"+patient.id+"_"+tp+"_redskull2.mnc"
+        patient[tp].stx_mnc["skull"]    = segdir+"stx_"+patient.id+"_"+tp+"_skull.mnc"
+
+
         # depricated files
         patient[tp].stx2_mnc["rhc"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_rhc.mnc"
         patient[tp].stx2_mnc["lhc"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_lhc.mnc"

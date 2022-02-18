@@ -157,22 +157,22 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False):
         # 3. concatenate all transforms
         if patient.skullreg:
             # skullreg
-            tmpstx2xfm = minc.tmp('stx2tmp' + patient.id + '_' + i + '.xfm')
+            # tmpstx2xfm = minc.tmp('stx2tmp' + patient.id + '_' + i + '.xfm')
             
             minc.xfmconcat([stx_xfm_file, xfmfile,
                         patient.template['stx2_xfm']],
-                        tmpstx2xfm)
+                        tp.stx2_xfm['t1'])
 
 
-            minc.skullregistration(
-                clp_tp,
-                patient.template['linear_template'],
-                tp.clp['mask'],
-                patient.template['linear_template_mask'],
-                stx_xfm_file,
-                tmpstx2xfm,
-                patient.template['stx2_xfm'],
-                )
+            # minc.skullregistration(
+            #     clp_tp,
+            #     patient.template['linear_template'],
+            #     tp.clp['mask'],
+            #     patient.template['linear_template_mask'],
+            #     stx_xfm_file,
+            #     tmpstx2xfm,
+            #     patient.template['stx2_xfm'],
+            #     )
         else:
             minc.xfmconcat([stx_xfm_file, xfmfile,
                         patient.template['stx2_xfm']],
@@ -233,6 +233,8 @@ def linearlngtemplate_v11(patient):
 
         atlas = patient.modeldir + os.sep + patient.modelname + '.mnc'
         atlas_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
+        atlas_skull_mask = patient.modeldir + os.sep + patient.modelname + '_skull.mnc'
+
         atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
         atlas_mask_novent = patient.modeldir + os.sep + patient.modelname + '_mask_novent.mnc'
 
@@ -241,7 +243,7 @@ def linearlngtemplate_v11(patient):
         biasdist = 100
         # if patient.mri3T: biasdist=50
         # VF: disabling, because it seem to be unstable
-        
+        # using skull mask if patients.skullreg
         options={   'symmetric':False,
                     'reg_type':'-lsq12',
                     'objective':'-xcorr',
@@ -260,7 +262,10 @@ def linearlngtemplate_v11(patient):
         # Here we are relying on the time point order (1)
 
         samples=None
-        if patient.rigid:
+        if patient.skullreg:
+            samples= [ [tp.stx_mnc['t1'],    tp.stx_mnc['skull']]
+                        for (i, tp) in patient.items() ]
+        elif patient.rigid:
             samples= [ [tp.stx_ns_mnc['t1'], tp.stx_ns_mnc['masknoles']]
                         for (i, tp) in patient.items() ]
         else:
@@ -282,8 +287,12 @@ def linearlngtemplate_v11(patient):
         # Create the new stx space using the template
         
         # TODO: add pre-scaling in case of rigid (?)
-
-        if patient.large_atrophy:
+        if patient.skullreg: # with skull registration we will not have a brain mask
+            ipl.registration.linear_register(patient.template['linear_template'],
+                                atlas, patient.template['stx2_xfm'],
+                                source_mask=patient.template['linear_template_mask'], 
+                                target_mask=atlas_skull_mask)
+        elif patient.large_atrophy:
             ipl.registration.linear_register(patient.template['linear_template'],
                                 atlas, patient.template['stx2_xfm'],
                                 source_mask=atlas_mask_novent,

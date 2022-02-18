@@ -877,7 +877,7 @@ def parse_options():
     group.add_argument(
         '--skullreg',
         dest='skullreg',
-        help='Run skull registration in stx2',
+        help='Run skull registration in stx2 (REDSKULL)',
         action='store_true',
         default=False,
         )
