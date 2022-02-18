@@ -399,7 +399,7 @@ def setFilenames(patient):
         lngdir = patient[tp].tpdir + 'lng' + os.sep
         os.makedirs(lngdir,exist_ok=True)
         segdir = patient[tp].tpdir + 'seg' + os.sep
-        os.makedirs(lngdir,exist_ok=True)
+        os.makedirs(segdir,exist_ok=True)
         # take the sequences of the patient from the native images
         # this includes t1,t2,pd and t2les
 
