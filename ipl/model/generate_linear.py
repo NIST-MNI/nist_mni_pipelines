@@ -61,6 +61,12 @@ def generate_linear_average(
     use_n4     = options.get('N4',False)
     use_median = options.get('median',False)
 
+    norot      = options.get('norot',False)
+    noshear    = options.get('noshear',False)
+    noshift    = options.get('noshift',False)
+    noscale    = options.get('noscale',False)
+    close      = options.get('close',False)
+
     models=[]
     models_sd=[]
     models_bias=[]
@@ -128,7 +134,12 @@ def generate_linear_average(
                         linreg=linreg,
                         work_dir=prefix,
                         bias=prev_bias_field,
-                        downsample=downsample)
+                        downsample=downsample,
+                        noshear=noshear,
+                        noscale=noscale,
+                        noshift=noshift,
+                        norot=norot,
+                        close=close)
                     )
                 inv_transforms.append(sample_inv_xfm)
                 fwd_transforms.append(sample_xfm)

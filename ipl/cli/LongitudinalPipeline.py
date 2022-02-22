@@ -349,7 +349,7 @@ def launchPipeline(options):
             print('{} - {}'.format(id,visit) )
             # store patients in the pickle
 
-    if options.pe is None: # use SCOOP to run all subjects in parallel
+    if options.pe is None: # use ray to run all subjects in parallel
         pickles = []
 
         for (id, i) in patients.items():
@@ -357,11 +357,12 @@ def launchPipeline(options):
             if not os.path.exists(i.pickle):
                 i.write(i.pickle)
             pickles.append(i.pickle)
-
+        
         jobs=[runPipeline.remote(i) for i in pickles] 
         # wait for all jobs to finish
-        _,_ = ray.wait(jobs,num_returns=len(jobs))
-        print('All subjects finished:%d' % len(jobs))
+        print("waiting for {} jobs".format(len(jobs)))
+        ray.get(jobs)
+        print('All subjects finished:{}'.format(len(jobs)))
 
     else: # USE SGE to submit one job per subject, using required peslots
         pickles = []
@@ -565,52 +566,47 @@ def runPipeline(pickle, workdir=None):
         patient = LngPatient.read(pickle)
         if not version == patient.pipeline_version:
             print(' #### NOT THE SAME PIPELINE VERSION!! ')
-            raise IplError('       - Change the pipeline version or restart all processing'
-                        )
+            raise IplError('       - Change the pipeline version or restart all processing' )
 
         setFilenames(patient)
-        print("Processing:")
-        patient.printself()
-
+        #print("Processing:")
+        #patient.printself()
 
         if workdir is not None:
-          patient.workdir=workdir
+            patient.workdir=workdir
         # prepare qc folder
 
         tps = sorted(patient.keys())
-        jobs=[]
+        jobs = []
         for tp in tps:
-            jobs.append(runTimePoint_FirstStage.remote(tp, patient))
+            jobs.append( runTimePoint_FirstStage.remote(tp, patient) )
 
-        ready,remain = ray.wait(jobs,num_returns=len(jobs))
-
-        print('First stage finished!',len(ready),len(remain))
-
+        ray.get(jobs)
         patient.write(patient.pickle)  # copy new images in the pickle
 
         jobs=[]
 
         if len(tps) == 1:
             for tp in tps:
-                ray.wait([runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  )])
+                ray.get([runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  )])
         else:
+            
             # create longitudinal template
             # ############################
             # it creates a new stx space (stx2) registering the linear template to the atlas
             # all images are aligned using this new template and the bias correction used in the template creation
-
             pipeline_linearlngtemplate(patient)
 
             for tp in tps:
                 jobs.append(runSkullStripping.remote(tp , patient))
             # wait for all jobs to finish
-            ray.wait(jobs, num_returns=len(jobs))
+            ray.get(jobs)
 
             # using the stx2 space, we do the non-linear template
             # ################################################
             pipeline_lngtemplate(patient)
 
-            # non-linear registration of the template to the atlas
+             # non-linear registration of the template to the atlas
             # ##########################
             pipeline_atlasregistration(patient)
 
@@ -624,7 +620,7 @@ def runPipeline(pickle, workdir=None):
                 jobs.append(
                     runTimePoint_ThirdStage.remote( tp, patient
                     ))
-            ray.wait(jobs, num_returns=len(jobs))
+            ray.get(jobs)
 
             # longitudinal classification
             # ############################
@@ -637,7 +633,7 @@ def runPipeline(pickle, workdir=None):
             for tp in tps:
                 jobs.append(runTimePoint_FourthStage.remote( tp, patient, patient.vbm_options))
             
-            ray.wait(jobs, num_returns=len(jobs))
+            ray.get(jobs)
 
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -988,8 +984,7 @@ def main():
     opts.temporalregu = False
 
     if opts.ray_start is not None: # HACK?
-        #ray._private.services.address_to_ip = lambda x: '127.0.0.1'
-        ray.init()
+        ray.init(num_cpus=opts.ray_start)
     elif opts.ray_local:
         ray.init(local_mode=True)
     elif opts.ray_host is not None:
@@ -1007,5 +1002,9 @@ def main():
     else:
         print("missing something...")
         sys.exit(1)
+
+    if opts.ray_start is not None:
+        ray.shutdown()
+    
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

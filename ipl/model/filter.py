@@ -51,7 +51,6 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
     lll=1.0
 
     for i in range(1,len(infiles)):
-        print(infiles[i])
         in_minc=minc2_file(infiles[i])
         #TODO: check dimensions
         in_minc.setup_standard_order()
@@ -63,7 +62,6 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
         if out_sd is not None:
             vol_sd+=v*v
 
-        
     #Averaging
     vol_avg/=lll
     
@@ -169,7 +167,6 @@ def average_samples(
                         avg.append(s.mask_f)
 
                 if not os.path.exists(output.mask):
-                    
                     if symmetrize:
                         if have_minc2_simple:
                             faster_average(avg,m.tmp('avg_mask.mnc'))
@@ -185,11 +182,6 @@ def average_samples(
                         else:
                             m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
                         m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
-
-
-                    
-                    
-
         return  True
     except mincError as e:
         print("Exception in average_samples:{}".format(str(e)))

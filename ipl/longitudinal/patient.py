@@ -436,6 +436,9 @@ def setFilenames(patient):
                 + '_' + tp + '_' + s + '.mnc'
             patient[tp].stx_ns_xfm[s] = stxdir + 'nsstx_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
+            # hack
+            patient[tp].stx_ns_xfm['unscale_'+s] = stxdir + 'nsstx_unscale_' + patient.id \
+                + '_' + tp + '_' + s + '.xfm'
 
             # stx2 space
             patient[tp].stx2_mnc[s] = stx2dir + 'stx2_' + patient.id \
@@ -443,19 +446,9 @@ def setFilenames(patient):
             patient[tp].stx2_xfm[s] = stx2dir + 'stx2_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
 
-            # stx2 space
-            # patient[tp].stx2v0_mnc[s] = stx2dir+"stx2v0_"+patient.id+"_"+tp+"_"+s+".mnc"
-            # patient[tp].stx2v0_xfm[s] = stx2dir+"stx2v0_"+patient.id+"_"+tp+"_"+s+".xfm"
-            # if len(patient)==1: # cross sectional
-            #  patient[tp].stx2_mnc[s]  =patient[tp].stx_mnc[s]
-            #  patient[tp].stx2_xfm[s]  =patient[tp].stx_xfm[s]
-            # qc
-
             patient[tp].qc_jpg['stx_' + s] = patient.qcdir + 'qc_stx_' + s + '_' + patient.id + '_' + tp + '.jpg'
             patient[tp].qc_jpg['stx2_' + s] = patient.qcdir + 'qc_stx2_' + s + '_' + patient.id + '_' + tp + '.jpg'
             patient[tp].qc_jpg['nl_' + s] = patient.qcdir + 'qc_nl_' + s + '_' + patient.id + '_' + tp + '.jpg'
-
-            # patient[tp].qc_jpg["stx2v0_"+s]=patient.qcdir+"qc_stx2v0_"+s+"_"+patient.id+"_"+tp+".jpg"
 
             if not s == 't1':
                 patient[tp].qc_jpg['t1' + s] = patient.qcdir + 'qc_t1' \
@@ -502,7 +495,6 @@ def setFilenames(patient):
 
         # HACK
         patient[tp].stx_mnc["redskull"]    = segdir+"stx_"+patient.id+"_"+tp+"_redskull2.mnc"
-        patient[tp].stx_mnc["skull"]    = segdir+"stx_"+patient.id+"_"+tp+"_skull.mnc"
 
 
         # depricated files
@@ -512,8 +504,12 @@ def setFilenames(patient):
         patient[tp].stx2_mnc["lam"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_lam.mnc"
         patient[tp].stx2_mnc["vent"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_vent.mnc"
         
-        #patient[tp].stx2v0_mnc["mask"]   = stx2dir+"stx2v0_"+patient.id+"_"+tp+"_mask.mnc"
-        patient[tp].stx_ns_mnc["mask"] = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
+        # non-scaled
+        patient[tp].stx_ns_mnc["mask"]  = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
+        patient[tp].stx_ns_mnc["skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_skull.mnc"
+        patient[tp].stx_ns_mnc["head"]  = segdir+"nsstx_"+patient.id+"_"+tp+"_head.mnc"
+
+
         patient[tp].qc_jpg['stx_mask'] = patient.qcdir+"qc_stx_mask_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_mask']= patient.qcdir+"qc_stx2_mask_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_rhc']= patient.qcdir+"qc_stx2_rhc_"+patient.id+"_"+tp+".jpg"
@@ -524,6 +520,7 @@ def setFilenames(patient):
         patient[tp].qc_jpg['stx2_deep']= patient.qcdir+"qc_stx2_deep_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['lng_det']= patient.qcdir+"qc_lngdet_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['nl_det']= patient.qcdir+"qc_nldet_"+patient.id+"_"+tp+".jpg"
+        patient[tp].qc_jpg['stx_skull']= patient.qcdir+"qc_stx_skull_"+patient.id+"_"+tp+".jpg"
         
         if 't2les' in patient[tp].native:
             patient[tp].stx_mnc['masknoles'] = stxdir + 'stx_' \
@@ -645,10 +642,14 @@ def setFilenames(patient):
         + 'lin_template_' + patient.id + '_t1_sd.mnc'
     patient.template['linear_template_mask'] = lngtmpldir \
         + 'lin_template_' + patient.id + '_mask.mnc'
+    patient.template['scale_xfm'] = lngtmpldir + 'lin_template_scale_' \
+        + patient.id + '_t1.xfm'
     patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' \
         + patient.id + '_t1.xfm'
     patient.qc_jpg['linear_template'] = patient.qcdir \
         + 'qc_lin_template_' + patient.id + '.jpg'
+    patient.template['linear_template_mask'] = lngtmpldir \
+        + 'lin_template_' + patient.id + '_mask.mnc'
 
     # b) non-linear
 

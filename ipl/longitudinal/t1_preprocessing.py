@@ -27,6 +27,8 @@ from .patient import *
 
 import shutil
 
+import ray
+
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
 # - pipeline_version is employed to select the correct version of the pipeline
@@ -63,6 +65,75 @@ def pipeline_t1preprocessing(patient, tp):
             clamp=True,
             )
     return True
+
+
+### HACK 
+# to share GPUs properly
+@ray.remote(num_gpus=1,num_cpus=1)
+def run_redskull_gpu(in_t1w, out_redskull, out_skull, out_qc=None,qc_title=None,
+    redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth"):
+    with mincTools() as minc:
+        # run redskull segmentation to create skull mask
+        minc.command(['python', 'py_deep_seg/apply_multi_model.py', 
+                        redskull_model,
+                        '--stride', '32', '--patch', '144', 
+                        '--crop', '8', '--padvol', '16', # '--cpu',
+                        in_t1w,out_redskull],
+                    inputs=[in_t1w], outputs=[out_redskull])
+        
+        minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
+            out_skull, labels=True)
+        
+        if out_qc is not None:
+            minc.qc(
+                in_t1w,
+                out_qc,
+                title=qc_title,
+                image_range=[0, 120],
+                mask=out_skull,
+                big=True,
+                clamp=True
+                )
+
+### HACK 
+# to share GPUs properly
+@ray.remote(num_cpus=4)
+def run_redskull_cpu(in_t1w, out_redskull, 
+        unscale_xfm, out_ns_skull,out_ns_head, 
+        out_qc=None,qc_title=None,reference=None,
+        redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth" ):
+    with mincTools() as minc:
+        # run redskull segmentation to create skull mask
+        if not os.path.exists(out_redskull):
+            # HACK : TODO: figure out why it is so slow!
+            os.environ['OMP_NUM_THREADS']='4'
+            # 
+            subprocess.run(['python', 'py_deep_seg/apply_multi_model.py', 
+                            redskull_model,
+                            '--stride', '32', '--patch', '96', 
+                            '--crop', '8', '--padvol', '16', '--cpu',
+                            in_t1w, out_redskull ])
+        
+        # generate unscaling transform
+        minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
+            minc.tmp("skull.mnc"), labels=True)
+        minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
+            minc.tmp("head.mnc"), labels=True)
+        
+        minc.resample_labels(minc.tmp("skull.mnc"),out_ns_skull,transform=unscale_xfm,like=reference)
+        minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
+        
+        if out_qc is not None:
+            minc.qc(
+                in_t1w,
+                out_qc,
+                title=qc_title,
+                image_range=[0, 120],
+                mask=minc.tmp("skull.mnc"),
+                big=True,
+                clamp=True
+                )
+
 
 
 def t1preprocessing_v10(patient, tp):
@@ -213,8 +284,8 @@ def t1preprocessing_v10(patient, tp):
                               transform=patient[tp].stx_xfm['t1'] )
 
         # stx no scale
-        minc.xfm_noscale( patient[tp].stx_xfm['t1'],
-                          patient[tp].stx_ns_xfm['t1'])
+        minc.xfm_noscale( pVerboseatient[tp].stx_ns_xfm['t1'],
+                          unscale=patient[tp].stx_ns_xfm['unscale_t1'])
 
         minc.resample_smooth(t1_corr,
                              patient[tp].stx_ns_mnc['t1'],
@@ -222,17 +293,12 @@ def t1preprocessing_v10(patient, tp):
                              transform=patient[tp].stx_ns_xfm['t1'])
 
         # HACK
-        # run redskull segmentation to create skull mask
-        redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth"
-
-        minc.command(['python', 'py_deep_seg/apply_multi_model.py', redskull_model,
-                     '--stride', '32', '--patch', '144', 
-                     '--crop', '8', '--padvol', '16', '--cpu',
-                    patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull']],
-                    inputs=[patient[tp].stx_mnc['t1']],outputs=[patient[tp].stx_mnc['redskull']])
- 
-        minc.calc([patient[tp].stx_mnc['redskull']],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', patient[tp].stx_mnc['skull'],labels=True)
-
+        ray.get(run_redskull_cpu.remote(
+            patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull'],
+            patient[tp].stx_ns_xfm['unscale_t1'],
+            patient[tp].stx_ns_mnc["skull"], patient[tp].stx_ns_mnc["head"],
+            out_qc=patient[tp].qc_jpg['stx_skull'],
+            qc_title=patient[tp].qc_title, reference=modelmask ))
 
 if __name__ == '__main__':
 
