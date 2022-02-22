@@ -284,7 +284,7 @@ def t1preprocessing_v10(patient, tp):
                               transform=patient[tp].stx_xfm['t1'] )
 
         # stx no scale
-        minc.xfm_noscale( pVerboseatient[tp].stx_ns_xfm['t1'],
+        minc.xfm_noscale( patient[tp].stx_ns_xfm['t1'],patient[tp].stx_ns_xfm['t1'],
                           unscale=patient[tp].stx_ns_xfm['unscale_t1'])
 
         minc.resample_smooth(t1_corr,
