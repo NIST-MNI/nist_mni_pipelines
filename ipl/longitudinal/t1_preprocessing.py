@@ -134,6 +134,42 @@ def run_redskull_cpu(in_t1w, out_redskull,
                 clamp=True
                 )
 
+### HACK 
+@ray.remote(num_cpus=4)
+def run_redskull_ov(in_t1w, out_redskull, 
+        unscale_xfm, out_ns_skull,out_ns_head, 
+        out_qc=None,qc_title=None,reference=None,
+        redskull_model="/data/data01/vfonov/PreventAD/redskull.xml" ):
+    with mincTools() as minc:
+        # run redskull segmentation to create skull mask
+        if not os.path.exists(out_redskull):
+            # HACK : TODO: figure out why it is so slow!
+            #os.environ['OMP_NUM_THREADS']='4'
+            # 
+            subprocess.run(['python', '/data/data01/vfonov/PreventAD/py_deep_seg/apply_multi_model_ov.py', 
+                            redskull_model, 
+                            '--stride', '32', '--patch', '96', '--crop', '8', '--padvol', '16', '--threads', '4',
+                            in_t1w, out_redskull ])
+        
+        # generate unscaling transform
+        minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
+            minc.tmp("skull.mnc"), labels=True)
+        minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
+            minc.tmp("head.mnc"), labels=True)
+        
+        minc.resample_labels(minc.tmp("skull.mnc"),out_ns_skull,transform=unscale_xfm,like=reference)
+        minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
+        
+        if out_qc is not None:
+            minc.qc(
+                in_t1w,
+                out_qc,
+                title=qc_title,
+                image_range=[0, 120],
+                mask=minc.tmp("skull.mnc"),
+                big=True,
+                clamp=True
+                )
 
 
 def t1preprocessing_v10(patient, tp):
@@ -293,7 +329,7 @@ def t1preprocessing_v10(patient, tp):
                              transform=patient[tp].stx_ns_xfm['t1'])
 
         # HACK
-        ray.get(run_redskull_cpu.remote(
+        ray.get(run_redskull_ov.remote(
             patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull'],
             patient[tp].stx_ns_xfm['unscale_t1'],
             patient[tp].stx_ns_mnc["skull"], patient[tp].stx_ns_mnc["head"],
