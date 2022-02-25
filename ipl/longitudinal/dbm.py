@@ -31,8 +31,8 @@ def pipeline_lngDBM(patient, tp=None):
             patient[tp].qc_jpg['lng_det'],
             title=patient[tp].qc_title,
             image_range=[0, 120],
-            big=True,
-            clamp=True,
+            samples=20,
+            
             mask=patient[tp].lng_det['t1'],
             cyanred_mask=True )
 

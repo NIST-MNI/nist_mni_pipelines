@@ -10,6 +10,7 @@
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 import shutil
 
 version = '1.0'
@@ -377,27 +378,13 @@ def lng_classification_v10(patient):
         # create QC images for all timepoints
 
         for (i, tp) in patient.items():
-            comm = [
-                'minc_qc.pl',
+            minc_qc.qc(
                 tp.stx2_mnc['t1'],
                 tp.qc_jpg['lngclassification'],
-                '--title',
-                tp.qc_title,
-                '--image-range',
-                '0',
-                '120',
-                '--mask',
-                tp.stx2_mnc['lng_classification'],
-                '--labels-mask',
-                '--big',
-                '--clamp',
-                ]
-
-            if command(comm, [tp.stx2_mnc['t1'],
-                    tp.stx2_mnc['lng_classification']],
-                    [tp.qc_jpg['lngclassification']],
-                    patient.cmdfile, patient.logfile):
-                raise IplError(' -- ERROR : QC :: ' + comm[0])
-
+                title=tp.qc_title,
+                image_range=[0,120],dpi=200,use_max=True,
+                mask=tp.stx2_mnc['lng_classification'],
+                samples=20,bg_color="black",fg_color="white")
+            
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

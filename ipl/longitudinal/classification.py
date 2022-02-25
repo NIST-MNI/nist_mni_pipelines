@@ -12,7 +12,7 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
-
+from ipl import minc_qc
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -24,11 +24,10 @@ def pipeline_classification(patient, tp):
     else:
         classification_v10(patient, tp)  # beast by simon fristed
 
-    with mincTools() as minc:
-        minc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['classification'],
+    minc_qc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['classification'],
                 title=patient[tp].qc_title, image_range=[0,120],
-                mask=patient[tp].stx2_mnc['classification'],labels_mask=True,
-                big=True,clamp=True   )
+                mask=patient[tp].stx2_mnc['classification'],dpi=200,
+                samples=20,use_max=True,bg_color="black",fg_color="white" )
     return True
 
 
