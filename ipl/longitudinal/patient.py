@@ -69,7 +69,7 @@ class LngPatient(dict):
         self.temporalregu = False  # default no temporal regularization for template creations
         self.run_face = False  # default - do not attempt to run FACE
         self.run_deep = False  # default - do not perform deep structures segmentation
-        self.run_skullreg = False  # default - do not attempt to run skull registration
+        self.skullreg = False  # default - do not attempt to run skull registration
         self.large_atrophy = False  # default - do not use the ventricle mask for the linear template creation
         self.geo_corr = False  # default - do not perform distortion correction
         self.dodbm = False  #  default - do not create dbm files
@@ -82,8 +82,11 @@ class LngPatient(dict):
         self.modelname = ''  # model name
         self.beastdir = ''  # beast library directory
 
-        # patient data
+        self.redskull_ov = None # Redskull segmentation library for omnivision
+        self.redskull_pytorch = None # Redskull segmentation library for pytorch
+        self.py_deep_seg = None # Location of deep segmentation script
 
+        # patient data
         self.id = id  # subject id
         self.sex = ''  # subject gender
         self.clinicaldata = {}  # additional info
