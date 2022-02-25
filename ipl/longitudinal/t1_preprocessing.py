@@ -101,14 +101,15 @@ def run_redskull_gpu(in_t1w, out_redskull, out_skull, out_qc=None,qc_title=None,
 def run_redskull_cpu(in_t1w, out_redskull, 
         unscale_xfm, out_ns_skull,out_ns_head, 
         out_qc=None,qc_title=None,reference=None,
-        redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth" ):
+        redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth",
+        py_deep_seg="py_deep_seg" ):
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_redskull):
             # HACK : TODO: figure out why it is so slow!
             os.environ['OMP_NUM_THREADS']='4'
             # 
-            subprocess.run(['python', 'py_deep_seg/apply_multi_model.py', 
+            subprocess.run(['python', os.path.join(py_deep_seg,'apply_multi_model_ov.py'), 
                             redskull_model,
                             '--stride', '32', '--patch', '96', 
                             '--crop', '8', '--padvol', '16', '--cpu',
@@ -139,6 +140,7 @@ def run_redskull_cpu(in_t1w, out_redskull,
 def run_redskull_ov(in_t1w, out_redskull, 
         unscale_xfm, out_ns_skull,out_ns_head, 
         out_qc=None,qc_title=None,reference=None,
+        py_deep_seg="py_deep_seg",
         redskull_model="/data/data01/vfonov/PreventAD/redskull.xml" ):
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
@@ -146,7 +148,7 @@ def run_redskull_ov(in_t1w, out_redskull,
             # HACK : TODO: figure out why it is so slow!
             #os.environ['OMP_NUM_THREADS']='4'
             # 
-            subprocess.run(['python', '/data/data01/vfonov/PreventAD/py_deep_seg/apply_multi_model_ov.py', 
+            subprocess.run(['python', os.path.join(py_deep_seg,'apply_multi_model_ov.py'), 
                             redskull_model, 
                             '--stride', '32', '--patch', '96', '--crop', '8', '--padvol', '16', '--threads', '4',
                             in_t1w, out_redskull ])
@@ -328,13 +330,16 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
-        # HACK
-        ray.get(run_redskull_ov.remote(
-            patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull'],
-            patient[tp].stx_ns_xfm['unscale_t1'],
-            patient[tp].stx_ns_mnc["skull"], patient[tp].stx_ns_mnc["head"],
-            out_qc=patient[tp].qc_jpg['stx_skull'],
-            qc_title=patient[tp].qc_title, reference=modelmask ))
+        if patient[tp].py_deep_seg is not None and patient[tp].redskull_ov is not None:
+            ray.get(run_redskull_ov.remote(
+                patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull'],
+                patient[tp].stx_ns_xfm['unscale_t1'],
+                patient[tp].stx_ns_mnc["skull"], patient[tp].stx_ns_mnc["head"],
+                out_qc=patient[tp].qc_jpg['stx_skull'],
+                qc_title=patient[tp].qc_title, 
+                reference=modelmask,
+                py_deep_seg=patient[tp].py_deep_seg,
+                redskull_ov=patient[tp].redskull_ov ))
 
 if __name__ == '__main__':
 

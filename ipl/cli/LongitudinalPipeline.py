@@ -21,7 +21,7 @@ from ipl.longitudinal.general            import *  # functions to call binaries 
 from ipl.longitudinal.patient            import *  # class to store all the data
 
 
-from  ipl.minc_tools import mincTools,mincError
+from ipl.minc_tools import mincTools,mincError
 
 # files storing all processing
 from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing
@@ -94,6 +94,12 @@ def launchPipeline(options):
 
         if 'skullreg' in _opts:
             options.skullreg=_opts['skullreg']
+            
+        if 'redskull_ov' in _opts:
+            options.redskull_ov=_opts['redskull_ov']
+
+        if 'py_deep_seg' in _opts:
+            options.py_deep_seg=_opts['py_deep_seg']
 
         if 'large_atrophy' in _opts:
             options.large_atrophy=_opts['large_atrophy']
@@ -127,7 +133,6 @@ def launchPipeline(options):
 
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
-
 
         if 'vbm_options' in _opts:
             options.vbm_blur = _opts['vbm_options'].get('vbm_blur',4.0)
@@ -263,6 +268,7 @@ def launchPipeline(options):
                 patients[id].fast     = options.fast
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
+                patients[id].redskull_ov = options.redskull_ov
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
                 patients[id].linreg   = options.linreg
@@ -873,10 +879,22 @@ def parse_options():
     group.add_argument(
         '--skullreg',
         dest='skullreg',
-        help='Run skull registration in stx2 (REDSKULL)',
+        help='Run skull registration in stx (REDSKULL)',
         action='store_true',
         default=False,
         )
+
+    group.add_argument('--redskull_ov', 
+                     dest='redskull_ov',
+                     help='omnivisoon library for redskull ',
+                     default='redskull.xml'
+                     )
+    
+    group.add_argument('--py_deep_seg', 
+                     dest='py_deep_seg',
+                     help='Location of py_deep_seg scripts '
+                     )
+    
 
     group.add_argument(
         '--large_atrophy',
