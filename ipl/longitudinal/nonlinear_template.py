@@ -92,7 +92,8 @@ def lngtemplate_v11(patient):
             patient.qc_jpg['nl_template'],
             title=patient.id,
             image_range=[0, 120],
-            big=True
+            samples=20,
+            bg_color='black',fg_color='white'
             )
 
         # copy each timepoint images too

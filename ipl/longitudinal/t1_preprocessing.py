@@ -55,15 +55,14 @@ def pipeline_t1preprocessing(patient, tp):
 
     modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
-    with mincTools(  ) as minc:
-        minc_qc.qc(
-            patient[tp].stx_mnc['t1'],
-            patient[tp].qc_jpg['stx_t1'],
-            title=patient[tp].qc_title,
-            image_range=[0, 120],
-            mask=modeloutline,dpi=200,use_max=True,
-            samples=20,bg_color="black",fg_color="white"
-            )
+    minc_qc.qc(
+        patient[tp].stx_mnc['t1'],
+        patient[tp].qc_jpg['stx_t1'],
+        title=patient[tp].qc_title,
+        image_range=[0, 120],
+        mask=modeloutline,dpi=200,use_max=True,
+        samples=20,bg_color="black",fg_color="white"
+        )
     return True
 
 
@@ -330,7 +329,7 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
-        if patient[tp].py_deep_seg is not None and patient[tp].redskull_ov is not None:
+        if patient.py_deep_seg is not None and patient.redskull_ov is not None:
             ray.get(run_redskull_ov.remote(
                 patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull'],
                 patient[tp].stx_ns_xfm['unscale_t1'],
@@ -338,8 +337,8 @@ def t1preprocessing_v10(patient, tp):
                 out_qc=patient[tp].qc_jpg['stx_skull'],
                 qc_title=patient[tp].qc_title, 
                 reference=modelmask,
-                py_deep_seg=patient[tp].py_deep_seg,
-                redskull_ov=patient[tp].redskull_ov ))
+                py_deep_seg=patient.py_deep_seg,
+                redskull_ov=patient.redskull_ov ))
 
 if __name__ == '__main__':
 

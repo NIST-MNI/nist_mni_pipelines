@@ -37,6 +37,7 @@ def atlasregistration_v10(patient):
     if patient.fast:  # fast mode
         nl_level = 4
 
+    print("nl_method:",patient.nl_method)
     with mincTools() as minc:
         model_t1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
         model_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
@@ -51,16 +52,43 @@ def atlasregistration_v10(patient):
                 level=nl_level,
                 )
         elif patient.nl_method == 'ANTS' or patient.nl_method == 'ants': # ANTs ?
-             ipl.ants_registration.non_linear_register_ants2(
-                    patient.template['nl_template'], model_t1,
-                    patient.nl_xfm,
-                    source_mask=patient.template['nl_template_mask'],
-                    target_mask=model_mask,
-                    level=nl_level,
-                    parameters={'convergence':'1.e-7,10',
-                                'cost_function':'CC',
-                                'cost_function_par':'1,3,Regular,1.0'}
+            if patient.fast:  # fast mode
+                ipl.ants_registration.non_linear_register_ants2(
+                        patient.template['nl_template'], model_t1,
+                        patient.nl_xfm,
+                        source_mask=patient.template['nl_template_mask'],
+                        target_mask=model_mask,
+                        start=16,
+                        level=4,
+                        parameters={'transformation':'SyN[.7,3,0]',
+                                    'conf':  {16:50,8:50,4:20,2:20,1:20},
+                                    'shrink':{16:16,8:8,4:4,2:2,1:1},
+                                    'blur':  {16:12,8:6,4:3,2:1,1:0},
+                                    'winsorize-image-intensities':True,
+                                    'convergence':'1.e-7,10',
+                                    'cost_function':'CC',
+                                    'use_float': True,
+                                    'cost_function_par':'1,3,Regular,1.0'}
                     )
+            else:
+                ipl.ants_registration.non_linear_register_ants2(
+                        patient.template['nl_template'], model_t1,
+                        patient.nl_xfm,
+                        source_mask=patient.template['nl_template_mask'],
+                        target_mask=model_mask,
+                        start=16,
+                        level=1,
+                        parameters={'transformation':'SyN[.7,3,0]',
+                                    'conf':  {16:50,8:50,4:50,2:50,1:50},
+                                    'shrink':{16:16,8:8,4:4,2:2,1:1},
+                                    'blur':  {16:12,8:6,4:3,2:1,1:0},
+                                    'winsorize-image-intensities':True,
+                                    'convergence':'1.e-7,10',
+                                    'cost_function':'CC',
+                                    'use_float': True,
+                                    'cost_function_par':'1,3,Regular,1.0'}
+                    )
+
         else:
             ipl.elastix_registration.register_elastix(
                     patient.template['nl_template'], model_t1,

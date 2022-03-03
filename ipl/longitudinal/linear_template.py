@@ -274,8 +274,8 @@ def linearlngtemplate_v11(patient):
             unscale_xfms = [ tp.stx_ns_xfm['unscale_t1'] 
                         for (i, tp) in patient.items() ]
             
-            xfmavg(unscale_xfms,minc.tmp('avg_unscale.xfm'))
-            minc.xfminvert(minc.tmp('avg_unscale.xfm'),patient.template['scale_xfm'])
+            xfmavg(unscale_xfms, minc.tmp('avg_unscale.xfm'))
+            minc.xfminvert(minc.tmp('avg_unscale.xfm'), patient.template['scale_xfm'])
         elif patient.rigid:
             print("linearlngtemplate_v11: rigid")
             samples= [ [tp.stx_ns_mnc['t1'], tp.stx_ns_mnc['masknoles']]
@@ -372,7 +372,10 @@ def linearlngtemplate_v11(patient):
             if patient.dobiascorr:
                 biascorr=output['biascorr'][k]
             # Here we are relying on the time point order (1) - see above
-            jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid,transform2=output_2['xfm'][k]))
+            if patient.skullreg:
+                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=True, transform2=output_2['xfm'][k]))
+            else:
+                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid ))
             k+=1
         
         # wait for all substeps to finish
