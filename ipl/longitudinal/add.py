@@ -71,8 +71,8 @@ def pipeline_run_add(patient):
                     with open(options,'r') as f:
                         options=json.load(f)
                 
-                library=ipl.segment.SegLibrary( library )
-                print(repr(library))
+                library = ipl.segment.SegLibrary( library )
+                
                 if os.path.exists(output_prefix+'_seg.mnc'):
                     print('ADD:{} already done!'.format(output_name))
                 else:
@@ -96,7 +96,7 @@ def pipeline_run_add_tp(patient, tp):
         
         library=None
         if 'segment_library' in j:
-            library=ipl.segment.load_library_info( j['segment_library'] )
+            library=ipl.segment.SegLibrary(j['segment_library'])
             
         options=j.get('segment_options',{})
         
@@ -156,9 +156,8 @@ def pipeline_run_add_tp(patient, tp):
                             [11,  'globus_pallidus_right'],
                             [29,  'fornix_left'],
                             [254, 'fornix_right'],
-                            [28,  'skull'] ]
-                
-            with mincTools() as minc: 
+                            [28,  'skull'] ]                
+            with mincTools() as minc:
                 if j.get('warp',False):
                     minc.resample_labels(template_seg, output_seg,
                             transform=nl_xfm,
