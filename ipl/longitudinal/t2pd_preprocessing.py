@@ -282,6 +282,7 @@ def t2pdpreprocessing_v10(patient, tp):
             tmpstats = minc.tmp('volpol_pd.stats')
             tmp_pd_t1_xfm = minc.tmp('pd_t1_0.xfm')
             tmp_pd_stx_xfm = minc.tmp('pd_stx_0.xfm')
+            init_xfm = None
 
             # 0. Convert to float (repair brokenfiles)
             minc.reshape(patient[tp].native['pd'], tmppd,
@@ -308,7 +309,6 @@ def t2pdpreprocessing_v10(patient, tp):
                 # tmp_xfm=tmpdir+'tmp_t1pd.xfm"'
                 print(' -- Using PD to register to T1')  # TODO: convert to minctools
                 
-                init_xfm = None
                 # VF: this is probably incorrect!
                 if 'stx_pd' in patient[tp].manual \
                     and os.path.exists(patient[tp].manual['stx_pd']):
@@ -435,7 +435,6 @@ def t2pdpreprocessing_v10(patient, tp):
 
             if 'pd' in patient[tp].geo and patient.geo_corr:
                 pd_corr = patient[tp].corr['pd']
-                
                 minc.resample_smooth( patient[tp].clp['pd'],
                                     pd_corr,
                                     transform=patient[tp].geo['t2'] )
@@ -446,7 +445,7 @@ def t2pdpreprocessing_v10(patient, tp):
                     pd_corr,
                     t1_corr,
                     patient[tp].clp['pdt1xfm'],
-                    init_xfm=tmp_t2_t1_xfm,
+                    init_xfm=init_xfm,
                     nocrop=True,
                     noautothreshold=True,
                     close=True,

@@ -72,6 +72,7 @@ def pipeline_linearlngtemplate(patient):
                 title=patient.id,
                 image_range=[0, 120],
                 samples=20,dpi=200,use_max=True,
+                bg_color="black",fg_color="white",
                 mask=atlas_outline
                 )
 
@@ -84,7 +85,7 @@ def pipeline_linearlngtemplate(patient):
                     title=tp.qc_title,
                     image_range=[0, 120],
                     mask=atlas_outline,use_max=True,
-                    samples=20,dpi=200  )
+                    samples=20,dpi=200,bg_color="black",fg_color="white"   )
     except mincError as e:
         print("Exception in average_transforms:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
