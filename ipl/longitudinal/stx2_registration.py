@@ -143,7 +143,7 @@ def linearatlasregistration_v10(patient, tp):
                 minc.tmp('clp2_pd.mnc'),
                 templatet2,
                 patient[tp].clp2['pd'],
-                source_mask=minc.tmp('t2_mask.mnc'),
+                source_mask=minc.tmp('t2_mask.mnc') ,
                 target_mask=template_mask,
                 datatype='-short' )
 
