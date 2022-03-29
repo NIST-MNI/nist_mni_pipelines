@@ -998,7 +998,7 @@ def main():
 
     if opts.ray_start is not None: # HACK?
         #ray._private.services.address_to_ip = lambda x: '127.0.0.1'
-        ray.init()
+        ray.init(num_cpus=opts.ray_start)
     elif opts.ray_local:
         ray.init(local_mode=True)
     elif opts.ray_host is not None:
