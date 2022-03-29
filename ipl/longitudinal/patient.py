@@ -424,7 +424,7 @@ def setFilenames(patient):
                 + tp + '_' + s + '.mnc'
 
             patient[tp].clp2[s] = clp2dir + 'clp2_' + patient.id + '_' \
-                + tp + '_t1.mnc'
+                + tp + '_' + s + '.mnc'
 
             # stx space
             patient[tp].stx_mnc[s] = stxdir + 'stx_' + patient.id + '_' \
