@@ -62,7 +62,8 @@ def atlasregistration_v10(patient):
                                 'conf':{"32":200,"16":200,"8":100,"4":100,"2":50},
                                 'blur':{"32":24, "16":12, "8":6,  "4":2,  "2":1},
                                 'cost_function':'CC',
-                                'cost_function_par':'1,3,Regular,1.0'}
+                                'cost_function_par':'1,3,Regular,1.0',
+                                'transformation': 'SyN[0.1,3,0.0]'}
                     )
         else:
             ipl.elastix_registration.register_elastix(
