@@ -57,7 +57,10 @@ def atlasregistration_v10(patient):
                     source_mask=patient.template['nl_template_mask'],
                     target_mask=model_mask,
                     level=nl_level,
-                    parameters={'convergence':'1.e-7,10',
+                    start=32,
+                    parameters={'convergence':'1.e-8,20',
+                                'conf':{"32":200,"16":200,"8":100,"4":100,"2":50},
+                                'blur':{"32":24, "16":12, "8":6,  "4":2,  "2":1},
                                 'cost_function':'CC',
                                 'cost_function_par':'1,3,Regular,1.0'}
                     )
