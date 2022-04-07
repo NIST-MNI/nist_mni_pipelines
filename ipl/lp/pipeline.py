@@ -107,6 +107,8 @@ def standard_pipeline(info,
     Kyword arguments:
             work_dir string pointing to work directory , default None - use output_dir
     """
+    subject_id=None
+    timepoint_id=None
     try:
         with temp_files() as tmp:
             if options is None:
@@ -711,12 +713,12 @@ def standard_pipeline(info,
             return iter_summary
 
     except mincError as e:
-        print("Exception in iter_step:{}".format(str(e)))
+        print("Exception while processing {}/{}/{} in iter_step:{}".format(output_dir, subject_id, timepoint_id, str(e)))
         traceback.print_exc( file=sys.stdout )
-        raise
+        return None
     except :
-        print("Exception in iter_step:{}".format(sys.exc_info()[0]))
+        print("Exception while processing {}/{}/{} in iter_step:{}".format(output_dir, subject_id, timepoint_id, sys.exc_info()[0]))
         traceback.print_exc( file=sys.stdout)
-        raise
+        return None
 
 #kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
