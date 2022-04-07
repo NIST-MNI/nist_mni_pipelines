@@ -7,9 +7,11 @@
 from __future__ import print_function
 
 import os
+from threading import local
 import traceback
 import json
 import six
+import sys
 
 import argparse
 
@@ -19,7 +21,7 @@ from ipl.longitudinal.general            import *  # functions to call binaries 
 from ipl.longitudinal.patient            import *  # class to store all the data
 
 
-from   ipl.minc_tools import mincTools,mincError
+from  ipl.minc_tools import mincTools,mincError
 
 # files storing all processing
 from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing
@@ -48,20 +50,20 @@ from ipl.longitudinal.add                import pipeline_run_add_tp,pipeline_run
 from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 
 # parallel processing
-from scoop import futures, shared
-
+import ray
+#ray.init(address='auto') # address='auto' local_mode=True
 
 version = '1.0'
 
 # a hack to use environment stored in a file
 # usefull when scoop spans across multiple nodes
 # and default environment is not the same
-if os.path.exists('lng_environment.json'):
-    env={}
-    with open('lng_environment.json','r') as f:
-        env=json.load(f)
-    for i in env.iterkeys():
-        os.environ[i]=env[i]
+# if os.path.exists('lng_environment.json'):
+#     env={}
+#     with open('lng_environment.json','r') as f:
+#         env=json.load(f)
+#     for i in env.iterkeys():
+#         os.environ[i]=env[i]
 
 
 def launchPipeline(options):
@@ -141,6 +143,9 @@ def launchPipeline(options):
 
         if 'rigid' in _opts:
             options.rigid = _opts['rigid']
+
+        if 'nl_ants' in _opts:
+            options.nl_ants = _opts['nl_ants']
 
         # TODO: add more options
     # patients dictionary
@@ -272,8 +277,9 @@ def launchPipeline(options):
                                              'vbm_nl_level':options.vbm_nl,
                                              'vbm_nl_method':'minctracc' }
 
-                #if options.sym == True:
-                    #patients[id].nl_method = 'bestsym1stepnlreg.pl'
+                if options.nl_ants :
+                    patients[id].nl_method = 'ANTS'
+                    patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
                 # end of creating a patient
 
@@ -356,8 +362,9 @@ def launchPipeline(options):
                 i.write(i.pickle)
             pickles.append(i.pickle)
 
-        jobs=[futures.submit(runPipeline,i) for i in pickles] # assume workdir is properly set in pickle...
-        futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+        jobs=[runPipeline.remote(i) for i in pickles] 
+        # wait for all jobs to finish
+        _,_ = ray.wait(jobs,num_returns=len(jobs))
         print('All subjects finished:%d' % len(jobs))
 
     else: # USE SGE to submit one job per subject, using required peslots
@@ -391,6 +398,7 @@ def launchPipeline(options):
                     logfile=i.patientdir+os.sep+str(id)+".sge.log",
                     queue=options.queue)
 
+@ray.remote
 def runTimePoint_FirstStage(tp, patient):
     '''
     Process one timepoint for cross-sectional analysis
@@ -431,7 +439,7 @@ def runTimePoint_FirstStage(tp, patient):
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def runTimePoint_SecondStage(tp, patient, vbm_options):
     '''
     Process one timepoint for cross-sectional analysis
@@ -477,6 +485,7 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         raise
 
 
+@ray.remote
 def runSkullStripping(tp, patient):
     try:
         pipeline_stx2_skullstripping(patient, tp)
@@ -490,6 +499,7 @@ def runSkullStripping(tp, patient):
         raise
 
 
+@ray.remote
 def runTimePoint_ThirdStage(tp, patient):
     # calculate full NL registration in multiple TP case
     try:
@@ -510,6 +520,7 @@ def runTimePoint_ThirdStage(tp, patient):
         raise
 
 
+@ray.remote
 def runTimePoint_FourthStage(tp, patient, vbm_options):
     # perform steps that requre full NL registration in multi tp case
     try:
@@ -541,6 +552,7 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         traceback.print_exc(file=sys.stdout)
         raise
 
+@ray.remote
 def runPipeline(pickle, workdir=None):
     '''
     RUN PIPELINE
@@ -572,11 +584,11 @@ def runPipeline(pickle, workdir=None):
         tps = sorted(patient.keys())
         jobs=[]
         for tp in tps:
-            jobs.append(futures.submit(runTimePoint_FirstStage,tp, patient))
+            jobs.append(runTimePoint_FirstStage.remote(tp, patient))
 
-        futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+        ready,remain = ray.wait(jobs,num_returns=len(jobs))
 
-        print('First stage finished!')
+        print('First stage finished!',len(ready),len(remain))
 
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -584,7 +596,7 @@ def runPipeline(pickle, workdir=None):
 
         if len(tps) == 1:
             for tp in tps:
-                runTimePoint_SecondStage( tp, patient, patient.vbm_options  )
+                ray.wait([runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  )])
         else:
             # create longitudinal template
             # ############################
@@ -594,9 +606,9 @@ def runPipeline(pickle, workdir=None):
             pipeline_linearlngtemplate(patient)
 
             for tp in tps:
-                jobs.append(futures.submit(runSkullStripping, tp , patient))
+                jobs.append(runSkullStripping.remote(tp , patient))
             # wait for all jobs to finish
-            futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+            ray.wait(jobs, num_returns=len(jobs))
 
             # using the stx2 space, we do the non-linear template
             # ################################################
@@ -613,10 +625,10 @@ def runPipeline(pickle, workdir=None):
             # run per tp tissue classification
             jobs=[]
             for tp in tps:
-                jobs.append(futures.submit(
-                    runTimePoint_ThirdStage, tp, patient
+                jobs.append(
+                    runTimePoint_ThirdStage.remote( tp, patient
                     ))
-            futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+            ray.wait(jobs, num_returns=len(jobs))
 
             # longitudinal classification
             # ############################
@@ -627,8 +639,9 @@ def runPipeline(pickle, workdir=None):
 
             jobs=[]
             for tp in tps:
-                jobs.append(futures.submit(runTimePoint_FourthStage, tp, patient, patient.vbm_options))
-            futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+                jobs.append(runTimePoint_FourthStage.remote( tp, patient, patient.vbm_options))
+            
+            ray.wait(jobs, num_returns=len(jobs))
 
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -804,9 +817,6 @@ def parse_options():
         help='VBM nl level'
         )
 
-
-    # group.add_argument("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
-
     group.add_argument(
         '--nogeo',
         dest='geo',
@@ -901,6 +911,14 @@ def parse_options():
         )
 
     group.add_argument(
+        '--nl_ants',
+        dest='nl_ants',
+        help='Use ANTs for nonlinear registration',
+        action='store_true',
+        default=False,
+        )
+
+    group.add_argument(
         '--add',
         action='append',
         dest='add',
@@ -960,7 +978,12 @@ def parse_options():
     group.add_argument('-q','--queue', dest='queue',
                      help='Specify SGE queue for submission'
                      )
-
+    group.add_argument('--ray_start',type=int,
+                        help='start local ray instance')
+    group.add_argument('--ray_local',action='store_true',
+                        help='local ray (single process)')
+    group.add_argument('--ray_host',
+                        help='ray host address')
     options = parser.parse_args()
 
     return options
@@ -972,6 +995,16 @@ def main():
     opts = parse_options()
     # VF: disabled in public release
     opts.temporalregu = False
+
+    if opts.ray_start is not None: # HACK?
+        #ray._private.services.address_to_ip = lambda x: '127.0.0.1'
+        ray.init(num_cpus=opts.ray_start)
+    elif opts.ray_local:
+        ray.init(local_mode=True)
+    elif opts.ray_host is not None:
+        ray.init(address=opts.ray_host+':6379')
+    else:
+        ray.init(address='auto')
 
     if opts.list is not None :
         if opts.output is None:

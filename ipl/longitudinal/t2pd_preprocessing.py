@@ -445,7 +445,7 @@ def t2pdpreprocessing_v10(patient, tp):
                     pd_corr,
                     t1_corr,
                     patient[tp].clp['pdt1xfm'],
-                    init_xfm=tmp_t2_t1_xfm,
+                    init_xfm=init_xfm,
                     nocrop=True,
                     noautothreshold=True,
                     close=True,

@@ -32,7 +32,8 @@ from ipl.minc_tools import mincTools,mincError
 from ipl.segment import *
 
 # scoop parallel execution
-from scoop import futures, shared
+#from scoop import futures, shared
+import ray
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -126,6 +127,7 @@ def parse_options():
 
 def main():
     options = parse_options()
+    ray.init(address='auto') # address='auto' local_mode=True
     
     if options.create is not None and options.output is not None:
         create_parameters={}

@@ -10,9 +10,11 @@ from .filter import *
 from .structures import *
 
 # scoop parallel execution
-from scoop import futures, shared
+import ray
 
 
+
+@ray.remote
 def concat_resample(
     input_mri,
     input_transform,
@@ -79,6 +81,7 @@ def concat_resample(
         traceback.print_exc(file=sys.stdout)
         raise
 
+@ray.remote
 def concat_resample_nl(
     input_mri,
     input_transform,

@@ -26,7 +26,6 @@ from ipl.lp.structures      import save_pipeline_output,load_pipeline_output
 
 import ray
 
-ray.init(address='auto')
 
 
 def parse_options():
@@ -108,6 +107,8 @@ def main():
     pipeline_parameters = default_pipeline_options
     pipeline_info = {}
     modalities = options.modalities.split(',')
+    ray.init(address='auto')
+
     try:
         if options.options is not None:
             try:

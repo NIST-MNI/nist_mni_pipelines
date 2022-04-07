@@ -16,8 +16,7 @@ import json
 from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
 
 from .filter           import *
 from .structures       import *

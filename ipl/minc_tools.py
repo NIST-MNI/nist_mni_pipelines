@@ -1046,7 +1046,7 @@ class mincTools(temp_files):
                   output, datatype='-float')
 
 
-    def param2xfm(self, output, scales=None, translation=None, rotations=None, shears=None):
+    def param2xfm(self, output, scales=None, translation=None, rotations=None, shears=None,center=None):
         cmd = ['param2xfm','-clobber',output]
 
         if translation is not None:
@@ -1057,6 +1057,8 @@ class mincTools(temp_files):
             cmd.extend(['-scales',str(scales[0]),str(scales[1]),str(scales[2])])
         if shears is not None:
             cmd.extend(['-shears',str(shears[0]),str(shears[1]),str(shears[2])])
+        if center is not None:
+            cmd.extend(['-center',str(center[0]),str(center[1]),str(center[2])])
         self.command(cmd, inputs=[], outputs=[output], verbose=self.verbose)
 
 

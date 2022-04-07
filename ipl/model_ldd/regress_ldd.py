@@ -200,7 +200,7 @@ def regress_ldd(
                         #intensity_estimate.append(sample_intensity)
 
                     # wait for jobs to finish
-                    futures.wait(r, return_when=futures.ALL_COMPLETED)
+                    ray.wait(r,num_returns=len(r))
                     avg_inv_transform=None
                     
                     if debias:
@@ -218,7 +218,7 @@ def regress_ldd(
                         c=MriDataset(prefix=it_prefix,iter=it,name=s.name)
                         x=LDDMriTransform(name=s.name+'_corr',prefix=it_prefix,iter=it)
 
-                        corr.append(futures.submit(concat_resample_ldd, 
+                        corr.append(concat_resample_ldd.remote( 
                             s, velocity_estimate[i], avg_inv_transform, 
                             c, x,
                             model=ref_model,
@@ -228,12 +228,12 @@ def regress_ldd(
                         corr_transforms.append(x)
                         corr_samples.append(c)
 
-                    futures.wait(corr, return_when=futures.ALL_COMPLETED)
+                    ray.wait(corr,num_returns=len(corr))
 
                     # 4. perform regression and create new estimate
                     # 5. calculate residulas (?)
                     # 4+5
-                    result=futures.submit(voxel_regression,
+                    result=voxel_regression.remote(
                                         intensity_design_matrix, velocity_design_matrix,
                                         corr_samples,            corr_transforms,    
                                         next_intensity_model,    next_velocity_model,     
@@ -242,7 +242,7 @@ def regress_ldd(
                                         blur_vel_model=blur_vel_model,
                                         qc=qc
                                         )
-                    futures.wait([result], return_when=futures.ALL_COMPLETED)
+                    ray.wait([result],num_returns=len([result]))
 
                     # 6. cleanup
                     if cleanup :
@@ -274,7 +274,7 @@ def regress_ldd(
                 current_velocity_model=next_velocity_model
                 
                
-                result=futures.submit(average_stats_regression,
+                result=average_stats_regression.remote(
                                       current_intensity_model, current_velocity_model,
                                       intensity_residual, velocity_residual  )
                 residuals.append(result)
@@ -293,10 +293,10 @@ def regress_ldd(
                 prev_velocity_estimate=corr_transforms # have to use adjusted velocity estimate
 
         # copy output to the destination
-        futures.wait(residuals, return_when=futures.ALL_COMPLETED)
+        ray.wait(residuals,num_returns=len(residuals))
         with open(prefix+os.sep+'stats.txt','w') as f:
             for s in residuals:
-                f.write("{}\n".format(s.result()))
+                f.write("{}\n".format(ray.get(s)))
 
 
         with open(prefix+os.sep+'results_final.json','w') as f:
