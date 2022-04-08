@@ -126,7 +126,6 @@ def launchPipeline(options):
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
 
-
         if 'vbm_options' in _opts:
             options.vbm_blur = _opts['vbm_options'].get('vbm_blur',4.0)
             options.vbm_res  = _opts['vbm_options'].get('vbm_res',2 )
@@ -144,6 +143,9 @@ def launchPipeline(options):
 
         if 'nl_ants' in _opts:
             options.nl_ants = _opts['nl_ants']
+
+        if 'nl_step' in _opts:
+            options.nl_step = _opts['nl_ants']
 
         # TODO: add more options
     # patients dictionary
@@ -270,10 +272,12 @@ def launchPipeline(options):
                 patients[id].rigid    = options.rigid
                 patients[id].add      = options.add
 
-                patients[id].vbm_options = { 'vbm_fwhm':options.vbm_blur,
+                patients[id].vbm_options = { 'vbm_fwhm':      options.vbm_blur,
                                              'vbm_resolution':options.vbm_res,
-                                             'vbm_nl_level':options.vbm_nl,
+                                             'vbm_nl_level':  options.vbm_nl,
                                              'vbm_nl_method':'minctracc' }
+
+                patients[id].nl_step = options.nl_step
 
                 if options.nl_ants :
                     patients[id].nl_method = 'ANTS'
@@ -799,6 +803,7 @@ def parse_options():
         '--vbm_res',
         dest='vbm_res',
         help='VBM resolution',
+        type=float,
         default=2.0,
         )
 
@@ -908,6 +913,15 @@ def parse_options():
         action='store_true',
         default=False,
         )
+
+    group.add_argument(
+        '--nl_step',
+        dest='nl_step',
+        help='Nonlinear registration step',
+        type=float,
+        default=2.0
+        )
+
 
     group.add_argument(
         '--add',
