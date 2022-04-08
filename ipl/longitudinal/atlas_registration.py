@@ -32,7 +32,7 @@ def pipeline_atlasregistration(patient, tp=None):
 
 def atlasregistration_v10(patient):
 
-    nl_level = 2
+    nl_level = patient.nl_step
 
     if patient.fast:  # fast mode
         nl_level = 4
@@ -59,12 +59,12 @@ def atlasregistration_v10(patient):
                     level=nl_level,
                     start=32,
                     parameters={'convergence':'1.e-8,20',
-                                'conf':{"32":200,"16":200,"8":100,"4":100,"2":50},
-                                'blur':{"32":24, "16":12, "8":6,  "4":2,  "2":1},
+                                'conf':{"32":200,"16":200,"8":100,"4":100,"2":50,"1":50},
+                                'blur':{"32":24, "16":12, "8":6,  "4":2,  "2":1,"1":0.5},
                                 'cost_function':'CC',
                                 'cost_function_par':'1,3,Regular,1.0',
                                 'transformation': 'SyN[0.1,3,0.0]',
-                                'convert_grid_type':'short' },
+                                'convert_grid_type':'short'},
                     )
         else:
             ipl.elastix_registration.register_elastix(
