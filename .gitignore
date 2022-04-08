@@ -6,3 +6,6 @@
 *.pyc
 # minc volumes
 *.mnc
+# precompiled python
+__pycache__
+
