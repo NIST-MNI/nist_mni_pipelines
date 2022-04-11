@@ -309,9 +309,13 @@ def non_linear_register_ants2(
         use_mask=parameters.get('use_mask',True)
         use_histogram_matching=parameters.get('use_histogram_matching',False)
         use_float=parameters.get('use_float',False)
-        
         winsorize_intensity=parameters.get('winsorize-image-intensities',None)
+        convert_grid           = parameters.get('convert_grid_type', None)
         
+        if convert_grid is not None:
+            output_tmp    = minc.tmp("transform.xfm")
+            output_tmp_base    = output_tmp.rsplit('.xfm',1)[0]
+
         cmd=['antsRegistration','--minc','1','-a','--dimensionality','3']
 
 
@@ -337,7 +341,10 @@ def non_linear_register_ants2(
         cmd.extend(['--smoothing-sigmas',blur])
         cmd.extend(['--transform',transformation])
         
-        cmd.extend(['--output',output_base])
+        if convert_grid is not None:
+            cmd.extend(['--output',output_tmp_base])
+        else:
+            cmd.extend(['--output',output_base])
         #cmd.extend(['--save-state',output_xfm])
 
         if init_xfm is not None:
@@ -363,13 +370,23 @@ def non_linear_register_ants2(
         
         if verbose>0:
             cmd.extend(['--verbose','1'])
-            
-        outputs=[output_xfm ] # TODO: add inverse xfm ?
         
+        if convert_grid is not None:
+            outputs=[output_tmp]
+        else:
+            outputs=[output_xfm ] # TODO: add inverse xfm ?
         
         print(">>>\n{}\n>>>>".format(' '.join(cmd)))
         
         minc.command(cmd, inputs=inputs, outputs=outputs)
+
+        if convert_grid is not None:
+            # convert to smaller datatype
+            minc.reshape(output_tmp_base+'_grid_0.mnc',output_base+'_grid_0.mnc',datatype=convert_grid)
+            minc.reshape(output_tmp_base+'_inverse_grid_0.mnc',output_base+'_inverse_grid_0.mnc',datatype=convert_grid)
+            shutil.copy(output_tmp_base+'.xfm',output_xfm)
+            shutil.copy(output_tmp_base+'_inverse.xfm',output_base+'_inverse.xfm')
+
 
 def linear_register_ants2(
     source, target, output_xfm,
@@ -453,11 +470,7 @@ def linear_register_ants2(
         use_float              = parameters.get('use_float',False)
         intialize_fixed        = parameters.get('initialize_fixed',None)
         intialize_moving       = parameters.get('intialize_moving',None)
-        convert_grid           = parameters.get('convert_grid_type', None)
 
-        if convert_grid is not None:
-            output_tmp    = minc.tmp("transform.xfm")
-            output_tmp_base    = output_tmp.rsplit('.xfm',1)[0]
         
         cmd=['antsRegistration','--collapse-output-transforms', '0', '--minc','1','-a','--dimensionality','3']
 
@@ -483,10 +496,7 @@ def linear_register_ants2(
         cmd.extend(['--smoothing-sigmas',blur])
         cmd.extend(['--transform',transformation])
 
-        if convert_grid is not None:
-            cmd.extend(['--output',output_tmp_base])
-        else:
-            cmd.extend(['--output',output_base])
+        cmd.extend(['--output',output_base])
         #cmd.extend(['--save-state',output_xfm])
 
         if init_xfm is not None:
@@ -528,12 +538,5 @@ def linear_register_ants2(
         
         outputs=[] # TODO: add inverse xfm ?
         minc.command(cmd, inputs=inputs, outputs=outputs,verbose=verbose)
-
-        if convert_grid is not None:
-            # convert to smaller datatype
-            minc.reshape(output_tmp_base+'_grid_0.mnc',output_base+'_grid_0.mnc',datatype=convert_grid)
-            minc.reshape(output_tmp_base+'_inverse_grid_0.mnc',output_base+'_inverse_grid_0.mnc',datatype=convert_grid)
-            shutil.copy(output_tmp_base+'.xfm',output_xfm)
-            shutil.copy(output_tmp_base+'_inverse.xfm',output_base+'_inverse.xfm')
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
