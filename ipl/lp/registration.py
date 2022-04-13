@@ -185,6 +185,7 @@ def intermodality_co_registration(scan, ref, out_xfm,
         objective =parameters.get('objective',  '-nmi')
         nl        =parameters.get('nl',         False)
         
+        
         print("Running intermodality_co_registration with parameters:{}".format(repr(parameters)))
         
         _init_xfm=None
