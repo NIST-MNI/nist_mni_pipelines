@@ -384,8 +384,24 @@ def non_linear_register_ants2(
             # convert to smaller datatype
             minc.reshape(output_tmp_base+'_grid_0.mnc',output_base+'_grid_0.mnc',datatype=convert_grid)
             minc.reshape(output_tmp_base+'_inverse_grid_0.mnc',output_base+'_inverse_grid_0.mnc',datatype=convert_grid)
-            shutil.copy(output_tmp_base+'.xfm',output_xfm)
-            shutil.copy(output_tmp_base+'_inverse.xfm',output_base+'_inverse.xfm')
+            # have to fix .xfm file to use proper grid file name
+            #shutil.copy(output_tmp_base+'.xfm', output_xfm)
+            #shutil.copy(output_tmp_base+'_inverse.xfm', output_base+'_inverse.xfm')
+            # HACK
+            with open(output_xfm,"w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(output_base+'_grid_0.mnc')};
+                """)
+            with open(output_base+'_inverse.xfm',"w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(output_base+'_inverse_grid_0.mnc')};
+                """)
 
 
 def linear_register_ants2(
