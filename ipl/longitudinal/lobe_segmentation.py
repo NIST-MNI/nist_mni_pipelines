@@ -23,11 +23,11 @@ def pipeline_lobe_segmentation(patient, tp):
         lobe_segmentation_v10(patient, tp)  # beast by simon fristed
 
     # lobes qc
-    with mincTools() as minc:
-        minc_qc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['lobes'],
-                title=patient[tp].qc_title, image_range=[0,120],
-                mask=patient[tp].stx2_mnc['lobes'],dpi=200,use_max=True,
-                samples=20, bg_color="black",fg_color="white"  )
+    minc_qc.qc(patient[tp].stx2_mnc['t1'],patient[tp].qc_jpg['lobes'],
+            title=patient[tp].qc_title, image_range=[0,120],
+            mask=patient[tp].stx2_mnc['lobes'],dpi=200,use_max=True,
+            samples=20, bg_color="black",fg_color="white",
+            mask_cmap='spectral')
 
     return True
 
