@@ -253,14 +253,7 @@ linear_registration_config={
           }
         ],
     'bestlinreg_20180117_scaling': [      # scaling only, assuming centers are alrey aligned with lsq6
-        {   'blur'        : "blur",
-            'trans'       : None,
-            'blur_fwhm'   : 4,
-            'steps'       : [4, 4, 4],
-            'tolerance'   : 0.0001,
-            'simplex'     : 2 },
-
-        {   'blur'        : "blur",
+          { 'blur'        : "blur",
             'trans'       : None,
             'blur_fwhm'   : 2,
             'steps'       : [2, 2, 2],
@@ -268,8 +261,7 @@ linear_registration_config={
             'simplex'     : 1,
             'reverse'     : False # replace source and target 
           },
-
-        {   'blur'        : "blur",
+          { 'blur'        : "blur",
             'trans'       : None,
             'blur_fwhm'   : 1,
             'steps'       : [2, 2, 2],

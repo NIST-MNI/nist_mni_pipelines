@@ -117,11 +117,11 @@ def run_redskull_cpu(in_t1w, out_redskull,
         # generate unscaling transform
         minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
             minc.tmp("skull.mnc"), labels=True)
-        minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
-            minc.tmp("head.mnc"), labels=True)
+        #minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
+        #    minc.tmp("head.mnc"), labels=True)
         
         minc.resample_labels(minc.tmp("skull.mnc"),out_ns_skull,transform=unscale_xfm,like=reference)
-        minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
+        #minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
         
         if out_qc is not None:
             minc.qc(
@@ -153,13 +153,13 @@ def run_redskull_ov(in_t1w, out_redskull,
                             in_t1w, out_redskull ])
         
         # generate unscaling transform
-        minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
+        minc.calc([out_redskull],'abs(A[0]-2)<0.<0.5?1:0', 
             minc.tmp("skull.mnc"), labels=True)
-        minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
-            minc.tmp("head.mnc"), labels=True)
+        # minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
+        #     minc.tmp("head.mnc"), labels=True)
         
         minc.resample_labels(minc.tmp("skull.mnc"),out_ns_skull,transform=unscale_xfm,like=reference)
-        minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
+        #minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
         
         if out_qc is not None:
             minc.qc(

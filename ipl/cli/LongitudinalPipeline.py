@@ -887,7 +887,7 @@ def parse_options():
 
     group.add_argument('--redskull_ov', 
                      dest='redskull_ov',
-                     help='omnivisoon library for redskull ',
+                     help='omnivision library for redskull brain+skull',
                      default='redskull.xml'
                      )
     
