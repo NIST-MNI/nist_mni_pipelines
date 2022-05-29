@@ -43,7 +43,8 @@ def pipeline_t1preprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_xfm['t1']) \
         and os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
-        and os.path.exists(patient[tp].stx_ns_mnc['t1']):
+        and   os.path.exists(patient[tp].stx_ns_mnc['t1']) \
+        and ( os.path.exists(patient[tp].stx_ns_mnc['skull']) or patient.redskull_ov is None ):
         print(' -- pipeline_t1preprocessing was already performed')
     else:
         # # Run the appropiate version
@@ -153,7 +154,7 @@ def run_redskull_ov(in_t1w, out_redskull,
                             in_t1w, out_redskull ])
         
         # generate unscaling transform
-        minc.calc([out_redskull],'abs(A[0]-2)<0.<0.5?1:0', 
+        minc.calc([out_redskull],'abs(A[0]-2)<0.5?1:0', 
             minc.tmp("skull.mnc"), labels=True)
         # minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
         #     minc.tmp("head.mnc"), labels=True)
@@ -162,14 +163,13 @@ def run_redskull_ov(in_t1w, out_redskull,
         #minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
         
         if out_qc is not None:
-            minc.qc(
+            minc_qc.qc(
                 in_t1w,
                 out_qc,
                 title=qc_title,
                 image_range=[0, 120],
-                mask=minc.tmp("skull.mnc"),
-                big=True,
-                clamp=True
+                mask=minc.tmp("skull.mnc"),dpi=200,use_max=True,
+                samples=20,bg_color="black",fg_color="white"
                 )
 
 
@@ -329,16 +329,19 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
+        print("===DEBUG===",patient.py_deep_seg,patient.redskull_ov)
         if patient.py_deep_seg is not None and patient.redskull_ov is not None:
             ray.get(run_redskull_ov.remote(
-                patient[tp].stx_mnc['t1'], patient[tp].stx_mnc['redskull'],
+                patient[tp].stx_mnc['t1'], 
+                patient[tp].stx_mnc['redskull'],
                 patient[tp].stx_ns_xfm['unscale_t1'],
-                patient[tp].stx_ns_mnc["skull"], patient[tp].stx_ns_mnc["head"],
+                patient[tp].stx_ns_mnc["skull"], 
+                patient[tp].stx_ns_mnc["head"],
                 out_qc=patient[tp].qc_jpg['stx_skull'],
                 qc_title=patient[tp].qc_title, 
                 reference=modelmask,
                 py_deep_seg=patient.py_deep_seg,
-                redskull_ov=patient.redskull_ov ))
+                redskull_model=patient.redskull_ov ))
 
 if __name__ == '__main__':
 

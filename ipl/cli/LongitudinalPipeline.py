@@ -272,6 +272,7 @@ def launchPipeline(options):
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
                 patients[id].redskull_ov = options.redskull_ov
+                patients[id].py_deep_seg = options.py_deep_seg
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
                 patients[id].linreg   = options.linreg

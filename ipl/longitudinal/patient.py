@@ -641,20 +641,13 @@ def setFilenames(patient):
     # ## template images
     # a) linear
 
-    patient.template['linear_template'] = lngtmpldir + 'lin_template_' \
-        + patient.id + '_t1.mnc'
-    patient.template['linear_template_sd'] = lngtmpldir \
-        + 'lin_template_' + patient.id + '_t1_sd.mnc'
-    patient.template['linear_template_mask'] = lngtmpldir \
-        + 'lin_template_' + patient.id + '_mask.mnc'
-    patient.template['scale_xfm'] = lngtmpldir + 'lin_template_scale_' \
-        + patient.id + '_t1.xfm'
-    patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' \
-        + patient.id + '_t1.xfm'
-    patient.qc_jpg['linear_template'] = patient.qcdir \
-        + 'qc_lin_template_' + patient.id + '.jpg'
-    patient.template['linear_template_mask'] = lngtmpldir \
-        + 'lin_template_' + patient.id + '_mask.mnc'
+    patient.template['linear_template'] = lngtmpldir + 'lin_template_' + patient.id + '_t1.mnc'
+    patient.template['linear_template_sd'] = lngtmpldir + 'lin_template_' + patient.id + '_t1_sd.mnc'
+    patient.template['linear_template_mask'] = lngtmpldir + 'lin_template_' + patient.id + '_mask.mnc'
+    patient.template['scale_xfm'] = lngtmpldir + 'lin_template_scale_' + patient.id + '_t1.xfm'
+    patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' + patient.id + '_t1.xfm'
+    patient.qc_jpg['linear_template'] = patient.qcdir + 'qc_lin_template_' + patient.id + '.jpg'
+    patient.template['linear_template_skull'] = lngtmpldir + 'lin_template_' + patient.id + '_skull.mnc'
 
     # b) non-linear
 

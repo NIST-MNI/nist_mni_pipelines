@@ -85,11 +85,11 @@ def pipeline_linearlngtemplate(patient):
                     mask=atlas_outline,use_max=True,
                     samples=20,dpi=200  )
     except mincError as e:
-        print("Exception in average_transforms:{}".format(str(e)))
+        print("Exception in pipeline_linearlngtemplate:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in average_transforms:{}".format(sys.exc_info()[0]))
+        print("Exception in pipeline_linearlngtemplate:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -101,7 +101,7 @@ class LngOptions:
 
 # apply additional processing steps
 @ray.remote
-def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=None):
+def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=None, scale_xfm=None):
     # bias in stx space
     modelt1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
     modelmask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
@@ -162,8 +162,9 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
 
         # 3. concatenate all transforms
         if patient.skullreg:
-            minc.xfmconcat([stx_xfm_file, xfmfile, transform2.xfm,
-                        patient.template['stx2_xfm'] ],
+            minc.xfmconcat([stx_xfm_file, xfmfile, 
+                            transform2.xfm, scale_xfm, 
+                            patient.template['stx2_xfm'] ],
                         tp.stx2_xfm['t1'] )
         else:
             minc.xfmconcat([stx_xfm_file, xfmfile,
@@ -269,7 +270,7 @@ def linearlngtemplate_v11(patient):
         # Here we are relying on the time point order (1)
         if patient.skullreg:
             print("linearlngtemplate_v11: skullreg")
-            samples= [ [tp.stx_ns_mnc['t1'],    tp.stx_ns_mnc['head']]
+            samples= [ [tp.stx_ns_mnc['t1'],    tp.stx_ns_mnc['masknoles']]
                         for (i, tp) in patient.items() ]
             unscale_xfms = [ tp.stx_ns_xfm['unscale_t1'] 
                         for (i, tp) in patient.items() ]
@@ -328,13 +329,18 @@ def linearlngtemplate_v11(patient):
 
             # need to apply full transformation to the brain masks 
             _masks=[]
+            _masks_skull=[]
             for i,_ in enumerate(output_2['xfm']):
                 minc.xfmconcat([output['xfm'][i].xfm, output_2['xfm'][i].xfm, patient.template['scale_xfm']], minc.tmp("full_{}.xfm".format(i)))
-                minc.resample_labels(patient[tps[i]].stx_ns_mnc['mask'], minc.tmp("mask_{}.mnc".format(i)),transform=minc.tmp("full_{}.xfm".format(i)))
+                minc.resample_labels(patient[tps[i]].stx_ns_mnc['mask'], minc.tmp("mask_{}.mnc".format(i)), transform=minc.tmp("full_{}.xfm".format(i)))
+                minc.resample_labels(patient[tps[i]].stx_ns_mnc['skull'], minc.tmp("skull_{}.mnc".format(i)), transform=minc.tmp("full_{}.xfm".format(i)))
                 _masks.append(minc.tmp("mask_{}.mnc".format(i)))
+                _masks_skull.append(minc.tmp("skull_{}.mnc".format(i)))
 
             minc.average(_masks,minc.tmp("all_masks.mnc"))
+            minc.average(_masks_skull,minc.tmp("all_masks_skull.mnc"))
             minc.calc([minc.tmp("all_masks.mnc")],"A[0]>0.5?1:0",patient.template['linear_template_mask'],labels=True)
+            minc.calc([minc.tmp("all_masks_skull.mnc")],"A[0]>0.5?1:0",patient.template['linear_template_skull'],labels=True)
             ####
             minc.resample_smooth(output_2['model_sd'].scan,patient.template['linear_template_sd'],  transform=patient.template['scale_xfm'])
         elif patient.rigid:
@@ -348,10 +354,11 @@ def linearlngtemplate_v11(patient):
 
         # Create the new stx space using the template
         if patient.skullreg: 
+            # registering using skull is extremely unstable :(
             ipl.registration.linear_register(patient.template['linear_template'],
                                 atlas, patient.template['stx2_xfm'],
                                 source_mask=patient.template['linear_template_mask'], 
-                                target_mask=atlas_skull_mask)
+                                target_mask=atlas_mask_novent)
         elif patient.large_atrophy:
             ipl.registration.linear_register(patient.template['linear_template'],
                                 atlas, patient.template['stx2_xfm'],
@@ -373,7 +380,8 @@ def linearlngtemplate_v11(patient):
                 biascorr=output['biascorr'][k]
             # Here we are relying on the time point order (1) - see above
             if patient.skullreg:
-                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=True, transform2=output_2['xfm'][k]))
+                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=True, 
+                            transform2=output_2['xfm'][k], scale_xfm=patient.template['scale_xfm']))
             else:
                 jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid ))
             k+=1
