@@ -313,7 +313,8 @@ def qc(
             cbar = fig.colorbar(oscalarMap)
         
         if title is not None:
-            plt.suptitle(title,fontsize=10)
+            plt.suptitle(title,fontsize=7,y=0.99,x=0.1,ha='left',verticalalignment='top',color='black',backgroundcolor='white')
+            #plt.text(x=0.0,y=0.97,ha='left',va='top',s=title,color='black',backgroundcolor='white')
             #plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
             plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
         else:
