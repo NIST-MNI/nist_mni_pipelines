@@ -19,13 +19,15 @@ import ipl.ants_registration
 import ipl.elastix_registration
 
 
-def lin_registration(scan, model, out_xfm, init_xfm=None, parameters={}, corr_xfm=None, par=None, log=None):
+def lin_registration(scan, model, out_xfm, init_xfm=None, parameters={}, corr_xfm=None, par=None, log=None, ref_model=None):
     """Perform linear registration
     
     """
     with mincTools() as m:
-        
-        if not m.checkfiles(inputs=[scan.scan,model.scan],outputs=[out_xfm.xfm]):
+        if ref_model is None:
+            ref_model = model
+            
+        if not m.checkfiles(inputs=[scan.scan, model.scan],outputs=[out_xfm.xfm]):
             return
         
         use_inverse    = parameters.get('inverse',  False)
@@ -63,10 +65,10 @@ def lin_registration(scan, model, out_xfm, init_xfm=None, parameters={}, corr_xf
             #_init_xfm=init_xfm.xfm
             _init_xfm=None
             _out_xfm=m.tmp('out.xfm')
-            m.resample_smooth(_in_scan,m.tmp('scan_scan.mnc'), transform=init_xfm.xfm, like=model.scan)
+            m.resample_smooth(_in_scan, m.tmp('scan_scan.mnc'), transform=init_xfm.xfm, like=ref_model.scan)
             _in_scan=m.tmp('scan_scan.mnc')
             if scan.mask is not None:
-                m.resample_labels(scan.mask, _in_mask, transform=init_xfm.xfm, like=model.scan)
+                m.resample_labels(scan.mask, _in_mask, transform=init_xfm.xfm, like=ref_model.scan)
                 _in_mask=m.tmp('scan_mask.mnc')
 
         print("lin_registration: mode={} init_xfm={} scan_mask={} use_inverse={}".format(lin_mode,_init_xfm,scan.mask,use_inverse))
@@ -131,10 +133,10 @@ def lin_registration(scan, model, out_xfm, init_xfm=None, parameters={}, corr_xf
         elif lin_mode=='mritotal':
             # going to use mritotal directly
             #m.command()
-            model_name=os.path.basename(model.scan).rsplit('.mnc',1)[0]
-            model_dir=os.path.dirname(model.scan)
+            model_name = os.path.basename(model.scan).rsplit('.mnc',1)[0]
+            model_dir  = os.path.dirname(model.scan)
             # TODO: add more options?
-            cmd=['mritotal','-model',model_name,'-modeldir',model_dir, _in_scan, _out_xfm]
+            cmd=['mritotal','-model', model_name,'-modeldir',model_dir, _in_scan, _out_xfm]
             if options is not None:
                 cmd.extend(options)
                 
@@ -182,6 +184,7 @@ def intermodality_co_registration(scan, ref, out_xfm,
         resample  =parameters.get('resample',   False)
         objective =parameters.get('objective',  '-nmi')
         nl        =parameters.get('nl',         False)
+        
         
         print("Running intermodality_co_registration with parameters:{}".format(repr(parameters)))
         

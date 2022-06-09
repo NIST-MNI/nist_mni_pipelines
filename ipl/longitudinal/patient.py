@@ -62,6 +62,7 @@ class LngPatient(dict):
         self.mask_n3 = False  # Use brain mask for N3
         self.n4 = True  # Use N4 for non-uniformity correction
         self.nl_method = 'nlfit_s'  # Do non-linear registration
+        self.nl_step = 2.0 # nonlinear registration step
         self.deface = False  # Do defacing (not implemented yet)
         self.mri3T  = True  # Using 3T
         self.beastresolution = '2'  # Beast resolution
@@ -428,7 +429,7 @@ def setFilenames(patient):
                 + tp + '_' + s + '.mnc'
 
             patient[tp].clp2[s] = clp2dir + 'clp2_' + patient.id + '_' \
-                + tp + '_t1.mnc'
+                + tp + '_' + s + '.mnc'
 
             # stx space
             patient[tp].stx_mnc[s] = stxdir + 'stx_' + patient.id + '_' \

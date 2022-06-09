@@ -95,7 +95,7 @@ def VBM_v10(patient, tp, options):
         det=minc.tmp('det.mnc')
         minc.grid_determinant(minc.tmp('nl')+'_grid_0.mnc',det)
 
-        resample_modulate(cls, 1, xfm, det, patient[tp].vbm['csf'],modelmask, vbm_resolution, vbm_fwhm)
+        resample_modulate(cls, 1, xfm, det, patient[tp].vbm['csf'],modelmask,  vbm_resolution, vbm_fwhm)
         resample_modulate(cls, 2, xfm, det, patient[tp].vbm['gm'], modelmask,  vbm_resolution, vbm_fwhm)
         resample_modulate(cls, 3, xfm, det, patient[tp].vbm['wm'], modelmask,  vbm_resolution, vbm_fwhm)
         

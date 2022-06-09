@@ -72,6 +72,13 @@ def parse_options():
                     dest="modalities",
                     default="t2w,pdw")
 
+    parser.add_argument('--ray_start',type=int,
+                        help='start local ray instance')
+    parser.add_argument('--ray_local',action='store_true',
+                        help='local ray (single process)')
+    parser.add_argument('--ray_host',
+                        help='ray host address')
+
     #parser.add_argument("--json",
                         #help="load json description")
 
@@ -107,7 +114,16 @@ def main():
     pipeline_parameters = default_pipeline_options
     pipeline_info = {}
     modalities = options.modalities.split(',')
-    ray.init(address='auto')
+    
+    # deal with ray
+    if options.ray_start is not None: # HACK?
+        ray.init(num_cpus=options.ray_start)
+    elif options.ray_local:
+        ray.init(local_mode=True)
+    elif options.ray_host is not None:
+        ray.init(address=options.ray_host+':6379')
+    else:
+        ray.init(address='auto')
 
     try:
         if options.options is not None:
@@ -249,12 +265,13 @@ def main():
                 if len(options.corr)>1:
                     info['corr_t2w']=MriTransform(None,'corr_t2w',xfm=options.corr[1])
             
-            ret=standard_pipeline( info,
+            ret=standard_pipeline.remote( info,
                                output_dir, 
                                options=pipeline_parameters, 
                                work_dir=output_dir,
                                manual_dir=manual_dir
                              )
+            ret=ray.get(ret)
             # TODO: make a check if there is a summary file there already?
             #save_pipeline_output([info],options.output+os.sep+'summary.json')
             

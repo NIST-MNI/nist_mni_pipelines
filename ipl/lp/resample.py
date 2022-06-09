@@ -14,7 +14,7 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-def warp_scan(sample, reference, output_scan, transform=None, parameters={},corr_xfm=None):
+def warp_scan(sample, reference, output_scan, transform=None, parameters={}, corr_xfm=None):
     with mincTools() as m:  
         xfm=None
         xfms=[]
@@ -33,10 +33,11 @@ def warp_scan(sample, reference, output_scan, transform=None, parameters={},corr
             xfm=m.tmp('concatenated.xfm')
 
         resample_order=parameters.get('resample_order',4)
+        fill      =parameters.get('fill',         None)
         
         m.resample_smooth(sample.scan, output_scan.scan, 
                           transform=xfm, like=reference.scan, 
-                          order=resample_order)
+                          order=resample_order,fill=fill)
 
 
 def warp_mask(sample, reference, output_scan, transform=None, parameters={},corr_xfm=None):
