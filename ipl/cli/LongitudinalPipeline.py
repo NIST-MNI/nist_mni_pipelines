@@ -143,9 +143,12 @@ def launchPipeline(options):
 
         if 'nl_ants' in _opts:
             options.nl_ants = _opts['nl_ants']
+            
+        if 'nl_cost_fun' in _opts:
+            options.nl_cost_fun = _opts['nl_cost_fun']
 
         if 'nl_step' in _opts:
-            options.nl_step = _opts['nl_ants']
+            options.nl_step = _opts['nl_step']
 
         # TODO: add more options
     # patients dictionary
@@ -283,6 +286,7 @@ def launchPipeline(options):
                     patients[id].nl_method = 'ANTS'
                     patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
+                patients[id].nl_cost_fun = options.nl_cost_fun
                 # end of creating a patient
 
             # ## Add timepoint to the patient
@@ -912,6 +916,14 @@ def parse_options():
         help='Use ANTs for nonlinear registration',
         action='store_true',
         default=False,
+        )
+
+    group.add_argument(
+        '--nl_cost_fun',
+        dest='nl_cost_fun',
+        help='ANTs cost function',
+        default='CC',
+        choices=['CC', 'MI', 'Mattes']
         )
 
     group.add_argument(
