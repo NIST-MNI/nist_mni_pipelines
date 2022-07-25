@@ -321,6 +321,16 @@ def non_linear_register_ants2(
 
         (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
 
+        dilate_mask = parameters.get("dilate_mask", None)
+
+        if dilate_mask is not None:
+            if source_mask_lr is not None:
+                minc.binary_morphology(source_mask_lr,"D[{}]".format(dilate_mask),minc.tmp("source_mask_lr.mnc"))
+                source_mask_lr=minc.tmp("source_mask_lr.mnc")
+            if target_mask_lr is not None:
+                minc.binary_morphology(target_mask_lr,"D[{}]".format(dilate_mask),minc.tmp("target_mask_lr.mnc"))
+                target_mask_lr=minc.tmp("target_mask_lr.mnc")
+
         # generate modalities
         for _s in range(modalities):
             if isinstance(cost_function, list): 
