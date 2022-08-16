@@ -94,8 +94,8 @@ def t1preprocessing_v10(patient, tp):
 
         if not os.path.exists( patient[tp].clp['t1'] ):
 
-            minc.reshape( patient[tp].native['t1'], tmpt1 )
-
+            minc.convert( patient[tp].native['t1'], tmpt1 )
+            
             for s in ['xspace', 'yspace', 'zspace']:
                 spacing = minc.query_attribute( tmpt1, s + ':spacing' )
 

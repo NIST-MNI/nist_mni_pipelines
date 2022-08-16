@@ -106,9 +106,7 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_t2_stx_xfm = minc.tmp('t2_stx_0.xfm')
             tmpstats = minc.tmp('volpol_t2.stats')
 
-            # 0. Convert to float (repair brokenfiles)
-            minc.reshape(patient[tp].native['t2'], tmpt2,
-                         normalize=True, datatype='float')
+            minc.convert(patient[tp].native['t2'], tmpt2)
 
             for s in ['xspace', 'yspace', 'zspace']:
                 spacing = minc.query_attribute(tmpt2, s + ':spacing')
@@ -282,9 +280,7 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_pd_t1_xfm = minc.tmp('pd_t1_0.xfm')
             tmp_pd_stx_xfm = minc.tmp('pd_stx_0.xfm')
 
-            # 0. Convert to float (repair brokenfiles)
-            minc.reshape(patient[tp].native['pd'], tmppd,
-                         normalize=True, datatype='float')
+            minc.convert(patient[tp].native['pd'], tmppd)
 
             for s in ['xspace', 'yspace', 'zspace']:
                 spacing = minc.query_attribute(tmppd, s + ':spacing')
@@ -293,7 +289,7 @@ def t2pdpreprocessing_v10(patient, tp):
                     minc.set_attribute( tmppd, s + ':spacing', 'regular__' )
                         
             # 1. Do nlm
-            
+          
             if patient.denoise:
                 minc.nlm(tmppd, tmpnlm, beta=0.7)
             else:

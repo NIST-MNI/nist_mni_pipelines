@@ -541,7 +541,7 @@ class mincTools(temp_files):
         i = subprocess.Popen(['mincinfo', '-vardims', 'image', input],
                              stdout=subprocess.PIPE).communicate()
         return i[0].decode().rstrip('\n').split(' ')
-    
+
     @staticmethod
     def query_attribute(input, attribute):
         '''read a value of an attribute inside minc file'''
@@ -549,8 +549,8 @@ class mincTools(temp_files):
         i = subprocess.Popen(['mincinfo', '-attvalue', attribute,
                              input],
                              stdout=subprocess.PIPE).communicate()
-        return i[0].decode().rstrip('\n').rstrip(' ')
-        
+        return i[0].decode(encoding='utf-8', errors='ignore').rstrip('\n').rstrip(' ')
+
     @staticmethod
     def set_attribute(input, attribute, value):
         '''set a value of an attribute inside minc file
@@ -575,7 +575,7 @@ class mincTools(temp_files):
         """
         # TODO: make this robust to errors!
         _image_dims = subprocess.Popen(['mincinfo', '-vardims', 'image', input],
-                             stdout=subprocess.PIPE).communicate()[0].decode().rstrip('\n').rstrip(' ').split(' ')
+                             stdout=subprocess.PIPE).communicate()[0].decode(encoding='utf-8', errors='ignore').rstrip('\n').rstrip(' ').split(' ')
         
         _req=['mincinfo']
         for i in _image_dims:
@@ -585,7 +585,7 @@ class mincTools(temp_files):
                          '-attvalue', '{}:direction_cosines'.format(i)])
         _req.append(input)
         _info= subprocess.Popen(_req,
-                             stdout=subprocess.PIPE).communicate()[0].decode().rstrip('\n').rstrip(' ').split("\n")
+                             stdout=subprocess.PIPE).communicate()[0].decode(encoding='utf-8', errors='ignore').rstrip('\n').rstrip(' ').split("\n")
 
         diminfo=collections.namedtuple('dimension',['length','start','step','direction_cosines'])
         
@@ -1695,6 +1695,19 @@ class mincTools(temp_files):
         if datatype is not None:
             cmd.append('--'+datatype)
         self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+
+    def convert(
+        self,
+        input,
+        output,
+        out_v2=True,
+        compress=0
+        ):
+        "convert minc file type"
+        cmd = ['mincconvert', input, output,'-compress',str(compress)]
+        if out_v2: cmd+=['-2']
+        self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+
 
     def reshape(
         self,
