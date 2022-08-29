@@ -424,11 +424,10 @@ def linear_register_ants2(
     ):
     """perform linear registration using ANTs"""
     #TODO:implement close
-    
-    
+
     with ipl.minc_tools.mincTools(verbose=verbose) as minc:
 
-        
+
         if parameters is None:
             #TODO add more options here
             parameters={ 
@@ -553,14 +552,14 @@ def linear_register_ants2(
                 cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',0.01)),str(winsorize_intensity.get('high',0.99))])
             else:
                 cmd.append('--winsorize-image-intensities')
-            
+
         if use_float:
             cmd.append('--float')
         
         if verbose>0:
             cmd.extend(['--verbose','1'])
         
-        outputs=[] # TODO: add inverse xfm ?
-        minc.command(cmd, inputs=inputs, outputs=outputs,verbose=verbose)
+        outputs=[output_xfm ] # TODO: add inverse xfm ?
+        minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
