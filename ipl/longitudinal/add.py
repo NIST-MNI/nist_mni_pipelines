@@ -95,7 +95,7 @@ def pipeline_run_add_tp(patient, tp):
 
         library=None
         if 'segment_library' in j:
-            library=ipl.segment.load_library_info( j['segment_library'] )
+            library=ipl.segment.SegLibrary( library )
             
         options=j.get('segment_options',{})
         
