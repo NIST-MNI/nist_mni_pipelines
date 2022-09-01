@@ -453,7 +453,6 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
     Process one timepoint for cross-sectional analysis
     Second Stage, run in case of a single time point
     '''
-
     try:
         pipeline_linearatlasregistration(patient, tp)
 
@@ -474,10 +473,11 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         pipeline_lobe_segmentation(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
-
+        # Additional steps because there is only one timepoint actually
+        # ######################
         if len(patient.add)>0:
             pipeline_run_add(patient)
-            pipeline_run_add_tp(patient,tp)
+            pipeline_run_add_tp(patient,tp,single_tp=True)
 
         # vbm images
         # ###########

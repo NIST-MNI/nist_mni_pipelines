@@ -85,10 +85,10 @@ def pipeline_run_add(patient):
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
-
+    # END
 
 # this part runs timepoint-specific part
-def pipeline_run_add_tp(patient, tp):
+def pipeline_run_add_tp(patient, tp, single_tp=False):
     for i,j in enumerate( patient.add ):
         output_name=j.get('name','seg_{}'.format(i))
         print("ADD TP:{}".format(output_name))
@@ -107,9 +107,14 @@ def pipeline_run_add_tp(patient, tp):
             template_prefix=patient.template['nl_template_prefix']+'_'+output_name
             output_prefix=patient[tp].stx2_mnc['add_prefix']+'_'+output_name
             
-            nl_xfm=patient[tp].lng_xfm['t1']
-            nl_igrid=patient[tp].lng_igrid['t1']
-            nl_idet=patient[tp].lng_det['t1']
+            if single_tp:
+                nl_xfm=None
+                nl_igrid=None
+                nl_idet=None
+            else:
+                nl_xfm=patient[tp].lng_xfm['t1']
+                nl_igrid=patient[tp].lng_igrid['t1']
+                nl_idet=patient[tp].lng_det['t1']
             
             template_seg=template_prefix+'_seg.mnc'
             output_seg=output_prefix+'_seg.mnc'
@@ -159,15 +164,19 @@ def pipeline_run_add_tp(patient, tp):
                 
             with mincTools() as minc: 
                 if j.get('warp',False):
-                    minc.resample_labels(template_seg, output_seg,
-                            transform=nl_xfm,
-                            invert_transform=True,
-                            like=patient[tp].stx2_mnc['t1'], 
-                            baa=options.get("resample_baa",True),
-                            order=options.get("resample_order",1)) # TODO: make it a parameter?
+                    if single_tp:
+                        # just copy from old place to tp-specific
+                        shutil.copyfile(template_seg, output_seg)
+                    else:
+                        minc.resample_labels(template_seg, output_seg,
+                                transform=nl_xfm,
+                                invert_transform=True,
+                                like=patient[tp].stx2_mnc['t1'], 
+                                baa=options.get("resample_baa",True),
+                                order=options.get("resample_order",1)) # TODO: make it a parameter?
                     ipl.segment.seg_to_volumes(output_seg, output_vol,label_map=label_map)
 
-                if j.get('jacobian',False):
+                if j.get('jacobian',False) and not single_tp:
                     # perform jacobian integration within each ROI
                     minc.grid_determinant(nl_igrid,minc.tmp("det.mnc"))
                     minc.resample_smooth(minc.tmp("det.mnc"), nl_idet, like=template_seg)
