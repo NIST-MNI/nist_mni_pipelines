@@ -118,22 +118,24 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
             stx_bias = biascorr.scan
 
             # 1. Transform the stn bias into native
-            native_bias = minc.tmp('tmpbias_' + patient.id + '.mnc')
-            
+            native_log_bias = minc.tmp('tmpbias_' + patient.id + '.mnc')
+            minc.calc([stx_bias],"A[0]>0.1?log(A[0]):0.0",minc.tmp('logbias_' + patient.id + '.mnc'))
+
+            # TODO: maybe better to resample with different fill value here?
             minc.resample_smooth(
-                stx_bias,
-                native_bias,
+                minc.tmp('logbias_' + patient.id + '.mnc'),
+                native_log_bias,
                 transform=stx_xfm_file,
                 like=tp.clp['t1'],
                 invert_transform=True,
                 resample='linear',
-                fill=1.0
+                order=1
                 )
 
             # 2. Apply correction to clp image
-            minc.calc([clp_tp, native_bias],
-                    'A[1]>0.2?A[0]/A[1]:A[0]/0.2', minc.tmp('clp2_t1.mnc'), datatype='-short')
-
+            minc.calc([clp_tp, native_log_bias],
+                    'A[0]/exp(A[1])', minc.tmp('clp2_t1.mnc'), datatype='-short')
+            # apply normalization once again
             minc.volume_pol(
                 minc.tmp('clp2_t1.mnc'),
                 modelt1,
@@ -143,7 +145,7 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
                 datatype='-short' )
 
             clp_tp=tp.clp2['t1']
-            
+
         else: # just run Nu correct one more time
             minc.nu_correct(clp_tp, 
                             output_image=minc.tmp('clp2_t1.mnc'), 

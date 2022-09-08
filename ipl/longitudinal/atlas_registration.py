@@ -52,20 +52,35 @@ def atlasregistration_v10(patient):
                 level=nl_level,
                 )
         elif patient.nl_method == 'ANTS' or patient.nl_method == 'ants': # ANTs ?
-             ipl.ants_registration.non_linear_register_ants2(
+
+            par={'convergence':'1.e-8,20',
+                                'conf':{"32":200,"16":200,"8":100,"4":100,"2":50,"1":50},
+                                'blur':{"32":24, "16":12, "8":6,  "4":2,  "2":1,"1":0.5},
+                                'cost_function':'CC',
+                                'cost_function_par':'1,3,Regular,1.0',
+                                'transformation': 'SyN[0.1,3,0.0]',
+                                'convert_grid_type':'short'
+                }
+            if patient.nl_cost_fun == 'CC':
+                par['cost_function']='CC'
+                par['cost_function_par']='1,3,Regular,1.0'
+            elif patient.nl_cost_fun == 'MI':
+                par['cost_function']='MI'
+                par['cost_function_par']='1,32,Regular,1.0'
+            elif patient.nl_cost_fun == 'Mattes':
+                par['cost_function']='Mattes'
+                par['cost_function_par']='1,32,Regular,1.0'
+            else:
+                pass
+            print(repr(par))
+            ipl.ants_registration.non_linear_register_ants2(
                     patient.template['nl_template'], model_t1,
                     patient.nl_xfm,
                     source_mask=patient.template['nl_template_mask'],
                     target_mask=model_mask,
                     level=nl_level,
                     start=32,
-                    parameters={'convergence':'1.e-8,20',
-                                'conf':{"32":200,"16":200,"8":100,"4":100,"2":50,"1":50},
-                                'blur':{"32":24, "16":12, "8":6,  "4":2,  "2":1,"1":0.5},
-                                'cost_function':'CC',
-                                'cost_function_par':'1,3,Regular,1.0',
-                                'transformation': 'SyN[0.1,3,0.0]',
-                                'convert_grid_type':'short'},
+                    parameters=par,
                     )
         else:
             ipl.elastix_registration.register_elastix(

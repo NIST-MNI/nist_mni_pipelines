@@ -151,6 +151,9 @@ def launchPipeline(options):
 
         if 'nl_ants' in _opts:
             options.nl_ants = _opts['nl_ants']
+            
+        if 'nl_cost_fun' in _opts:
+            options.nl_cost_fun = _opts['nl_cost_fun']
 
         if 'nl_step' in _opts:
             options.nl_step = _opts['nl_step']
@@ -293,6 +296,7 @@ def launchPipeline(options):
                     patients[id].nl_method = 'ANTS'
                     patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
+                patients[id].nl_cost_fun = options.nl_cost_fun
                 # end of creating a patient
 
             # ## Add timepoint to the patient
@@ -458,7 +462,6 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
     Process one timepoint for cross-sectional analysis
     Second Stage, run in case of a single time point
     '''
-
     try:
         pipeline_linearatlasregistration(patient, tp)
 
@@ -479,10 +482,11 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         pipeline_lobe_segmentation(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
-
+        # Additional steps because there is only one timepoint actually
+        # ######################
         if len(patient.add)>0:
             pipeline_run_add(patient)
-            pipeline_run_add_tp(patient,tp)
+            pipeline_run_add_tp(patient,tp,single_tp=True)
 
         # vbm images
         # ###########
@@ -937,6 +941,14 @@ def parse_options():
         help='Use ANTs for nonlinear registration',
         action='store_true',
         default=False,
+        )
+
+    group.add_argument(
+        '--nl_cost_fun',
+        dest='nl_cost_fun',
+        help='ANTs cost function',
+        default='CC',
+        choices=['CC', 'MI', 'Mattes']
         )
 
     group.add_argument(

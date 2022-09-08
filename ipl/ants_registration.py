@@ -321,6 +321,16 @@ def non_linear_register_ants2(
 
         (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
 
+        dilate_mask = parameters.get("dilate_mask", None)
+
+        if dilate_mask is not None:
+            if source_mask_lr is not None:
+                minc.binary_morphology(source_mask_lr,"D[{}]".format(dilate_mask),minc.tmp("source_mask_lr.mnc"))
+                source_mask_lr=minc.tmp("source_mask_lr.mnc")
+            if target_mask_lr is not None:
+                minc.binary_morphology(target_mask_lr,"D[{}]".format(dilate_mask),minc.tmp("target_mask_lr.mnc"))
+                target_mask_lr=minc.tmp("target_mask_lr.mnc")
+
         # generate modalities
         for _s in range(modalities):
             if isinstance(cost_function, list): 
@@ -384,8 +394,22 @@ def non_linear_register_ants2(
             # convert to smaller datatype
             minc.reshape(output_tmp_base+'_grid_0.mnc',output_base+'_grid_0.mnc',datatype=convert_grid)
             minc.reshape(output_tmp_base+'_inverse_grid_0.mnc',output_base+'_inverse_grid_0.mnc',datatype=convert_grid)
-            shutil.copy(output_tmp_base+'.xfm',output_xfm)
-            shutil.copy(output_tmp_base+'_inverse.xfm',output_base+'_inverse.xfm')
+            # have to fix .xfm file to use proper grid file name
+            # HACK
+            with open(output_xfm,"w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(output_base+'_grid_0.mnc')};
+                """)
+            with open(output_base+'_inverse.xfm',"w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(output_base+'_inverse_grid_0.mnc')};
+                """)
 
 
 def linear_register_ants2(
@@ -400,11 +424,10 @@ def linear_register_ants2(
     ):
     """perform linear registration using ANTs"""
     #TODO:implement close
-    
-    
+
     with ipl.minc_tools.mincTools(verbose=verbose) as minc:
 
-        
+
         if parameters is None:
             #TODO add more options here
             parameters={ 
@@ -529,14 +552,14 @@ def linear_register_ants2(
                 cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',0.01)),str(winsorize_intensity.get('high',0.99))])
             else:
                 cmd.append('--winsorize-image-intensities')
-            
+
         if use_float:
             cmd.append('--float')
         
         if verbose>0:
             cmd.extend(['--verbose','1'])
         
-        outputs=[] # TODO: add inverse xfm ?
-        minc.command(cmd, inputs=inputs, outputs=outputs,verbose=verbose)
+        outputs=[output_xfm ] # TODO: add inverse xfm ?
+        minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
