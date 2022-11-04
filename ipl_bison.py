@@ -131,7 +131,7 @@ def read_csv_dict(fname):
 
 def resample_job(in_mnc,out_mnc,ref,xfm,invert_xfm):
     with mincTools() as m:
-        m.resample_smooth(in_mnc,out_mnc,order=1,like=ref,transform=xfm,invert_transform=invert_xfm)
+        m.resample_smooth(in_mnc,out_mnc,order=2,like=ref,transform=xfm,invert_transform=invert_xfm)
     return out_mnc
 
 def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
@@ -152,7 +152,7 @@ def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
         if "xfm" not in train:
             raise Error("Need to provide XFM files in xfm column")
 
-        with mincTools() as m:
+        with mincTools() as minc:
             with Pool(processes=n_jobs) as pool: 
                 jobs={}
                 for m in modalities:
@@ -162,8 +162,8 @@ def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
                         for i,xfm in enumerate(train["xfm"]):
                             jobs[f'av_{m}'].append(
                                 pool.apply_async(
-                                    resample_job, f"{atlas_pfx}_{m}.mnc",m.tmp(f"{i}_avg_{m}.mnc"),
-                                         train["mask"][i],xfm,inverse_xfm
+                                    resample_job, (f"{atlas_pfx}{m}.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
+                                         train["mask"][i],xfm,inverse_xfm)
                                     )
                             )
                 
@@ -172,8 +172,8 @@ def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
                     for i,xfm in enumerate(train["xfm"]):
                         jobs[f'p{c+1}'].append(
                                 pool.apply_async(
-                                    resample_job, f"{atlas_pfx}_p{c+1}.mnc",m.tmp(f"{i}_p{c+1}.mnc"),
-                                         train["mask"][i], xfm, inverse_xfm
+                                    resample_job, (f"{atlas_pfx}{c+1}.mnc",minc.tmp(f"{i}_p{c+1}.mnc"),
+                                         train["mask"][i], xfm, inverse_xfm)
                                     )
                             )
                 # collect results of all jobs
@@ -565,7 +565,7 @@ if __name__ == "__main__":
         hist = {}
         for m in modalities:
             if m in infer:
-                if f'av_{m}' not in infer:
+                if not options.resample and f'av_{m}' not in infer:
                     raise Error(f'missing av_{m}')
                 present_modalities.append(m)
                 hist[m] = joblib.load(options.load + os.sep + f'{m}_Label.pkl')
@@ -576,7 +576,7 @@ if __name__ == "__main__":
             clf.n_jobs = options.n_jobs
 
         for i in range(n_cls):
-            if f'p{i+1}' not in infer:
+            if not options.resample and f'p{i+1}' not in infer:
                 raise Error(f'p{i+1} is missing')
         
         nsamp=len(infer['subject'])
