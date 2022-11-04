@@ -1,5 +1,6 @@
 #! /usr/bin/env python
-# standard library
+
+# standard libraries
 import string
 import os
 import argparse
@@ -10,6 +11,7 @@ import math
 # MINC stuff
 from minc2_simple import minc2_file,minc2_error
 
+from   ipl.minc_tools    import mincTools,mincError
 
 try:
     import joblib
@@ -19,8 +21,9 @@ except ModuleNotFoundError:
 # numpy
 import numpy as np
 
-# scikit-learn
-import sklearn
+# using joblib to parallelize jobs (?)
+from multiprocessing import Pool
+
 
 class Error(Exception):
     def __init__(self, message):
@@ -126,26 +129,73 @@ def read_csv_dict(fname):
     return train
 
 
-def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir')):
-    train_vol={}
+def resample_job(in_mnc,out_mnc,ref,xfm,invert_xfm):
+    with mincTools() as m:
+        m.resample_smooth(in_mnc,out_mnc,order=1,like=ref,transform=xfm,invert_transform=invert_xfm)
+    return out_mnc
 
-    train_vol["subject"] = np.array(train["subject"])
-    train_vol["mask"]    = load_bin_volumes(train["mask"])
+def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
+    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False):
+    sample_vol={}
+
+    sample_vol["subject"] = np.array(train["subject"])
+    sample_vol["mask"]    = load_bin_volumes(train["mask"])
 
     if "labels" in train:
-        train_vol["labels"] = load_bin_volumes(train["labels"],mask=train_vol["mask"])
+        sample_vol["labels"] = load_bin_volumes(train["labels"], mask=sample_vol["mask"])
     
     for m in modalities:
         if m in train:
-            train_vol[m] = load_cnt_volumes(train[m], mask=train_vol['mask'])
-            if not f'av_{m}' in train: # TODO: move to sanity check
-                raise Error(f"Missing av_{m}")
-            train_vol[f'av_{m}'] = load_cnt_volumes(train[f'av_{m}'], mask=train_vol['mask'])
-    
-    for c in range(n_cls):
-        train_vol[f'p{c+1}'] = load_cnt_volumes(train[f'p{c+1}'], mask=train_vol['mask'])
+            sample_vol[m] = load_cnt_volumes(train[m], mask=sample_vol['mask'])
 
-    return train_vol
+    if resample: # assume that we need to apply transformation to the atlas first
+        if "xfm" not in train:
+            raise Error("Need to provide XFM files in xfm column")
+
+        with mincTools() as m:
+            with Pool(processes=n_jobs) as pool: 
+                jobs={}
+                for m in modalities:
+                    if m in train:
+                        jobs[f'av_{m}']=[]
+
+                        for i,xfm in enumerate(train["xfm"]):
+                            jobs[f'av_{m}'].append(
+                                pool.apply_async(
+                                    resample_job, f"{atlas_pfx}_{m}.mnc",m.tmp(f"{i}_avg_{m}.mnc"),
+                                         train["mask"][i],xfm,inverse_xfm
+                                    )
+                            )
+                
+                for c in range(n_cls):
+                    jobs[f'p{c+1}']=[]
+                    for i,xfm in enumerate(train["xfm"]):
+                        jobs[f'p{c+1}'].append(
+                                pool.apply_async(
+                                    resample_job, f"{atlas_pfx}_p{c+1}.mnc",m.tmp(f"{i}_p{c+1}.mnc"),
+                                         train["mask"][i], xfm, inverse_xfm
+                                    )
+                            )
+                # collect results of all jobs
+                for m in modalities:
+                    if m in train:
+                        r=[i.get() for i in jobs[f'av_{m}']]
+                        sample_vol[f'av_{m}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
+                for c in range(n_cls):
+                    r=[i.get() for i in jobs[f'p{c+1}']]
+                    sample_vol[f'p{c+1}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
+        # here all temp files should be removed    
+    else:
+        for m in modalities:
+            if m in train:
+                if not f'av_{m}' in train: # TODO: move to sanity check
+                    raise Error(f"Missing av_{m}")
+                sample_vol[f'av_{m}'] = load_cnt_volumes(train[f'av_{m}'], mask=sample_vol['mask'])
+        
+        for c in range(n_cls):
+            sample_vol[f'p{c+1}'] = load_cnt_volumes(train[f'p{c+1}'], mask=sample_vol['mask'])
+
+    return sample_vol
 
 
 def estimate_histograms(scans, labels, n_cls, n_bins,subset=None):
@@ -179,13 +229,13 @@ def estimate_histograms(scans, labels, n_cls, n_bins,subset=None):
     #print("Done",flush=True)
     return global_hist
 
+
 def draw_histograms(hist,out,modality='',dpi=100 ):
     import matplotlib
     matplotlib.use('AGG')
     import matplotlib.pyplot as plt
     import matplotlib.cm  as cmx
     import matplotlib.colors as colors
-    
 
     fig = plt.figure()
 
@@ -205,40 +255,40 @@ def draw_histograms(hist,out,modality='',dpi=100 ):
     plt.close('all')
 
 
-def estimate_all_histograms(train_vol, n_cls, n_bins, modalities=('t1','t2','pd','flair','ir'),subset=None):
+def estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=('t1','t2','pd','flair','ir'),subset=None):
     hist={}
     for m in modalities:
-        if m in train_vol:
-            hist[m] = estimate_histograms(train_vol[m], train_vol['labels'], n_cls, n_bins, subset=subset)
+        if m in sample_vol:
+            hist[m] = estimate_histograms(sample_vol[m], sample_vol['labels'], n_cls, n_bins, subset=subset)
     return hist
 
 
-def load_XY_item(i, train_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir')):
-    if 'labels' in train_vol:
-        Y__ = train_vol['labels'][i]
+def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir')):
+    if 'labels' in sample_vol:
+        Y__ = sample_vol['labels'][i]
     else:
         Y__ = None
 
     X__=[]
     for m in modalities:
-        if m in train_vol:
-            f1 = train_vol[m][i] # intensity feature
+        if m in sample_vol:
+            f1 = sample_vol[m][i] # intensity feature
             X__ += [ f1[:, np.newaxis] ]
             f1_i = np.round(f1).astype(int).clip(0,n_bins-1)
 
             for c in range(n_cls):
                 X__ += [ hist[m][ f1_i, c ][:, np.newaxis]  ] # p_int
 
-            X__ += [ train_vol[f'av_{m}'][i][:, np.newaxis] ] # intensity feature
+            X__ += [ sample_vol[f'av_{m}'][i][:, np.newaxis] ] # intensity feature
     ###
     for c in range(n_cls):
-        X__ += [ train_vol[f'p{c+1}'][i][:, np.newaxis] ] # intensity feature
+        X__ += [ sample_vol[f'p{c+1}'][i][:, np.newaxis] ] # intensity feature
 
     X__ = np.concatenate(X__, axis=1)
     return X__,Y__
 
 
-def load_XY(train_vol, hist, n_cls, n_bins, 
+def load_XY(sample_vol, hist, n_cls, n_bins, 
             modalities=('t1','t2','pd','flair','ir'),
             subset=None, noconcat=False):
     X_=[]
@@ -248,10 +298,10 @@ def load_XY(train_vol, hist, n_cls, n_bins,
         Y_=None
     
     if subset is None:
-        subset=np.arange(len(train_vol['mask']))
+        subset=np.arange(len(sample_vol['mask']))
 
     for i in subset:
-        (X__,Y__) = load_XY_item(i, train_vol, hist, n_cls, n_bins, modalities)
+        (X__,Y__) = load_XY_item(i, sample_vol, hist, n_cls, n_bins, modalities)
         X_.append(X__)
         if 'labels' in train:
             Y_.append(Y__)
@@ -316,7 +366,21 @@ def parse_options():
     parser.add_argument('--batch', type=int,
                         dest="batch",
                         help='Batch size for inference', default=1 )
-    
+
+    parser.add_argument('--atlas_pfx', 
+                        help='Atlas prefix, if on-line prior resampling is needed', default=1 )
+
+    parser.add_argument('--resample', action="store_true",
+                        dest="resample",
+                        default=False,
+                        help='Resample priors on line, need "xfm" column' )
+
+    parser.add_argument('--inverse_xfm', action="store_true",
+                        dest="inverse_xfm",
+                        default=False,
+                        help='Use invers of the xfm files for resampling (faster for nonlinear xfm)' )
+
+
     options = parser.parse_args()
     
     return options
@@ -348,13 +412,21 @@ if __name__ == "__main__":
         elif 'mask' not in train: # TODO: train with whole image?
             print('mask is missing')
             exit(1)
-        for i in range(n_cls):
-            if f'p{i+1}' not in train:
-                print(f'p{i+1} is missing')
+
+        if options.resample:
+            if 'xfm' not in train:
+                print("Need xfm column")
                 exit(1)
+        else:
+            for i in range(n_cls):
+                if f'p{i+1}' not in train:
+                    print(f'p{i+1} is missing')
+                    exit(1)
 
         print("Loading all volumes")
-        train_vol=load_all_volumes(train,n_cls,modalities=modalities)
+        sample_vol=load_all_volumes(train, n_cls, modalities=modalities,
+            resample=options.resample,atlas_pfx=options.atlas_pfx,inverse_xfm=options.inverse_xfm,
+            n_jobs=options.n_jobs)
 
         n_feat = n_cls # p_spatial 
 
@@ -402,7 +474,7 @@ if __name__ == "__main__":
         if options.CV is not None:
             folds = options.CV
             # create subset
-            subject     = train_vol['subject']
+            subject     = sample_vol['subject']
             unique_subj = np.unique(subject)
 
             _state = None
@@ -426,10 +498,10 @@ if __name__ == "__main__":
                 train_subset = np.array([ i for i,s in enumerate(subject) if s in training ],dtype=int)
                 test_subset = np.array([ i for i,s in enumerate(subject)  if s in testing ],dtype=int)
                 print("Estimating histogram")
-                hist = estimate_all_histograms(train_vol, n_cls, n_bins, modalities=modalities, subset=train_subset)
+                hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities, subset=train_subset)
 
-                tr_X,tr_Y = load_XY(train_vol, hist, n_cls, n_bins,subset=train_subset)
-                te_X,te_Y = load_XY(train_vol, hist, n_cls, n_bins,subset=test_subset, noconcat=True)
+                tr_X,tr_Y = load_XY(sample_vol, hist, n_cls, n_bins,subset=train_subset)
+                te_X,te_Y = load_XY(sample_vol, hist, n_cls, n_bins,subset=test_subset, noconcat=True)
                 te_s      = subject[test_subset]
 
                 print("Training classifier")
@@ -458,14 +530,14 @@ if __name__ == "__main__":
                 json.dump(cv_res, f, indent=2)
         else:
             # 1st stage : estimage intensity histograms
-            hist = estimate_all_histograms(train_vol, n_cls, n_bins, modalities=modalities)
+            hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities)
             for i,j in hist.items():
                 joblib.dump(j, options.output + os.sep + f'{i}_Label.pkl')
                 draw_histograms(j,options.output + os.sep + f'{i}_hist.png', modality=i)
 
             print("Loading features")
             # load image features
-            X,Y = load_XY(train_vol, hist, n_cls, n_bins)
+            X,Y = load_XY(sample_vol, hist, n_cls, n_bins)
 
             # X = np.concatenate(X_, axis=0)
             # Y = np.concatenate(Y_, axis=0)
@@ -511,7 +583,10 @@ if __name__ == "__main__":
         print(f"Processing {nsamp} volumes, batch size:{options.batch}...",flush=True)
         for b in range(math.ceil(nsamp/options.batch)):
             infer_sub = get_batch(infer, b, options.batch)
-            infer_vol = load_all_volumes(infer_sub, n_cls, modalities=modalities)
+            infer_vol = load_all_volumes(infer_sub, n_cls, modalities=modalities,
+                resample=options.resample,atlas_pfx=options.atlas_pfx,inverse_xfm=options.inverse_xfm,
+                n_jobs=options.n_jobs)
+            
             for i,subj in enumerate( infer_vol['subject'] ):
                 X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
                 out  = clf.predict(X_)
