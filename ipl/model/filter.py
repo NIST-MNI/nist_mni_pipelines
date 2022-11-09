@@ -168,8 +168,7 @@ def average_samples(
                     for s in samples:
                         avg.append(s.mask_f)
 
-                if not os.path.exists(output.mask):
-                    
+                if not os.path.exists(output.mask):                    
                     if symmetrize:
                         if have_minc2_simple:
                             faster_average(avg,m.tmp('avg_mask.mnc'))
@@ -185,11 +184,6 @@ def average_samples(
                         else:
                             m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
                         m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
-
-
-                    
-                    
-
         return  True
     except mincError as e:
         print("Exception in average_samples:{}".format(str(e)))
