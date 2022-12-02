@@ -204,7 +204,7 @@ def average_stats(
         st=0
         with mincTools(verbose=2) as m:
             if avg.mask is not None:
-                st=float(m.stats(sd.scan,'-median',mask=avg.mask))
+                st=float(m.stats(sd.scan,'-median', mask=avg.mask))
             else:
                 st=float(m.stats(sd.scan,'-median'))
         return st
