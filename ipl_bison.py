@@ -129,9 +129,9 @@ def read_csv_dict(fname):
     return train
 
 
-def resample_job(in_mnc,out_mnc,ref,xfm,invert_xfm):
+def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
     with mincTools() as m:
-        m.resample_smooth(in_mnc,out_mnc,order=2,like=ref,transform=xfm,invert_transform=invert_xfm)
+        m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
 def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
@@ -496,7 +496,7 @@ if __name__ == "__main__":
                 testing  = set( unique_subj[(fold * n_samples // folds): ((fold + 1) * n_samples // folds)] )
 
                 train_subset = np.array([ i for i,s in enumerate(subject) if s in training ],dtype=int)
-                test_subset = np.array([ i for i,s in enumerate(subject)  if s in testing ],dtype=int)
+                test_subset  = np.array([ i for i,s in enumerate(subject) if s in testing  ],dtype=int)
                 print("Estimating histogram")
                 hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities, subset=train_subset)
 
@@ -514,8 +514,8 @@ if __name__ == "__main__":
                         gt = (y      == (c+1))
                         sa = (te_out == (c+1))
                         kappa = 2.0 * (gt * sa).sum()/(gt.sum() + sa.sum())
-                        gt_vol = gt.sum()
-                        sa_vol = sa.sum()
+                        gt_vol = float(gt.sum())
+                        sa_vol = float(sa.sum())
                         #res[s][str(c)] = kappa
                         print(f"\t{s},{c+1},{kappa},{gt_vol},{sa_vol}")
                         cv_res['fold'].append(fold)
@@ -584,8 +584,10 @@ if __name__ == "__main__":
         for b in range(math.ceil(nsamp/options.batch)):
             infer_sub = get_batch(infer, b, options.batch)
             infer_vol = load_all_volumes(infer_sub, n_cls, modalities=modalities,
-                resample=options.resample,atlas_pfx=options.atlas_pfx,inverse_xfm=options.inverse_xfm,
-                n_jobs=options.n_jobs)
+                            resample=options.resample, 
+                            atlas_pfx=options.atlas_pfx, 
+                            inverse_xfm=options.inverse_xfm,
+                            n_jobs=options.n_jobs)
             
             for i,subj in enumerate( infer_vol['subject'] ):
                 X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
