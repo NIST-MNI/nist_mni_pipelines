@@ -71,14 +71,14 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
         # binarize:
         vol_avg=np.greater(vol_avg,threshold).astype('int8')
     else:
-        vol_avg=vol_avg.astype(np.float)
+        vol_avg=vol_avg.astype(np.float64)
     
     o_avg.save_complete_volume(vol_avg)
     
     if out_sd is not None:
         vol_sd/=lll
         vol_sd-=vol_avg*vol_avg
-        vol_sd=np.sqrt(vol_sd).astype(np.float)
+        vol_sd=np.sqrt(vol_sd).astype(np.float64)
         o_sd.save_complete_volume(vol_sd)
 
 @ray.remote

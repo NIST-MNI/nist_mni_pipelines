@@ -60,7 +60,7 @@ def xfmavg(inputs, output, verbose=False):
                 input_grids.append(grid_file)
                 
     if all_linear:
-        acc=np.asmatrix(np.zeros([4,4],dtype=np.complex))
+        acc=np.asmatrix(np.zeros([4,4],dtype=complex))
         for i in input_xfms:
             print(i)
             acc+=scipy.linalg.logm(i)
