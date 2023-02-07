@@ -105,7 +105,7 @@ def load_bin_volumes(vol_files, mask=None):
 
     if mask is None:
         mask=[None]*len(vol_files)
-    for v,m in zip(vol_files,mask):
+    for v,m in zip(vol_files, mask):
         vol=load_labels(v)
         if m is not None:
             out+=[vol[m>0]]
@@ -135,11 +135,14 @@ def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
     return out_mnc
 
 def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
-    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False):
+    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
     sample_vol={}
 
     sample_vol["subject"] = np.array(train["subject"])
     sample_vol["mask"]    = load_bin_volumes(train["mask"])
+    if ran_subset<1.0:
+        #remove random voxels from the mask
+        sample_vol["mask"] = np.logical_and(sample_vol["mask"]>0,np.random.rand(*sample_vol["mask"].shape)<=ran_subset)
 
     if "labels" in train:
         sample_vol["labels"] = load_bin_volumes(train["labels"], mask=sample_vol["mask"])
@@ -349,7 +352,7 @@ def parse_options():
         
     parser.add_argument('--random', type=int,default=None,
                         dest="random",
-                        help='Provide random state if needed' )
+                        help='Provide random state if needed for shuffling' )
 
     parser.add_argument('--n_cls', type=int,
                         dest="n_cls",
@@ -380,6 +383,13 @@ def parse_options():
                         default=False,
                         help='Use invers of the xfm files for resampling (faster for nonlinear xfm)' )
 
+    parser.add_argument('--ran_subset', type=float,
+                        dest="ran_subset",
+                        help='Random subset (fraction)', default=1.0 )
+
+    parser.add_argument('--subset_seed', type=int,
+                        dest="subset_seed",
+                        help='Seed for RNG to perform random subset', default=1 )
 
     options = parser.parse_args()
     
@@ -397,12 +407,12 @@ if __name__ == "__main__":
     options = parse_options()
     n_cls = options.n_cls
     n_bins = 256
-    modalities = ('t1', 't2', 'pd', 'flair', 'ir')
+    modalities = ('t1', 't2', 'pd', 'flair', 'ir','mp2t1', 'mp2uni')
 
     if options.train is not None and options.output is not None:
         train = read_csv_dict(options.train)
         # recognized headers:
-        # t1,t2,pd,flair,ir
+        # t1,t2,pd,flair,ir,mp2t1,mp2uni
         # pCls<n>,labels,mask
         # minimal set: one modality, p<n>, av_modality, labels, mask  for training 
 
@@ -424,10 +434,16 @@ if __name__ == "__main__":
                     exit(1)
 
         print("Loading all volumes")
+        if options.ran_subset<1.0: print("Using random subset:",options.ran_subset)
+
+        _state = np.random.get_state()
+        np.random.seed(options.subset_seed)
+
         sample_vol=load_all_volumes(train, n_cls, modalities=modalities,
             resample=options.resample,atlas_pfx=options.atlas_pfx,inverse_xfm=options.inverse_xfm,
-            n_jobs=options.n_jobs)
+            n_jobs=options.n_jobs,ran_subset=options.ran_subset)
 
+        np.random.set_state(_state)
         n_feat = n_cls # p_spatial 
 
         # Random Forest
