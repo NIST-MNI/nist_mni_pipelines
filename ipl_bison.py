@@ -134,7 +134,7 @@ def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
         m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
-def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
+def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
     resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
     sample_vol={}
 
@@ -142,7 +142,8 @@ def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
     sample_vol["mask"]    = load_bin_volumes(train["mask"])
     if ran_subset<1.0:
         #remove random voxels from the mask
-        sample_vol["mask"] = np.logical_and(sample_vol["mask"]>0,np.random.rand(*sample_vol["mask"].shape)<=ran_subset)
+        for i,_ in enumerate(sample_vol["mask"]):
+           sample_vol["mask"][i] = np.logical_and(sample_vol["mask"][i]>0, np.random.rand(*sample_vol["mask"][i].shape)<=ran_subset)
 
     if "labels" in train:
         sample_vol["labels"] = load_bin_volumes(train["labels"], mask=sample_vol["mask"])
@@ -258,7 +259,7 @@ def draw_histograms(hist,out,modality='',dpi=100 ):
     plt.close('all')
 
 
-def estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=('t1','t2','pd','flair','ir'),subset=None):
+def estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),subset=None):
     hist={}
     for m in modalities:
         if m in sample_vol:
@@ -266,7 +267,7 @@ def estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=('t1','t2','pd
     return hist
 
 
-def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir')):
+def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni')):
     if 'labels' in sample_vol:
         Y__ = sample_vol['labels'][i]
     else:
@@ -291,8 +292,8 @@ def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','
     return X__,Y__
 
 
-def load_XY(sample_vol, hist, n_cls, n_bins, 
-            modalities=('t1','t2','pd','flair','ir'),
+def load_XY(sample_vol, hist, n_cls, n_bins,
+            modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
             subset=None, noconcat=False):
     X_=[]
     if 'labels' in train:
