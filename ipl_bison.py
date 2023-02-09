@@ -145,7 +145,8 @@ def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
         m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
-def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
+def load_all_volumes(train, n_cls, 
+    modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
     resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
     sample_vol={}
 
@@ -273,10 +274,14 @@ def draw_histograms(hist,out,modality='',dpi=100 ):
     plt.close('all')
 
 
-def estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),subset=None):
+def estimate_all_histograms(sample_vol, n_cls, n_bins, 
+        modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'), 
+        subset=None):
     hist={}
     for m in modalities:
         if m in sample_vol:
+            if len(sample_vol[m])==0:
+                print("Error: zero length sample for modality ", m)
             hist[m] = estimate_histograms(sample_vol[m], sample_vol['labels'], n_cls, n_bins, subset=subset)
     return hist
 
