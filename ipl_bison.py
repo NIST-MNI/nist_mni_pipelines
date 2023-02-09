@@ -114,6 +114,9 @@ def load_bin_volumes(vol_files, mask=None):
         vol = load_labels(v)
         if m is not None:
             vv=vol[m>0]
+        else:
+            vv=vol
+
         if len(vv)==0:
             print("Warning:",v,"produces zero length volume")
             out += [vv]
