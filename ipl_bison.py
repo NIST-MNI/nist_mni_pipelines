@@ -94,10 +94,15 @@ def save_cnt( outfile, reference, data, mask=None, history=None ):
         out.save_complete_volume(_out)
 
 def load_cnt_volumes(vol_files, mask=None):
-    out=[]
-    for v,m in zip(vol_files,mask):
-        vol=load_image(v)
-        out+=[vol[m>0]]
+    out = []
+    for v,m in zip(vol_files, mask):
+        vol = load_image(v)
+        vv = vol[m>0]
+        if np.any(np.logical_not(np.isfinite(vv))):
+            print("Warning:",v,"Has NaNs!")
+        if len(vv)==0:
+            print("Warning:",v,"produces zero length volume")
+        out += [vv]
     return out
 
 def load_bin_volumes(vol_files, mask=None):
@@ -106,11 +111,14 @@ def load_bin_volumes(vol_files, mask=None):
     if mask is None:
         mask=[None]*len(vol_files)
     for v,m in zip(vol_files, mask):
-        vol=load_labels(v)
+        vol = load_labels(v)
         if m is not None:
-            out+=[vol[m>0]]
+            vv=vol[m>0]
+        if len(vv)==0:
+            print("Warning:",v,"produces zero length volume")
+            out += [vv]
         else:
-            out+=[vol]
+            out += [vol]
     return out
 
 
