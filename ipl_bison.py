@@ -99,7 +99,7 @@ def load_cnt_volumes(vol_files, mask=None):
         vol = load_image(v)
         vv = vol[m>0]
 
-        if np.any(np.logical_not(np.isfinite(vv))):
+        if np.any( np.logical_not( np.isfinite( vv ) ) ):
             print("Warning:",v,"Has NaNs!")
         if len(vv)==0:
             print("Warning:",v,"produces zero length volume")
@@ -120,7 +120,7 @@ def load_bin_volumes(vol_files, mask=None):
 
         if len(vv)==0:
             print("Warning:",v,"produces zero length volume")
-            
+
         out += [vv]
     return out
 
@@ -213,12 +213,15 @@ def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir','mp2t
     return sample_vol
 
 
-def estimate_histograms(scans, labels, n_cls, n_bins,subset=None):
+def estimate_histograms(scans, labels, n_cls, n_bins, subset=None):
     global_hist = np.zeros(shape=(n_bins , n_cls),dtype=float)
     #print("Estimating histogram:",end=' ',flush=True)
     if subset is None:
-        subset=np.arange(len(scans))
+        subset = np.arange(len(scans))
     
+    if len(subset)==0:
+        print("Error: estimate_histograms is called with zero-length subset")
+
     for i in subset:
         img = scans[i]
         lab = labels[i]
