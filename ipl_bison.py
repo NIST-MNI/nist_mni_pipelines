@@ -98,6 +98,7 @@ def load_cnt_volumes(vol_files, mask=None):
     for v,m in zip(vol_files, mask):
         vol = load_image(v)
         vv = vol[m>0]
+
         if np.any(np.logical_not(np.isfinite(vv))):
             print("Warning:",v,"Has NaNs!")
         if len(vv)==0:
@@ -119,9 +120,8 @@ def load_bin_volumes(vol_files, mask=None):
 
         if len(vv)==0:
             print("Warning:",v,"produces zero length volume")
-            out += [vv]
-        else:
-            out += [vol]
+            
+        out += [vv]
     return out
 
 
