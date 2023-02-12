@@ -9,12 +9,19 @@ import json
 from ipl.minc_tools import mincTools,mincError
 
 from ipl.model.structures       import MriDataset, MriTransform,MRIEncoder
-from ipl.model_ants.filter           import generate_flip_sample
-from ipl.model_ants.filter           import average_samples, average_stats
+from ipl.model.filter           import generate_flip_sample, normalize_sample
+from ipl.model.filter           import average_samples,average_stats
+from ipl.model.filter           import calculate_diff_bias_field,average_bias_fields
+from ipl.model.filter           import resample_and_correct_bias
 
-from ipl.model_ants.registration     import ants_register_step
-from ipl.model_ants.registration     import average_transforms
-from ipl.model_ants.resample         import concat_resample_nl
+from ipl.model.registration     import linear_register_step
+from ipl.model.registration     import non_linear_register_step
+from ipl.model.registration     import dd_register_step
+from ipl.model.registration     import ants_register_step
+from ipl.model.registration     import elastix_register_step
+from ipl.model.registration     import average_transforms
+from ipl.model.resample         import concat_resample
+from ipl.model.resample         import concat_resample_nl
 
 import ray
 
@@ -51,15 +58,7 @@ def generate_nonlinear_average(
 
     cleanup=       options.get('cleanup',False)
     symmetric=     options.get('symmetric',False)
-    parameters=    options.get('parameters',
-            {'convergence':'1.e-6,10',
-             'cost_function': 'CC',
-             'transformation': 'SyN[ .25, 2, 0.5 ]',
-             'use_histogram_matching': True,
-             'winsorize_intensity':None,
-
-             }
-            )
+    parameters=    options.get('parameters',None)
     refine=        options.get('refine',True)
     qc=            options.get('qc',False)
     downsample_=   options.get('downsample',None)
@@ -111,7 +110,9 @@ def generate_nonlinear_average(
             inv_transforms=[]
             fwd_transforms=[]
             
-            start=32 # TODO:make this a parameter
+            start=None
+            if it==1:
+                start=start_level
 
             for (i, s) in enumerate(samples):
                 sample_xfm=MriTransform(name=s.name,prefix=it_prefix,iter=it)
@@ -119,27 +120,76 @@ def generate_nonlinear_average(
 
                 prev_transform = None
 
-#                if it > 1:
-                    # if refine:
-                    #     prev_transform = corr_transforms[i]
-                    # else:
-                    #     start=start_level # TWEAK?
-
+                if it > 1:
+                    if refine:
+                        prev_transform = corr_transforms[i]
+                    else:
+                        start=start_level # TWEAK?
+                    
                 if it>skip and it<stop_early:
-                    transforms.append(
-                            ants_register_step.remote(
-                            s,
-                            current_model,
-                            sample_xfm,
-                            output_invert=sample_inv_xfm,
-                            init_xfm=prev_transform,
-                            symmetric=symmetric,
-                            parameters=parameters,
-                            level=p['level'],
-                            start=start,
-                            work_dir=prefix,
-                            downsample=downsample)
-                        )
+                    if use_dd:
+                        transforms.append(
+                            
+                                dd_register_step.remote(
+                                s,
+                                current_model,
+                                sample_xfm,
+                                output_invert=sample_inv_xfm,
+                                init_xfm=prev_transform,
+                                symmetric=symmetric,
+                                parameters=parameters,
+                                level=p['level'],
+                                start=start,
+                                work_dir=prefix,
+                                downsample=downsample)
+                            )
+                    elif use_ants:
+                        transforms.append(
+                            
+                                ants_register_step.remote(
+                                s,
+                                current_model,
+                                sample_xfm,
+                                output_invert=sample_inv_xfm,
+                                init_xfm=prev_transform,
+                                symmetric=symmetric,
+                                parameters=parameters,
+                                level=p['level'],
+                                start=start,
+                                work_dir=prefix,
+                                downsample=downsample)
+                            )
+                    elif use_elastix:
+                        transforms.append(
+                            
+                                elastix_register_step.remote(
+                                s,
+                                current_model,
+                                sample_xfm,
+                                output_invert=sample_inv_xfm,
+                                init_xfm=prev_transform,
+                                symmetric=symmetric,
+                                parameters=parameters,
+                                level=p['level'],
+                                start=start,
+                                work_dir=prefix,
+                                downsample=downsample)
+                            )
+                    else:
+                        transforms.append(
+                                non_linear_register_step.remote(
+                                s,
+                                current_model,
+                                sample_xfm,
+                                output_invert=sample_inv_xfm,
+                                init_xfm=prev_transform,
+                                symmetric=symmetric,
+                                parameters=parameters,
+                                level=p['level'],
+                                start=start,
+                                work_dir=prefix,
+                                downsample=downsample)
+                            )
                 inv_transforms.append(sample_inv_xfm)
                 fwd_transforms.append(sample_xfm)
 
