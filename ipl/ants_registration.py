@@ -279,7 +279,7 @@ def non_linear_register_ants2(
             if not 'conf'   in parameters: parameters['conf']   = {}
             if not 'blur'   in parameters: parameters['blur']   = {}
             if not 'shrink' in parameters: parameters['shrink'] = {}
-            
+
         prog=''
         shrink=''
         blur=''
@@ -293,7 +293,7 @@ def non_linear_register_ants2(
                 prog+='x'
                 shrink+='x'
                 blur+='x'
-                
+
         if not minc.checkfiles(inputs=sources+targets, 
                                 outputs=[output_xfm ]):
             return
@@ -313,7 +313,7 @@ def non_linear_register_ants2(
         convert_grid           = parameters.get('convert_grid_type', None)
         
         if convert_grid is not None:
-            output_tmp    = minc.tmp("transform.xfm")
+            output_tmp         = minc.tmp("transform.xfm")
             output_tmp_base    = output_tmp.rsplit('.xfm',1)[0]
 
         cmd=['antsRegistration','--minc','1','-a','--dimensionality','3']
