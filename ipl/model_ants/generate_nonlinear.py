@@ -13,8 +13,8 @@ from ipl.model_ants.filter           import generate_flip_sample
 from ipl.model_ants.filter           import average_samples, average_stats
 
 from ipl.model_ants.registration     import ants_register_step
-from ipl.model_ants.registration     import average_transforms
-from ipl.model_ants.resample         import concat_resample_nl
+from ipl.model_ants.registration     import generate_update_transform
+from ipl.model_ants.resample         import concat_resample_nl_inv
 
 import ray
 
@@ -63,11 +63,9 @@ def generate_nonlinear_average(
     refine=        options.get('refine',True)
     qc=            options.get('qc',False)
     downsample_=   options.get('downsample',None)
-    use_dd=        options.get('use_dd',False)
-    use_ants=      options.get('use_ants',False)
-    use_elastix=   options.get('use_elastix',False)
     start_level=   options.get('start_level',None)
     use_median=    options.get('median',False)
+    grad_step =    options.get('grad_step',0.25)
 
     models=[]
     models_sd=[]
@@ -136,7 +134,7 @@ def generate_nonlinear_average(
                             symmetric=symmetric,
                             parameters=parameters,
                             level=p['level'],
-                            start=start,
+                            start=start_level,
                             work_dir=prefix,
                             downsample=downsample)
                         )
@@ -155,11 +153,14 @@ def generate_nonlinear_average(
                     x.cleanup(verbose=True)
 
             # here all the transforms should exist
-            avg_inv_transform=MriTransform(name='avg_inv', prefix=it_prefix, iter=it)
+            update_group_transform = MriTransform(name='upd_group', 
+                prefix=it_prefix, iter=it)
 
             # 2 average all transformations
             if it>skip and it<stop_early:
-                result=average_transforms.remote(inv_transforms, avg_inv_transform, nl=True, symmetric=symmetric)
+                result=generate_update_transform.remote(inv_transforms, 
+                    update_group_transform, nl=True, 
+                    symmetric=symmetric, grad_step=grad_step)
                 ray.wait([result])
 
             corr=[]
@@ -172,14 +173,15 @@ def generate_nonlinear_average(
 
                 if it>skip and it<stop_early:
                     corr.append(
-                        concat_resample_nl.remote(
+                        concat_resample_nl_inv.remote(
                         s, 
-                        fwd_transforms[i], 
-                        avg_inv_transform, 
+                        inv_transforms[i], 
+                        update_group_transform, 
                         c, 
                         x, 
                         current_model, 
-                        level=p['level'], symmetric=symmetric, qc=qc ))
+                        level=p['level'], 
+                        symmetric=symmetric, qc=qc ))
                 corr_transforms.append(x)
                 corr_samples.append(c)
 
@@ -192,11 +194,15 @@ def generate_nonlinear_average(
                     x.cleanup()
                 for x in fwd_transforms:
                     x.cleanup()
-                avg_inv_transform.cleanup()
+                update_group_transform.cleanup()
                 
             # 4 average resampled samples to create new estimate
             if it>skip and it<stop_early:
-                result=average_samples.remote( corr_samples, next_model, next_model_sd, symmetric=symmetric, symmetrize=symmetric,median=use_median)
+                result = average_samples.remote( corr_samples, next_model, 
+                    next_model_sd, symmetric=symmetric, 
+                    symmetrize=symmetric, 
+                    median=use_median)
+                # TODO: add sharpening here
                 ray.wait([result])
 
             if cleanup and it>1:
@@ -208,7 +214,7 @@ def generate_nonlinear_average(
             current_model_sd=next_model_sd
 
             if it>skip and it<stop_early:
-                result=average_stats.remote( next_model, next_model_sd)
+                result = average_stats.remote( next_model, next_model_sd)
                 sd.append(result)
     
     # copy output to the destination
@@ -236,10 +242,10 @@ def generate_nonlinear_average(
         models_sd.pop()
         
         # delete unneeded models
-        for m in models:
-            m.cleanup()
-        for m in models_sd:
-            m.cleanup()
+        # for m in models:
+        #     m.cleanup()
+        # for m in models_sd:
+        #     m.cleanup()
 
     return results
 

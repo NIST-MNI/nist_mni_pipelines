@@ -15,7 +15,7 @@ import ray
 
 
 @ray.remote
-def concat_resample(
+def concat_resample_inv(
     input_mri,
     input_transform,
     corr_transform,
@@ -37,14 +37,19 @@ def concat_resample(
                     m.calc([input_mri.scan,bias.scan],'A[0]*A[1]',m.tmp('corr.mnc'))
                     scan=m.tmp('corr.mnc')
             
-                m.xfmconcat([input_transform.xfm, corr_transform.xfm], output_transform.xfm)
-                m.resample_smooth(scan, output_mri.scan, transform=output_transform.xfm,like=model.scan)
+                m.xfmconcat([corr_transform.xfm, input_transform.xfm ], output_transform.xfm)
+                m.resample_smooth(scan, 
+                    output_mri.scan, 
+                    transform=output_transform.xfm,
+                    like=model.scan, 
+                    invert_transform=True)
 
                 if input_mri.mask is not None and output_mri.mask is not None:
                     m.resample_labels(input_mri.mask, 
                                     output_mri.mask,
                                     transform=output_transform.xfm,
-                                    like=model.scan)
+                                    like=model.scan,
+                                    invert_transform=True)
                     if qc:
                         m.qc(output_mri.scan,output_mri.scan+'.jpg',mask=output_mri.mask)
                 else:
@@ -59,30 +64,34 @@ def concat_resample(
                         m.calc([input_mri.scan_f,bias.scan_f],'A[0]*A[1]',m.tmp('corr_f.mnc'))
                         scan_f=m.tmp('corr_f.mnc')
                     
-                    m.xfmconcat([input_transform.xfm_f, corr_transform.xfm], output_transform.xfm_f)
-                    m.resample_smooth(scan_f, output_mri.scan_f, transform=output_transform.xfm_f,like=model.scan)
+                    m.xfmconcat([corr_transform.xfm, input_transform.xfm_f], output_transform.xfm_f)
+                    m.resample_smooth(scan_f, output_mri.scan_f, 
+                        transform=output_transform.xfm_f,
+                        like=model.scan,
+                        invert_transform=True)
 
                     if input_mri.mask is not None and output_mri.mask is not None:
                         m.resample_labels(input_mri.mask_f, 
                                         output_mri.mask_f,
                                         transform=output_transform.xfm_f,
-                                        like=model.scan)
+                                        like=model.scan,
+                                        invert_transform=True)
                         if qc:
                             m.qc(output_mri.scan_f,output_mri.scan_f+'.jpg',mask=output_mri.mask_f)
                     else:
                         if qc:
                             m.qc(output_mri.scan_f,output_mri.scan_f+'.jpg')
     except mincError as e:
-        print("Exception in concat_resample:{}".format(str(e)))
+        print("Exception in concat_resample_inv:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in concat_resample:{}".format(sys.exc_info()[0]))
+        print("Exception in concat_resample_inv:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
 @ray.remote
-def concat_resample_nl(
+def concat_resample_nl_inv(
     input_mri,
     input_transform,
     corr_transform,
@@ -91,15 +100,14 @@ def concat_resample_nl(
     model,
     level,
     symmetric=False,
-    qc=False,
-    invert_transform=False
+    qc=False
     ):
     """apply correction transformation and resample input"""
     try:
         with mincTools() as m:
             tfm=input_transform.xfm
             if corr_transform is not None:
-                m.xfmconcat([input_transform.xfm, corr_transform.xfm], m.tmp('transform.xfm'))
+                m.xfmconcat([corr_transform.xfm, input_transform.xfm ], m.tmp('transform.xfm'))
                 tfm=m.tmp('transform.xfm')
             ref=None
             if isinstance(model, MriDatasetRegress): ref=model.volume[0]
@@ -111,14 +119,14 @@ def concat_resample_nl(
             m.resample_smooth(input_mri.scan, output_mri.scan, 
                               transform=output_transform.xfm, 
                               like=ref,
-                              invert_transform=invert_transform)
+                              invert_transform=True)
             
             if input_mri.mask and output_mri.mask:
                 m.resample_labels(input_mri.mask, 
                                 output_mri.mask,
                                 transform=output_transform.xfm,
                                 like=ref,
-                                invert_transform=invert_transform)
+                                invert_transform=True)
                 if qc:
                     m.qc(output_mri.scan,output_mri.scan+'.jpg',
                          mask=output_mri.mask)
@@ -129,19 +137,19 @@ def concat_resample_nl(
             if symmetric:
                 tfm_f=input_transform.xfm_f
                 if corr_transform is not None:
-                    m.xfmconcat( [input_transform.xfm_f, corr_transform.xfm], m.tmp('transform_f.xfm') )
+                    m.xfmconcat( [corr_transform.xfm, input_transform.xfm_f], m.tmp('transform_f.xfm') )
                     tfm_f=m.tmp('transform_f.xfm')
                 m.xfm_normalize( tfm_f, ref, output_transform.xfm_f, step=level )
                 m.resample_smooth(input_mri.scan_f, output_mri.scan_f, transform=output_transform.xfm_f, 
                                   like=ref,
-                                  invert_transform=invert_transform )
+                                  invert_transform=True )
                 
                 if input_mri.mask and output_mri.mask:
                     m.resample_labels(input_mri.mask_f, 
                                       output_mri.mask_f,
                                       transform=output_transform.xfm_f,
                                       like=ref,
-                                      invert_transform=invert_transform)
+                                      invert_transform=True)
                     
                     if qc:
                         m.qc(output_mri.scan_f, output_mri.scan_f+'.jpg',
@@ -153,11 +161,11 @@ def concat_resample_nl(
                     
         return True
     except mincError as e:
-        print("Exception in concat_resample_nl:{}".format(str(e)) )
+        print("Exception in concat_resample_nl_inv:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in concat_resample_nl:{}".format(sys.exc_info()[0]))
+        print("Exception in concat_resample_nl_inv:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
