@@ -52,7 +52,7 @@ def generate_nonlinear_average(
     cleanup=       options.get('cleanup',False)
     symmetric=     options.get('symmetric',False)
     parameters=    options.get('parameters',
-            {'convergence':'1.e-6,10',
+            {'convergence':'1.e-9,10',
              'cost_function': 'CC',
              'transformation': 'SyN[ .25, 2, 0.5 ]',
              'use_histogram_matching': True,
@@ -63,7 +63,7 @@ def generate_nonlinear_average(
     refine=        options.get('refine',True)
     qc=            options.get('qc',False)
     downsample_=   options.get('downsample',None)
-    start_level=   options.get('start_level',None)
+    start_level=   options.get('start_level',32)
     use_median=    options.get('median',False)
     grad_step =    options.get('grad_step',0.25)
 
@@ -98,8 +98,10 @@ def generate_nonlinear_average(
             # this will be a model for next iteration actually
 
             # 1 register all subjects to current template
-            next_model   =MriDataset(prefix=prefix,iter=it,name='avg',has_mask=current_model.has_mask())
-            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd' ,has_mask=current_model.has_mask())
+            next_model   =MriDataset(prefix=prefix,iter=it,name='avg',
+                has_mask=current_model.has_mask())
+            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd' ,
+                has_mask=current_model.has_mask())
             transforms=[]
 
             it_prefix=prefix+os.sep+str(it)
