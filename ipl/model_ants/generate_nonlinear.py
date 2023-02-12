@@ -54,10 +54,11 @@ def generate_nonlinear_average(
     parameters=    options.get('parameters',
             {'convergence':'1.e-9,10',
              'cost_function': 'CC',
-             'transformation': 'SyN[ .25, 2, 0.5 ]',
+             'cost_function_par': '1,4',
+             'transformation': 'SyN[ .1, 3, 0 ]',
              'use_histogram_matching': True,
-             'winsorize_intensity':None,
-
+             'winsorize_intensity': {'low':0.01, 'high':0.99},
+             
              }
             )
     refine=        options.get('refine',True)
@@ -161,7 +162,7 @@ def generate_nonlinear_average(
             # 2 average all transformations
             if it>skip and it<stop_early:
                 result=generate_update_transform.remote(inv_transforms, 
-                    update_group_transform, nl=True, 
+                    update_group_transform,  
                     symmetric=symmetric, grad_step=grad_step)
                 ray.wait([result])
 
