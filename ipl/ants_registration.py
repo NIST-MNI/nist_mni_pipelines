@@ -371,7 +371,9 @@ def non_linear_register_ants2(
             
         if winsorize_intensity is not None:
             if isinstance(winsorize_intensity, dict):
-                cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low', 0.01)),str(winsorize_intensity.get('high',0.99))])
+                cmd.extend(['--winsorize-image-intensities',
+                '[{},{}]'.format(winsorize_intensity.get('low', 0.01),
+                                 winsorize_intensity.get('high',0.99))])
             else:
                 cmd.append( '--winsorize-image-intensities')
             
