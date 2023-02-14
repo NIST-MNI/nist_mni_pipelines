@@ -8,7 +8,7 @@ import json
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-from ipl.model.structures       import MriDataset, MriTransform,MRIEncoder
+from ipl.model_ants.structures       import MriDataset, MriTransform,MRIEncoder
 from ipl.model_ants.filter           import generate_flip_sample
 from ipl.model_ants.filter           import average_samples, average_stats
 
@@ -61,7 +61,7 @@ def generate_nonlinear_average(
              
              }
             )
-    refine=        options.get('refine',True)
+    lin_parameters=options.get('lin_parameters',{})
     qc=            options.get('qc',False)
     downsample_=   options.get('downsample',None)
     start_level=   options.get('start_level',32)
@@ -103,21 +103,16 @@ def generate_nonlinear_average(
                 has_mask=current_model.has_mask())
             next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd' ,
                 has_mask=current_model.has_mask())
-            transforms=[]
 
             it_prefix=prefix+os.sep+str(it)
             if not os.path.exists(it_prefix):
                 os.makedirs(it_prefix)
 
-            inv_transforms=[]
-            fwd_transforms=[]
-            
-            start=32 # TODO:make this a parameter
+            transforms=[]
+            nl_transforms=[]
 
             for (i, s) in enumerate(samples):
-                sample_xfm=MriTransform(name=s.name,prefix=it_prefix,iter=it)
-                sample_inv_xfm=MriTransform(name=s.name+'_inv',prefix=it_prefix,iter=it)
-
+                sample_xfm     = MriTransform(name=s.name,       prefix=it_prefix,iter=it)
                 prev_transform = None
 
 #                if it > 1:
@@ -129,20 +124,19 @@ def generate_nonlinear_average(
                 if it>skip and it<stop_early:
                     transforms.append(
                             ants_register_step.remote(
-                            s,
                             current_model,
+                            s,
                             sample_xfm,
-                            output_invert=sample_inv_xfm,
                             init_xfm=prev_transform,
                             symmetric=symmetric,
                             parameters=parameters,
+                            lin_parameters=lin_parameters,
                             level=p['level'],
                             start=start_level,
-                            work_dir=prefix,
+                            #work_dir=prefix,
                             downsample=downsample)
                         )
-                inv_transforms.append(sample_inv_xfm)
-                fwd_transforms.append(sample_xfm)
+                nl_transforms.append(sample_xfm)
 
             # wait for jobs to finish
             if it>skip and it<stop_early:
@@ -151,9 +145,9 @@ def generate_nonlinear_average(
             if cleanup and it>1 :
                 # remove information from previous iteration
                 for s in corr_samples:
-                    s.cleanup(verbose=True)
+                   s.cleanup(verbose=True)
                 for x in corr_transforms:
-                    x.cleanup(verbose=True)
+                   x.cleanup(verbose=True)
 
             # here all the transforms should exist
             update_group_transform = MriTransform(name='upd_group', 
@@ -161,7 +155,7 @@ def generate_nonlinear_average(
 
             # 2 average all transformations
             if it>skip and it<stop_early:
-                result=generate_update_transform.remote(inv_transforms, 
+                result=generate_update_transform.remote(nl_transforms, 
                     update_group_transform,  
                     symmetric=symmetric, grad_step=grad_step)
                 ray.wait([result])
@@ -171,18 +165,18 @@ def generate_nonlinear_average(
             corr_samples=[]
             # 3 concatenate correction and resample
             for (i, s) in enumerate(samples):
-                c=MriDataset(prefix=it_prefix,iter=it,name=s.name)
-                x=MriTransform(name=s.name+'_corr',prefix=it_prefix,iter=it)
+                c=MriDataset(prefix=it_prefix, iter=it, name=s.name)
+                x=MriTransform(name=s.name+'_corr', prefix=it_prefix, iter=it)
 
                 if it>skip and it<stop_early:
                     corr.append(
                         concat_resample_nl_inv.remote(
                         s, 
-                        inv_transforms[i], 
+                        nl_transforms[i], 
                         update_group_transform, 
                         c, 
                         x, 
-                        current_model, 
+                        current_model,
                         level=p['level'], 
                         symmetric=symmetric, qc=qc ))
                 corr_transforms.append(x)
@@ -193,12 +187,10 @@ def generate_nonlinear_average(
 
             # cleanup transforms
             if cleanup :
-                for x in inv_transforms:
-                    x.cleanup()
-                for x in fwd_transforms:
-                    x.cleanup()
+                for x in nl_transforms:
+                   x.cleanup()
                 update_group_transform.cleanup()
-                
+
             # 4 average resampled samples to create new estimate
             if it>skip and it<stop_early:
                 result = average_samples.remote( corr_samples, next_model, 
@@ -245,10 +237,10 @@ def generate_nonlinear_average(
         models_sd.pop()
         
         # delete unneeded models
-        # for m in models:
-        #     m.cleanup()
-        # for m in models_sd:
-        #     m.cleanup()
+        for m in models:
+            m.cleanup()
+        for m in models_sd:
+            m.cleanup()
 
     return results
 

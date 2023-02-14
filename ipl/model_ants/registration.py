@@ -25,13 +25,16 @@ except:
 
 import ray
 
-def xfmavg(inputs, output, verbose=False,mult_grid=None):
+def xfmavg(inputs, output, verbose=False, mult_grid=None):
     # TODO: handle inversion flag correctly
     all_linear=True
     all_nonlinear=True
     input_xfms=[]
     input_grids=[]
     input_inv_grids=[]
+
+    _identity=np.asmatrix(np.identity(4))
+    _eps=1e-6
     
     for j in inputs:
         x=minc2_xfm(j)
@@ -42,26 +45,26 @@ def xfmavg(inputs, output, verbose=False,mult_grid=None):
             all_linear &= False
             # strip identity matrixes
             nl=[]
-            _identity=np.asmatrix(np.identity(4))
-            _eps=1e-6
-            if x.get_n_type(0)==minc2_xfm.MINC2_XFM_LINEAR and x.get_n_type(1)==minc2_xfm.MINC2_XFM_GRID_TRANSFORM:
-                if scipy.linalg.norm(_identity-np.asmatrix(x.get_linear_transform(0)) )>_eps: # this is non-identity matrix
-                    all_nonlinear&=False
-                else:
-                    # TODO: if grid have to be inverted!
-                    (grid_file,grid_invert)=x.get_grid_transform(1)
-                    input_grids.append(grid_file)
-                    input_inv_grids.append(grid_invert)
-            elif x.get_n_type(1)==minc2_xfm.MINC2_XFM_GRID_TRANSFORM:
+            if x.get_n_concat()==2 and x.get_n_type(0)==minc2_xfm.MINC2_XFM_LINEAR and x.get_n_type(1)==minc2_xfm.MINC2_XFM_GRID_TRANSFORM:
+                    if scipy.linalg.norm(_identity-np.asmatrix(x.get_linear_transform(0)) )>_eps: # this is non-identity matrix
+                        all_nonlinear &= False
+                    else:
+                        # TODO: if grid have to be inverted!
+                        (grid_file, grid_invert) = x.get_grid_transform(1)
+                        input_grids.append(grid_file)
+                        input_inv_grids.append(grid_invert)
+            elif x.get_n_concat()==1 and x.get_n_type(0) == minc2_xfm.MINC2_XFM_GRID_TRANSFORM:
                 # TODO: if grid have to be inverted!
-                (grid_file, grid_invert)=x.get_grid_transform(0)
+                (grid_file, grid_invert) = x.get_grid_transform(0)
                 input_grids.append(grid_file)
                 input_inv_grids.append(grid_invert)
+            else:
+                raise Exception("Unsupported numbre of transforms")
                 
     if all_linear:
         acc=np.asmatrix(np.zeros([4,4],dtype=complex))
         for i in input_xfms:
-            print(i)
+            #print(i)
             acc+=scipy.linalg.logm(i)
             
         acc/=len(input_xfms)
@@ -76,7 +79,7 @@ def xfmavg(inputs, output, verbose=False,mult_grid=None):
         if any(input_inv_grids) != all(input_inv_grids):
             raise Exception("Mixed XFM inversion flag in nonlinear transforms")
         
-        output_grid=output.rsplit('.xfm',1)[0]+'_grid_0.mnc'
+        output_grid = output.rsplit('.xfm',1)[0]+'_grid_0.mnc'
         
         with mincTools(verbose=2) as m:
             if mult_grid is not None:
@@ -97,13 +100,12 @@ def ants_register_step(
     sample,
     model,
     output,
-    output_invert=None,
     init_xfm=None,
     level=32,
     start=None,
     symmetric=False,
     parameters=None,
-    work_dir=None,
+    lin_parameters=None,
     downsample=None,
     avg_symmetric=True,
     verbose=2 
@@ -123,35 +125,39 @@ def ants_register_step(
                 _init_xfm_f=init_xfm.xfm_f
         
         with mincTools(verbose=verbose) as m:
-            out=m.tmp('forward')
-            out_f=m.tmp('forward_f')
+            out   = output
+            # TODO finalize this
             if symmetric:
-
                 if m.checkfiles(inputs=[sample.scan,model.scan,sample.scan_f],
-                                outputs=[output.xfm, output.xfm_f]):
+                                outputs=[output.fw, output.fw_f]):
                     
-                    ipl.ants_registration.non_linear_register_ants2(
+                    if avg_symmetric:
+                        out   = MriTransform(m.tmp('forward'))
+                    
+                    ipl.ants_registration.full_register_ants2(
                         sample.scan,
                         model.scan,
-                        out+'.xfm',
+                        out.base,
                         source_mask=sample.mask,
                         target_mask=model.mask,
                         init_xfm=_init_xfm,
                         parameters=parameters,
+                        lin_parameters=lin_parameters,
                         level=level,
                         start=start,
                         downsample=downsample,
                         #work_dir=work_dir
                         )
                     
-                    ipl.ants_registration.non_linear_register_ants2(
+                    ipl.ants_registration.full_register_ants2(
                         sample.scan_f,
                         model.scan,
-                        out_f+'.xfm',
+                        out.base_f,
                         source_mask=sample.mask_f,
                         target_mask=model.mask,
                         init_xfm=_init_xfm_f,
                         parameters=parameters,
+                        lin_parameters=lin_parameters,
                         level=level,
                         start=start,
                         downsample=downsample,
@@ -159,44 +165,36 @@ def ants_register_step(
                         )
                     
                     if avg_symmetric:
-                        m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0,1.0,1.0] )
-                        m.xfmconcat([m.tmp('flip_x.xfm'), out_f+'.xfm', m.tmp('flip_x.xfm')], m.tmp('forward_f_f.xfm'))
+                        #### TODO: finilize this!
+                        # m.param2xfm(m.tmp('flip_x.xfm'), scales=[-1.0,1.0,1.0] )
+                        # m.xfmconcat([m.tmp('flip_x.xfm'), out_f+'.xfm', m.tmp('flip_x.xfm')], m.tmp('forward_f_f.xfm'))
                         
-                        m.xfm_normalize(out+'.xfm', model.scan, m.tmp('forward_n.xfm'),step=level)
-                        m.xfm_normalize(m.tmp('forward_f_f.xfm'),model.scan,m.tmp('forward_f_f_n.xfm'),step=level)
+                        # m.xfm_normalize(out+'.xfm', model.scan, m.tmp('forward_n.xfm'),step=level)
+                        # m.xfm_normalize(m.tmp('forward_f_f.xfm'),model.scan,m.tmp('forward_f_f_n.xfm'),step=level)
                         
-                        xfmavg([m.tmp('forward_n.xfm'),m.tmp('forward_f_f_n.xfm')],output.xfm)
-                        m.xfmconcat([m.tmp('flip_x.xfm'), output.xfm , m.tmp('flip_x.xfm')], m.tmp('output_f.xfm' ))
-                        m.xfm_normalize(out_f+'.xfm',model.scan,output.xfm_f,step=level)
-                        
-                    else:
-                        m.xfm_normalize(out+'.xfm',model.scan,output.xfm,step=level)
-                        m.xfm_normalize(out_f+'.xfm',model.scan,output.xfm_f,step=level)
+                        # xfmavg([m.tmp('forward_n.xfm'),m.tmp('forward_f_f_n.xfm')],output.xfm)
+                        # m.xfmconcat([m.tmp('flip_x.xfm'), output.xfm , m.tmp('flip_x.xfm')], m.tmp('output_f.xfm' ))
+                        # m.xfm_normalize(out_f+'.xfm',model.scan,output.xfm_f,step=level)
+                        pass
                 
             else:
                 if m.checkfiles(inputs=[sample.scan,model.scan],
-                                outputs=[output.xfm]):
+                                outputs=[output.fw]):
 
-                    ipl.ants_registration.non_linear_register_ants2(
+                    ipl.ants_registration.full_register_ants2(
                         sample.scan,
                         model.scan,
-                        out+'.xfm',
+                        output.base,
                         source_mask=sample.mask,
                         target_mask=model.mask,
-                        init_xfm=_init_xfm,
+#                        init_xfm=_init_xfm,
                         parameters=parameters,
+                        lin_parameters=lin_parameters,
                         level=level,
                         start=start,
                         downsample=downsample,
                         #work_dir=work_dir
                         )
-                    m.xfm_normalize(out+'.xfm',model.scan,output.xfm,step=level)
-
-            if output_invert is not None and m.checkfiles(inputs=[], outputs=[output_invert.xfm]):
-                m.xfm_normalize(out+'_inverse.xfm',model.scan,output_invert.xfm,step=level)
-                if symmetric:
-                    m.xfm_normalize(out_f+'_inverse.xfm',model.scan,output_invert.xfm_f,step=level)
-                    
         return True
     except mincError as e:
         print( "Exception in ants_register_step:{}".format(str(e)) )
@@ -213,35 +211,49 @@ def generate_update_transform(
     samples,
     output,
     symmetric=False,
-    invert=False,
     grad_step=0.25,
     ):
     """create update transform ANTs style"""
     try:
         with mincTools() as m:
-            avg = []
-            out_xfm=output.xfm
+            avg     = []
+            avg_lin = []
 
             for i in samples:
-                avg.append(i.xfm)
+                avg.append(i.fw)
+                avg_lin.append(i.lin_fw)
 
             if symmetric:
                 for i in samples:
-                    avg.append(i.xfm_f)
-            if invert:
-                out_xfm=m.tmp("average.xfm")
-            # TODO: implement Affine part 
-            xfmavg(avg, out_xfm, mult_grid=-grad_step)
+                    avg.append(i.fw_f)
+                    avg_lin.append(i.lin_fw_f)
 
-            if invert:
-                m.xfminvert(out_xfm, output.xfm)
+            out_nl=m.tmp("avg_nl.xfm")
+            out_nl_grid=m.tmp("avg_nl.xfm").rsplit(".xfm",1)[0] + '_grid_0.mnc'
+
+            xfmavg(avg,     out_nl, mult_grid=-grad_step)
+            xfmavg(avg_lin, output.lin_fw )
+
+            ## transform nonlinear part 
+            # ${ANTSPATH}/WarpImageMultiTransform ${dim} ${templatename}0warp.nii.gz ${templatename}0warp.nii.gz -i  ${templatename}0Affine.txt -R ${template}
+            m.resample_smooth(out_nl_grid, output.fw_grid, transform=output.lin_fw, order=1)
+            print("generate_update_transform:",output.fw_grid)
+            ## HACK : generate grid header
+            with open(output.fw, "w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(output.fw_grid)};
+                """)
+
         return True
     except mincError as e:
-        print("Exception in average_transforms:{}".format(str(e)) )
+        print("Exception in generate_update_transform:{}".format(str(e)) )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in average_transforms:{}".format(sys.exc_info()[0]) )
+        print("Exception in generate_update_transform:{}".format(sys.exc_info()[0]) )
         traceback.print_exc(file=sys.stdout)
         raise
 

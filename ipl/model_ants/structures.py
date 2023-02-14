@@ -63,107 +63,61 @@ class MriDataset(object):
                     os.unlink(i)
 
 class MriTransform(object):
-    def __init__(self,prefix,name,iter=None,linear=False):
-        self.prefix=prefix
-        self.name=name
-        self.iter=iter
-        self.xfm_f=None
-        self.grid_f=None
-        self.linear=linear
+    """
+    Output from ANTs transform
+    """
+
+    def __init__(self, prefix, name, iter=None):
+        self.prefix = prefix
+        self.name = name
+        self.iter = iter
         
         if self.iter is None:
-            self.xfm=  self.prefix+os.sep+self.name+'.xfm'
-            self.xfm_f= self.prefix+os.sep+self.name+'_f.xfm'
-            self.grid= self.prefix+os.sep+self.name+'_grid_0.mnc'
-            self.grid_f= self.prefix+os.sep+self.name+'_f_grid_0.mnc'
+            self.base = self.prefix + os.sep + self.name + '_'
+            self.base_f = self.prefix + os.sep + self.name + '_f_'
         else:
-            self.xfm= self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'.xfm'
-            self.xfm_f= self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_f.xfm'
-            self.grid= self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_grid_0.mnc'
-            self.grid_f= self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_f_grid_0.mnc'
-        # just null grids if it is linear 
-        if self.linear:
-            self.grid=None
-            self.grid_f=None
-        
+            self.base = self.prefix + os.sep + self.name+'.{:03d}_'.format(iter)
+            self.base_f = self.prefix + os.sep + self.name+'.{:03d}_f_'.format(iter)
+
+        self.fw   = self.base   + '1_NL.xfm'
+        self.fw_f = self.base_f + '1_NL.xfm'
+        self.fw_grid    = self.base + '1_NL_grid_0.mnc'
+        self.fw_grid_f  = self.base_f + '1_NL_grid_0.mnc'
+
+        self.bw   = self.base   + '1_inverse_NL.xfm'
+        self.bw_f = self.base_f + '1_inverse_NL.xfm'
+        self.bw_grid    = self.base + '1_inverse_NL_grid_0.mnc'
+        self.bw_grid_f  = self.base_f + '1_inverse_NL_grid_0.mnc'
+
+        self.lin_fw   = self.base   + '0_GenericAffine.xfm'
+        self.lin_fw_f = self.base_f + '0_GenericAffine.xfm'
+
     def __repr__(self):
         return 'MriTransform(prefix="{}",name="{}",iter="{}")'.\
                format(self.prefix,self.name,repr(self.iter))
 
     def cleanup(self,verbose=False):
-        for i in (self.xfm, self.grid, self.xfm_f, self.grid_f):
+        for i in (self.fw, self.fw_grid, self.fw_f, self.fw_grid_f,
+                  self.bw, self.bw_grid, self.bw_f, self.bw_grid_f,
+                  self.lin_fw, self.lin_fw_f):
             if i is not None and os.path.exists(i):
                 if verbose:
                     print("Removing:{}".format(i))
                 os.unlink(i)
-
-
-class MriDatasetRegress(object):
-    def __init__(self, prefix=None, name=None, iter=None, N=1, protect=False, from_dict=None, nomask=False):
-        if from_dict is None:
-            self.prefix=prefix
-            self.name=name
-            self.iter=iter
-            self.protect=protect
-            self.N=N
-            self.volume=[]
-
-            if self.iter is None:
-                for n in range(0,N):
-                    self.volume.append(self.prefix+os.sep+self.name+'_{}.mnc'.format(n))
-                self.mask=self.prefix+os.sep+self.name+'_mask.mnc'
-            else:
-                for n in range(0,N):
-                    self.volume.append(self.prefix+os.sep+self.name+'.{:03d}_{}'.format(iter,n)+'.mnc')
-                self.mask=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_mask.mnc'
-            if nomask:
-                self.mask=None
-        else: # simple hack for now
-            self.volume=from_dict["volume"]
-            self.iter=from_dict["iter"]
-            self.name=from_dict["name"]
-            self.mask=from_dict["mask"]
-            self.N=len(self.volume)
-
-    def __repr__(self):
-        return 'MriDatasetRegress(prefix="{}",name="{}",volume={},mask={},iter="{}",protect={})'.\
-               format(self.prefix, self.name, repr(self.volume), self.mask, repr(self.iter), repr(self.protect))
-
-    def cleanup(self):
-        if not self.protect:
-            for i in self.volume:
-                if i is not None and os.path.exists(i):
-                    os.unlink(i)
-            for i in [self.mask]:
-                if i is not None and os.path.exists(i):
-                    os.unlink(i)
-
-    def exists(self):
-        """
-        Check that all files are present
-        """
-        _ex=True
-        for i in self.volume:
-            if i is not None :
-                _ex&=os.path.exists(i)
-                
-        for i in [self.mask]:
-            if i is not None :
-                _ex&=os.path.exists(i)
-                
-        return _ex
-
 
 class MRIEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, MriTransform):
             return {'name':obj.name,
                     'iter':obj.iter,
-                    'xfm':obj.xfm,    'grid':obj.grid,
-                    'xfm_f':obj.xfm_f,'grid_f':obj.grid_f,
-                    'linear':obj.linear
+                    'fw':  obj.fw,  'fw_grid':obj.fw_grid,
+                    'fw_f':obj.fw_f,'fw_grid_f':obj.fw_grid_f,
+                    'bw':  obj.bw,  'bw_grid':obj.bw_grid,
+                    'bw_f':obj.bw_f,'bw_grid_f':obj.bw_grid_f,
+                    'lin_fw':  obj.lin_fw,
+                    'lin_fw_f':obj.lin_fw_f,
                    }
-        if isinstance(obj, MriDataset):
+        elif isinstance(obj, MriDataset):
             return {'name':obj.name,
                     'iter':obj.iter,
                     'scan':obj.scan,
@@ -172,12 +126,6 @@ class MRIEncoder(json.JSONEncoder):
                     'mask_f':obj.mask_f,
                     'par_def':obj.par_def,
                     'par_int':obj.par_int
-                   }
-        elif isinstance(obj, MriDatasetRegress):
-            return {'name':  obj.name,
-                    'iter':  obj.iter,
-                    'volume':obj.volume,
-                    'mask':  obj.mask,
                    }
          # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)

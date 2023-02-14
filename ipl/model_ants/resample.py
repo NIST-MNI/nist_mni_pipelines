@@ -14,81 +14,6 @@ import ray
 
 
 
-@ray.remote
-def concat_resample_inv(
-    input_mri,
-    input_transform,
-    corr_transform,
-    output_mri,
-    output_transform,
-    model,
-    symmetric=False,
-    qc=False,
-    bias=None
-    ):
-    """apply correction transformation and resample input"""
-    try:
-        with mincTools() as m:
-            
-            if not ( os.path.exists(output_mri.scan) and os.path.exists(output_transform.xfm) ):
-                scan=input_mri.scan
-            
-                if bias is not None:
-                    m.calc([input_mri.scan,bias.scan],'A[0]*A[1]',m.tmp('corr.mnc'))
-                    scan=m.tmp('corr.mnc')
-            
-                m.xfmconcat([corr_transform.xfm, input_transform.xfm ], output_transform.xfm)
-                m.resample_smooth(scan, 
-                    output_mri.scan, 
-                    transform=output_transform.xfm,
-                    like=model.scan, 
-                    invert_transform=True)
-
-                if input_mri.mask is not None and output_mri.mask is not None:
-                    m.resample_labels(input_mri.mask, 
-                                    output_mri.mask,
-                                    transform=output_transform.xfm,
-                                    like=model.scan,
-                                    invert_transform=True)
-                    if qc:
-                        m.qc(output_mri.scan,output_mri.scan+'.jpg',mask=output_mri.mask)
-                else:
-                    if qc:
-                        m.qc(output_mri.scan,output_mri.scan+'.jpg')
-
-                
-                if symmetric:
-                    scan_f=input_mri.scan_f
-                
-                    if bias is not None:
-                        m.calc([input_mri.scan_f,bias.scan_f],'A[0]*A[1]',m.tmp('corr_f.mnc'))
-                        scan_f=m.tmp('corr_f.mnc')
-                    
-                    m.xfmconcat([corr_transform.xfm, input_transform.xfm_f], output_transform.xfm_f)
-                    m.resample_smooth(scan_f, output_mri.scan_f, 
-                        transform=output_transform.xfm_f,
-                        like=model.scan,
-                        invert_transform=True)
-
-                    if input_mri.mask is not None and output_mri.mask is not None:
-                        m.resample_labels(input_mri.mask_f, 
-                                        output_mri.mask_f,
-                                        transform=output_transform.xfm_f,
-                                        like=model.scan,
-                                        invert_transform=True)
-                        if qc:
-                            m.qc(output_mri.scan_f,output_mri.scan_f+'.jpg',mask=output_mri.mask_f)
-                    else:
-                        if qc:
-                            m.qc(output_mri.scan_f,output_mri.scan_f+'.jpg')
-    except mincError as e:
-        print("Exception in concat_resample_inv:{}".format(str(e)))
-        traceback.print_exc(file=sys.stdout)
-        raise
-    except :
-        print("Exception in concat_resample_inv:{}".format(sys.exc_info()[0]))
-        traceback.print_exc(file=sys.stdout)
-        raise
 
 @ray.remote
 def concat_resample_nl_inv(
@@ -105,26 +30,31 @@ def concat_resample_nl_inv(
     """apply correction transformation and resample input"""
     try:
         with mincTools() as m:
-            tfm=input_transform.xfm
+            tfm = input_transform.fw
+
             if corr_transform is not None:
-                m.xfmconcat([corr_transform.xfm, input_transform.xfm ], m.tmp('transform.xfm'))
+                m.xfmconcat(
+                    [corr_transform.fw, corr_transform.fw, 
+                     corr_transform.fw, corr_transform.fw,
+                     corr_transform.lin_fw,
+                     input_transform.fw ], 
+                    m.tmp('transform.xfm'))
                 tfm=m.tmp('transform.xfm')
-            ref=None
-            if isinstance(model, MriDatasetRegress): ref=model.volume[0]
-            else: ref=model.scan
-            
-            m.xfm_normalize( tfm, ref, output_transform.xfm, 
+
+            ref=model.scan
+            # TODO: decide if needed?
+            m.xfm_normalize( tfm, ref, output_transform.fw,
                              step=level)
             
             m.resample_smooth(input_mri.scan, output_mri.scan, 
-                              transform=output_transform.xfm, 
+                              transform=output_transform.fw, 
                               like=ref,
                               invert_transform=True)
             
             if input_mri.mask and output_mri.mask:
                 m.resample_labels(input_mri.mask, 
                                 output_mri.mask,
-                                transform=output_transform.xfm,
+                                transform=output_transform.fw,
                                 like=ref,
                                 invert_transform=True)
                 if qc:
@@ -135,11 +65,12 @@ def concat_resample_nl_inv(
                     m.qc(output_mri.scan,output_mri.scan+'.jpg')
             
             if symmetric:
-                tfm_f=input_transform.xfm_f
+                # TODO: fix symmetric
+                tfm_f=input_transform.fw_f
                 if corr_transform is not None:
-                    m.xfmconcat( [corr_transform.xfm, input_transform.xfm_f], m.tmp('transform_f.xfm') )
+                    m.xfmconcat( [corr_transform.fw, input_transform.fw_f], m.tmp('transform_f.xfm') )
                     tfm_f=m.tmp('transform_f.xfm')
-                m.xfm_normalize( tfm_f, ref, output_transform.xfm_f, step=level )
+                m.xfm_normalize( tfm_f, ref, output_transform.fw_f, step=level )
                 m.resample_smooth(input_mri.scan_f, output_mri.scan_f, transform=output_transform.xfm_f, 
                                   like=ref,
                                   invert_transform=True )
@@ -147,7 +78,7 @@ def concat_resample_nl_inv(
                 if input_mri.mask and output_mri.mask:
                     m.resample_labels(input_mri.mask_f, 
                                       output_mri.mask_f,
-                                      transform=output_transform.xfm_f,
+                                      transform=output_transform.fw_f,
                                       like=ref,
                                       invert_transform=True)
                     

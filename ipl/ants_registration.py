@@ -394,7 +394,7 @@ def non_linear_register_ants2(
 
         if convert_grid is not None:
             # convert to smaller datatype
-            minc.reshape(output_tmp_base+'_grid_0.mnc',output_base+'_grid_0.mnc',datatype=convert_grid)
+            minc.reshape(output_tmp_base+'_grid_0.mnc', output_base+'_grid_0.mnc',datatype=convert_grid)
             minc.reshape(output_tmp_base+'_inverse_grid_0.mnc',output_base+'_inverse_grid_0.mnc',datatype=convert_grid)
             # have to fix .xfm file to use proper grid file name
             # HACK
@@ -442,13 +442,13 @@ def linear_register_ants2(
             if not 'blur'   in parameters: parameters['blur']   = {}
             if not 'shrink' in parameters: parameters['shrink'] = {}
 
-        levels=parameters.get('levels',3)
+        levels = parameters.get('levels',3)
         prog=''
         shrink=''
         blur=''
         
         for i in range(levels,0,-1):
-            _i=str(i)
+            _i = str(i)
             prog+=  str(parameters['conf'].  get(i,parameters['conf'].  get(_i,10000)))
             shrink+=str(parameters['shrink'].get(i,parameters['shrink'].get(_i,2**i)))
             blur+=  str(parameters['blur'].  get(i,parameters['blur'].  get(_i,2**i)))
@@ -458,7 +458,7 @@ def linear_register_ants2(
                 shrink+='x'
                 blur+='x'
         # TODO: make it a parameter?
-        prog+=','+parameters.get('convergence','1.e-8,20')
+        prog += ',' + parameters.get('convergence','1.e-8,20')
         
         sources = []
         targets = []
@@ -488,7 +488,7 @@ def linear_register_ants2(
         cost_function          = parameters.get('cost_function',    'Mattes')
         cost_function_par      = parameters.get('cost_function_par','1,32,regular,0.3')
         
-        transformation         = parameters.get('transformation','affine[ 0.1 ]')
+        transformation         = parameters.get('transformation', 'affine[ 0.1 ]')
         use_mask               = parameters.get('use_mask',True)
         use_histogram_matching = parameters.get('use_histogram_matching',False)
         winsorize_intensity    = parameters.get('winsorize-image-intensities',None)
@@ -551,9 +551,11 @@ def linear_register_ants2(
 
         if winsorize_intensity is not None:
             if isinstance(winsorize_intensity, dict):
-                cmd.extend(['--winsorize-image-intensities',str(winsorize_intensity.get('low',0.01)),str(winsorize_intensity.get('high',0.99))])
+                cmd.extend(['--winsorize-image-intensities',
+                '[{},{}]'.format(winsorize_intensity.get('low', 0.01),
+                                 winsorize_intensity.get('high',0.99))])
             else:
-                cmd.append('--winsorize-image-intensities')
+                cmd.append( '--winsorize-image-intensities')
 
         if use_float:
             cmd.append('--float')
@@ -563,5 +565,269 @@ def linear_register_ants2(
         
         outputs=[output_xfm ] # TODO: add inverse xfm ?
         minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
+
+
+
+def full_register_ants2(
+    source, target,
+    output_base,
+    source_mask=None,
+    target_mask=None,
+    parameters =None,
+    downsample =None,
+    start      =None,
+    level      =32.0,
+    verbose    =0,
+
+    lin_parameters =None
+    ):
+    """ perform linear + non-linear registration using ANTs, 
+
+    Parameters
+    -------
+    source : source volume (fixed)
+    target : target volume (moving)
+    output_base: base name for output files
+
+    source_mask : mask for source volume (optional)
+    target_mask : mask for target volume (optional)
+    parameters: dict of parameters for nonlinear fit
+    downsample: resolution of downsampling step, before running ANTs (optional)
+    start: starting level for nl registration (optional)
+    level: final level for nl registration (optional)
+    verbose: verbosity flag
+
+    lin_parameters: dict of linear parameters (optional)
+
+    Returns
+    -------
+    tuple: (linear,nonlinear_forward, nonlinear_backward)
+    """
+
+    if start is None:
+        start=level
+    
+    with ipl.minc_tools.mincTools(verbose=verbose) as minc:
+
+        sources = []
+        targets = []
+        
+        if isinstance(source, list):
+            sources.extend(source)
+        else:
+            sources.append(source)
+        
+        if isinstance(target, list):
+            targets.extend(target)
+        else:
+            targets.append(target)
+        if len(sources)!=len(targets):
+            raise ipl.minc_tools.mincError(' ** Error: Different number of inputs ')
+        
+        modalities=len(sources)
+        n_out=0
+
+        # base command line
+        cmd=['antsRegistration',
+             '--minc','1',
+             '--dimensionality', '3', 
+             '--collapse-output-transforms', '1']
+
+        if parameters is None:
+            #TODO add more options here
+            parameters={'conf':{},
+                        'blur':{}, 
+                        'shrink':{} 
+                       }
+        else:
+            if not 'conf'   in parameters: parameters['conf']   = {}
+            if not 'blur'   in parameters: parameters['blur']   = {}
+            if not 'shrink' in parameters: parameters['shrink'] = {}
+
+        prog=''
+        shrink=''
+        blur=''
+        for i in range(int(math.log(start)/math.log(2)),-1,-1):
+            res=2**i
+            if res>=level:
+                prog+=  str(parameters['conf'].  get(res,parameters['conf'].  get(str(res),20)))
+                shrink+=str(parameters['shrink'].get(res,parameters['shrink'].get(str(res),2**i)))
+                blur+=  str(parameters['blur'].  get(res,parameters['blur'].  get(str(res),2**i)))
+            if res>level:
+                prog+='x'
+                shrink+='x'
+                blur+='x'
+
+        # if not minc.checkfiles(inputs=sources+targets, 
+        #                         outputs=[output_base+'' ]):
+        #     return
+        
+        prog += ',' + parameters.get('convergence', '1.e-6,10')
+        
+        #output_base=output_xfm.rsplit('.xfm',1)[0]
+            
+        cost_function=parameters.get('cost_function','CC')
+        cost_function_par=parameters.get('cost_function_par','1,2,Regular,1.0')
+        
+        transformation=parameters.get('transformation','SyN[ .25, 2, 0.5 ]')
+        use_mask=parameters.get('use_mask',True)
+        use_histogram_matching=parameters.get('use_histogram_matching',False)
+        use_float=parameters.get('use_float',False)
+        winsorize_intensity=parameters.get('winsorize-image-intensities',None)
+        convert_grid           = parameters.get('convert_grid_type', None)
+        
+        if convert_grid is not None:
+            output_tmp         = minc.tmp("transform.xfm")
+            output_tmp_base    = output_tmp.rsplit('.xfm',1)[0]
+
+
+        (sources_lr, targets_lr, source_mask_lr, target_mask_lr) = \
+                minc.downsample_registration_files(
+                        sources, targets, source_mask, target_mask, downsample)
+
+        dilate_mask = parameters.get("dilate_mask", None)
+
+        if dilate_mask is not None:
+            if source_mask_lr is not None:
+                minc.binary_morphology(source_mask_lr,"D[{}]".format(dilate_mask),
+                    minc.tmp("source_mask_lr.mnc"))
+                source_mask_lr=minc.tmp("source_mask_lr.mnc")
+            if target_mask_lr is not None:
+                minc.binary_morphology(target_mask_lr,"D[{}]".format(dilate_mask),
+                    minc.tmp("target_mask_lr.mnc"))
+                target_mask_lr=minc.tmp("target_mask_lr.mnc")
+
+
+
+        if lin_parameters is not None:
+            #### TODO: finish this properly
+            ### right now it's a hack
+            n_out += 1
+            lin_cost_function          = lin_parameters.get('cost_function',    'MI')
+            lin_cost_function_par      = lin_parameters.get('cost_function_par','1,32,regular,0.3')
+
+            lin_metric=[]
+            for _s in range(modalities):
+                if isinstance(cost_function, list): 
+                    lin_cost_function_ = lin_cost_function[_s]
+                else:
+                    lin_cost_function_ = lin_cost_function
+                #    
+                if isinstance(lin_cost_function_par, list): 
+                    lin_cost_function_par_ = lin_cost_function_par[_s]
+                else:
+                    lin_cost_function_par_ = lin_cost_function_par
+                #
+                lin_metric.extend( ['--metric',
+                    f'{lin_cost_function_}[{sources_lr[_s]},{targets_lr[_s]},{lin_cost_function_par_}]'])
+
+            stage0=["-r", f"[{sources_lr[0]},{targets_lr[0]},1]"]
+            stage1=["-t", "Rigid[ 0.1 ]", 
+                *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
+            stage2=["-t", "Affine[ 0.1 ]",
+                *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
+
+            cmd.extend(stage0)
+            cmd.extend(stage1)
+            cmd.extend(stage2)
+
+        # generate modalities
+        for _s in range(modalities):
+            if isinstance(cost_function, list): 
+                cost_function_ = cost_function[_s]
+            else:
+                cost_function_ = cost_function
+            #    
+            if isinstance(cost_function_par, list): 
+                cost_function_par_ = cost_function_par[_s]
+            else:
+                cost_function_par_ = cost_function_par
+            #
+            cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
+
+        cmd.extend(['--convergence','[{}]'.format(prog)])
+        cmd.extend(['--shrink-factors',shrink])
+        cmd.extend(['--smoothing-sigmas',blur])
+        cmd.extend(['--transform',transformation])
+        
+        if convert_grid is not None:
+            cmd.extend(['--output', f"[{output_tmp_base}]"])
+        else:
+            cmd.extend(['--output', f"[{output_base}]"])
+        
+        # if init_xfm is not None:
+        #     cmd.extend(['--initial-fixed-transform',init_xfm])
+        
+        inputs = sources_lr + targets_lr
+        
+        if target_mask_lr is not None and source_mask_lr is not None and use_mask:
+            inputs.extend([source_mask_lr, target_mask_lr])
+            cmd.extend(['-x','[{},{}]'.format(source_mask_lr, target_mask_lr)])
+        
+        if use_histogram_matching:
+            cmd.append('--use-histogram-matching')
+            
+        if winsorize_intensity is not None:
+            if isinstance(winsorize_intensity, dict):
+                cmd.extend(['--winsorize-image-intensities',
+                '[{},{}]'.format(winsorize_intensity.get('low', 0.01),
+                                 winsorize_intensity.get('high',0.99))])
+            else:
+                cmd.append( '--winsorize-image-intensities')
+            
+        if use_float:
+            cmd.append('--float')
+        
+        if verbose>0:
+            cmd.extend(['--verbose','1'])
+        
+        if convert_grid is not None:
+            outputs=[f"{output_tmp_base}{n_out}_NL.xfm"]
+        else:
+            outputs=[f"{output_base}{n_out}_NL.xfm" ] 
+        
+        print(">>>\n{}\n>>>>".format(' '.join(cmd)))
+        
+        minc.command(cmd, inputs=inputs, outputs=outputs)
+
+        
+        output_xfm = f"{output_base}{n_out}_NL.xfm"
+        output_inv_xfm = f"{output_base}{n_out}_inverse_NL.xfm"
+
+        if n_out>0:
+            output_lin_xfm= f"{output_base}0_GenericAffine.xfm"    
+        else:
+            output_lin_xfm = None
+
+        if convert_grid is not None:
+            if n_out>0:
+                shutil.copyfile(f"{output_tmp_base}0_GenericAffine.xfm",
+                                output_lin_xfm)
+
+            # convert to smaller datatype
+            minc.reshape(f"{output_tmp_base}{n_out}_NL_grid_0.mnc", 
+                f"{output_base}{n_out}_NL_grid_0.mnc",
+                datatype=convert_grid)
+            minc.reshape(f"{output_tmp_base}{n_out}_inverse_NL_grid_0.mnc",
+                f"{output_base}{n_out}_inverse_NL_grid_0.mnc",
+                datatype=convert_grid)
+            # have to fix .xfm file to use proper grid file name
+            # HACK
+            with open(output_xfm, "w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(f"{output_base}{n_out}_NL_grid_0.mnc")};
+                """)
+            with open( output_inv_xfm, "w") as f:
+                f.write(f"""MNI Transform File
+%ITK-XFM writer
+
+Transform_Type = Grid_Transform;
+Displacement_Volume = {os.path.basename(f"{output_base}{n_out}_inverse_NL_grid_0.mnc")};
+                """)
+    
+    return (output_lin_xfm, output_xfm, output_inv_xfm)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
