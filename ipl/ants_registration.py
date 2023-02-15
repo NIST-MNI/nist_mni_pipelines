@@ -627,11 +627,7 @@ def full_register_ants2(
         modalities=len(sources)
         n_out=0
 
-        # base command line
-        cmd=['antsRegistration',
-             '--minc','1',
-             '--dimensionality', '3', 
-             '--collapse-output-transforms', '1']
+
 
         if parameters is None:
             #TODO add more options here
@@ -697,6 +693,14 @@ def full_register_ants2(
                     minc.tmp("target_mask_lr.mnc"))
                 target_mask_lr=minc.tmp("target_mask_lr.mnc")
 
+        # base command line
+        cmd=['antsRegistration',
+             '--minc','1',
+             '--dimensionality', '3', 
+             '--collapse-output-transforms', '1']
+
+        if use_float:
+            cmd.append('--float','1')
 
 
         if lin_parameters is not None:
@@ -719,20 +723,20 @@ def full_register_ants2(
                 else:
                     lin_cost_function_par_ = lin_cost_function_par
                 #
-                lin_metric.extend( ['--metric',
+                lin_metric.extend( ['-m',
                     f'{lin_cost_function_}[{sources_lr[_s]},{targets_lr[_s]},{lin_cost_function_par_}]'])
 
             if only_rigid:
                 stage0=["-r", f"[{sources_lr[0]},{targets_lr[0]},1]"]
-                stage1=["--transform", "Rigid[0.1]", 
+                stage1=["-t", "Rigid[0.1]", 
                     *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
                 cmd.extend(stage0)
                 cmd.extend(stage1)
             else:
                 stage0=["-r", f"[{sources_lr[0]},{targets_lr[0]},1]"]
-                stage1=["--transform", "Rigid[0.1]", 
+                stage1=["-t", "Rigid[0.1]", 
                     *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
-                stage2=["--transform", "Affine[0.1]",
+                stage2=["-t", "Affine[0.1]",
                     *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
 
                 cmd.extend(stage0)
@@ -751,17 +755,17 @@ def full_register_ants2(
             else:
                 cost_function_par_ = cost_function_par
             #
-            cmd.extend(['--metric','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
+            cmd.extend(['-m','{}[{},{},{}]'.format(cost_function_, sources_lr[_s], targets_lr[_s], cost_function_par_)])
 
-        cmd.extend(['--convergence','[{}]'.format(prog)])
-        cmd.extend(['--shrink-factors',shrink])
-        cmd.extend(['--smoothing-sigmas',blur])
-        cmd.extend(['--transform',transformation])
+        cmd.extend(['-t',transformation])
+        cmd.extend(['-c','[{}]'.format(prog)])
+        cmd.extend(['-f',shrink])
+        cmd.extend(['-s',blur])
         
         if convert_grid is not None:
-            cmd.extend(['--output', f"[{output_tmp_base}]"])
+            cmd.extend(['-o', f"[{output_tmp_base}]"])
         else:
-            cmd.extend(['--output', f"[{output_base}]"])
+            cmd.extend(['-o', f"[{output_base}]"])
         
         # if init_xfm is not None:
         #     cmd.extend(['--initial-fixed-transform',init_xfm])
@@ -783,8 +787,6 @@ def full_register_ants2(
             else:
                 cmd.append( '--winsorize-image-intensities')
             
-        if use_float:
-            cmd.append('--float')
         
         if verbose>0: ## HACK!
             cmd.extend(['--verbose','1'])
