@@ -700,8 +700,7 @@ def full_register_ants2(
              '--collapse-output-transforms', '1']
 
         if use_float:
-            cmd.append('--float','1')
-
+            cmd.extend(['--float','1'])
 
         if lin_parameters is not None:
             #### TODO: finish this properly

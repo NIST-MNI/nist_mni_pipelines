@@ -90,6 +90,7 @@ def generate_nonlinear_average(
         ray.wait(flip_all, num_returns=len(flip_all))
     # go through all the iterations
     it=0
+    
     for (i,p) in enumerate(protocol):
         downsample=p.get('downsample',downsample_)
         for j in range(1,p['iter']+1):
