@@ -24,9 +24,11 @@ if __name__ == '__main__':
                 'use_histogram_matching': True,
                 'winsorize_intensity': {'low':0.01, 'high':0.99},
              },
+             'lin_parameters':{'only_rigid':True},
              'start_level':16,
-             'grad_step':0.2,
-             'refine': False
+             'grad_step':0.25,
+             'refine': False,
+             'qc':True
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc'

@@ -197,12 +197,13 @@ def average_samples(
 @ray.remote
 def average_stats(
     avg,
-    sd,
+    sd
     ):
+    
     """calculate median sd within mask"""
     try:
         st=0
-        with mincTools(verbose=2) as m:
+        with mincTools(verbose=0) as m:
             if avg.mask is not None:
                 st=float(m.stats(sd.scan,'-median', mask=avg.mask))
             else:

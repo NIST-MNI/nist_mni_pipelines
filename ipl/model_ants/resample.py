@@ -30,37 +30,37 @@ def concat_resample_nl_inv(
     """apply correction transformation and resample input"""
     try:
         with mincTools() as m:
-
+            tfm=m.tmp('transform.xfm')
             if corr_transform is not None:
-                m.xfmconcat(
-                    [corr_transform.fw, corr_transform.fw, 
-                     corr_transform.fw, corr_transform.fw,
-                     corr_transform.lin_fw,
+
+                m.xfmconcat( # HACK!!!
+                    [
+                     input_transform.fw,
                      input_transform.lin_fw,
-                     input_transform.fw
-                     ], 
-                    m.tmp('transform.xfm'))
-                tfm=m.tmp('transform.xfm')
+                     # correction part
+                     corr_transform.lin_fw,
+                     corr_transform.fw, corr_transform.fw, 
+                     corr_transform.fw, corr_transform.fw,
+                     # standard part
+                     ],
+                    tfm)                
             else:
                 m.xfmconcat(
-                    [input_transform.lin_fw , input_transform.fw ], 
-                    m.tmp('transform.xfm'))
-                tfm=m.tmp('transform.xfm')
-
+                    [ input_transform.fw, input_transform.lin_fw], 
+                    tfm)
             ref=model.scan
             # TODO: decide if needed?
-            m.xfm_normalize( tfm, ref, output_transform.fw,
-                             step=level)
-            
+            # m.xfm_normalize( tfm, ref, output_transform.fw,
+            #                  step=level)
             m.resample_smooth(input_mri.scan, output_mri.scan, 
-                              transform=output_transform.fw, 
+                              transform=tfm,
                               like=ref,
                               invert_transform=True)
             
             if input_mri.mask and output_mri.mask:
                 m.resample_labels(input_mri.mask, 
                                 output_mri.mask,
-                                transform=output_transform.fw,
+                                transform=tfm,
                                 like=ref,
                                 invert_transform=True)
                 if qc:

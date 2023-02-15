@@ -319,7 +319,7 @@ def non_linear_register_ants2(
         cmd=['antsRegistration','--minc','1','-a','--dimensionality','3']
 
 
-        (sources_lr, targets_lr, source_mask_lr, target_mask_lr)=minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
+        (sources_lr, targets_lr, source_mask_lr, target_mask_lr) = minc.downsample_registration_files(sources,targets,source_mask,target_mask, downsample)
 
         dilate_mask = parameters.get("dilate_mask", None)
 
@@ -705,6 +705,7 @@ def full_register_ants2(
             n_out += 1
             lin_cost_function          = lin_parameters.get('cost_function',    'MI')
             lin_cost_function_par      = lin_parameters.get('cost_function_par','1,32,regular,0.3')
+            only_rigid                 = lin_parameters.get('only_rigid',    False)
 
             lin_metric=[]
             for _s in range(modalities):
@@ -721,15 +722,22 @@ def full_register_ants2(
                 lin_metric.extend( ['--metric',
                     f'{lin_cost_function_}[{sources_lr[_s]},{targets_lr[_s]},{lin_cost_function_par_}]'])
 
-            stage0=["-r", f"[{sources_lr[0]},{targets_lr[0]},1]"]
-            stage1=["-t", "Rigid[ 0.1 ]", 
-                *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
-            stage2=["-t", "Affine[ 0.1 ]",
-                *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
+            if only_rigid:
+                stage0=["-r", f"[{sources_lr[0]},{targets_lr[0]},1]"]
+                stage1=["--transform", "Rigid[0.1]", 
+                    *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
+                cmd.extend(stage0)
+                cmd.extend(stage1)
+            else:
+                stage0=["-r", f"[{sources_lr[0]},{targets_lr[0]},1]"]
+                stage1=["--transform", "Rigid[0.1]", 
+                    *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
+                stage2=["--transform", "Affine[0.1]",
+                    *lin_metric, '-c', '[1000x500x250x0,1e-6,10 ]', '-f', '6x4x2x1', '-s', '4x2x1x0']
 
-            cmd.extend(stage0)
-            cmd.extend(stage1)
-            cmd.extend(stage2)
+                cmd.extend(stage0)
+                cmd.extend(stage1)
+                cmd.extend(stage2)
 
         # generate modalities
         for _s in range(modalities):
@@ -778,7 +786,7 @@ def full_register_ants2(
         if use_float:
             cmd.append('--float')
         
-        if verbose>0:
+        if verbose>0: ## HACK!
             cmd.extend(['--verbose','1'])
         
         if convert_grid is not None:
