@@ -62,15 +62,15 @@ def xfmavg(inputs, output, verbose=False, mult_grid=None):
                 raise Exception("Unsupported numbre of transforms")
                 
     if all_linear:
-        acc=np.asmatrix(np.zeros([4,4],dtype=complex))
+        acc = np.asmatrix(np.zeros([4,4],dtype=complex))
         for i in input_xfms:
             #print(i)
-            acc+=scipy.linalg.logm(i)
+            acc += scipy.linalg.logm(i)
             
-        acc/=len(input_xfms)
-        acc=np.asarray(scipy.linalg.expm(acc).real,'float64','C')
+        acc /= len(input_xfms)
+        acc = np.asarray( scipy.linalg.expm(acc).real, 'float64','C')
         
-        x=minc2_xfm()
+        x = minc2_xfm()
         x.append_linear_transform(acc)
         x.save(output)
         
@@ -230,14 +230,17 @@ def generate_update_transform(
 
             out_nl=m.tmp("avg_nl.xfm")
             out_nl_grid=m.tmp("avg_nl.xfm").rsplit(".xfm",1)[0] + '_grid_0.mnc'
+            out_lin=m.tmp("avg_lin.xfm")
 
             xfmavg(avg,     out_nl, mult_grid=-grad_step)
-            xfmavg(avg_lin, output.lin_fw )
+            xfmavg(avg_lin, out_lin )
 
             ## transform nonlinear part 
             # ${ANTSPATH}/WarpImageMultiTransform ${dim} ${templatename}0warp.nii.gz ${templatename}0warp.nii.gz -i  ${templatename}0Affine.txt -R ${template}
-            m.resample_smooth(out_nl_grid, output.fw_grid, transform=output.lin_fw, order=1)
-            print("generate_update_transform:",output.fw_grid)
+            # TODO: figure out order?
+            m.resample_smooth(out_nl_grid, output.fw_grid, transform=out_lin, order=1)
+            m.xfminvert(out_lin, output.lin_fw)
+
             ## HACK : generate grid header
             with open(output.fw, "w") as f:
                 f.write(f"""MNI Transform File

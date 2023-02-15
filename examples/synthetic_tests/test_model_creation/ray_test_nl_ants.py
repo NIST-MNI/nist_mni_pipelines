@@ -12,7 +12,7 @@ if __name__ == '__main__':
   generate_nonlinear_model_csv('subjects.lst',
     work_prefix='tmp_nl_ants',
     options={'symmetric':False,
-             'protocol': [{'iter':8,'level':8},
+             'protocol': [{'iter':8,'level':4},
                           ],
              'cleanup': False,
              'parameters':
@@ -25,7 +25,7 @@ if __name__ == '__main__':
                 'winsorize_intensity': {'low':0.01, 'high':0.99},
              },
              'start_level':16,
-             'grad_step':0.25,
+             'grad_step':0.2,
              'refine': False
             },
     model='test_data/ellipse_1.mnc',

@@ -30,14 +30,20 @@ def concat_resample_nl_inv(
     """apply correction transformation and resample input"""
     try:
         with mincTools() as m:
-            tfm = input_transform.fw
 
             if corr_transform is not None:
                 m.xfmconcat(
                     [corr_transform.fw, corr_transform.fw, 
                      corr_transform.fw, corr_transform.fw,
                      corr_transform.lin_fw,
-                     input_transform.fw ], 
+                     input_transform.lin_fw,
+                     input_transform.fw
+                     ], 
+                    m.tmp('transform.xfm'))
+                tfm=m.tmp('transform.xfm')
+            else:
+                m.xfmconcat(
+                    [input_transform.lin_fw , input_transform.fw ], 
                     m.tmp('transform.xfm'))
                 tfm=m.tmp('transform.xfm')
 
