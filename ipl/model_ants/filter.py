@@ -116,6 +116,7 @@ def normalize_sample(input,
 def average_samples(
     samples,
     output,
+    upd=None,
     output_sd=None,
     symmetric=False,
     symmetrize=False,
@@ -127,12 +128,17 @@ def average_samples(
         with mincTools() as m:
             avg = []
 
-            out_scan=output.scan
-            out_mask=output.mask
+            # out_scan=output.scan
+            # out_mask=output.mask
             
-            if symmetrize:
-                out_scan=m.tmp('avg.mnc')
-                out_mask=m.tmp('avg_mask.mnc')
+            # if symmetrize: TODO: fix this
+            #     out_scan=m.tmp('avg.mnc')
+            #     out_mask=m.tmp('avg_mask.mnc')
+            out_scan=m.tmp('avg.mnc')
+
+            if upd is not None:
+                corr_xfm=m.tmp("correction.xfm")
+                m.xfmconcat([upd.fw, upd.fw, upd.fw, upd.fw, upd.lin_fw], corr_xfm)
                 
             for s in samples:
                 avg.append(s.scan)
@@ -141,28 +147,42 @@ def average_samples(
                 for s in samples:
                     avg.append(s.scan_f)
             out_sd=None
-            
             if output_sd:
                 out_sd=output_sd.scan
+
+            out_scan_mean=None
 
             if average_mode == 'median':
                 m.median(avg, out_scan, madfile=out_sd)
             elif average_mode == 'ants':
-                #m.cmd()#
                 cmd = ['AverageImages', '3', out_scan,'1']
                 cmd.extend(avg)
                 m.command(cmd, inputs=avg, outputs=[out_scan])
+
+                #HACK to create a "standard" average
+                out_scan_mean=out_scan.rsplit(".mnc",1)[0]+'_mean.mnc'
+                if have_minc2_simple:
+                    faster_average(avg,m.tmp('avg_mean.mnc'),out_sd=out_sd)
+                else:
+                    m.average(avg, m.tmp('avg_mean.mnc'), sdfile=out_sd)
             else:
                 if have_minc2_simple:
                     faster_average(avg,out_scan,out_sd=out_sd)
                 else:
                     m.average(avg, out_scan, sdfile=out_sd)
 
-            if symmetrize:
-                # TODO: replace flipping of averages with averaging of flipped 
-                # some day
-                m.flip_volume_x(out_scan,m.tmp('flip.mnc'))
-                m.average([out_scan,m.tmp('flip.mnc')],output.scan)
+            if upd is not None:
+                m.resample_smooth(out_scan, output.scan, transform=corr_xfm, invert_transform=True)
+                if out_sd is not None: 
+                    m.resample_smooth(out_sd,output_sd.scan,transform=corr_xfm,invert_transform=True)
+                if out_scan_mean is not None:
+                    m.resample_smooth(m.tmp('avg_mean.mnc'),out_scan_mean, transform=corr_xfm, invert_transform=True)
+                
+            # if symmetrize: # TODO: fix this
+            #     # TODO: replace flipping of averages with averaging of flipped 
+            #     # some day
+            #     m.flip_volume_x(out_scan,m.tmp('flip.mnc'))
+            #     m.average([out_scan,m.tmp('flip.mnc')],output.scan)
             
             # average masks
             if output.mask is not None:
@@ -170,9 +190,9 @@ def average_samples(
                 for s in samples:
                     avg.append(s.mask)
 
-                if symmetric:
-                    for s in samples:
-                        avg.append(s.mask_f)
+                # if symmetric:
+                #     for s in samples:
+                #         avg.append(s.mask_f)
 
                 if not os.path.exists(output.mask):                    
                     if symmetrize:
@@ -188,8 +208,15 @@ def average_samples(
                         if have_minc2_simple:
                             faster_average(avg,m.tmp('avg_mask.mnc'))
                         else:
-                            m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
-                        m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
+                            m.average(avg,m.tmp('avg_mask_.mnc'),datatype='-float')
+
+
+                    if upd is not None:
+                        m.resample_smooth(m.tmp('avg_mask_.mnc'),m.tmp('avg_mask.mnc'), transform=corr_xfm,invert_transform=True)
+                    else:
+                        m.resample_smooth(m.tmp('avg_mask_.mnc'),m.tmp('avg_mask.mnc')) # HACK
+                    # apply correction!
+                    m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
         return  True
     except mincError as e:
         print("Exception in average_samples:{}".format(str(e)))
@@ -203,18 +230,38 @@ def average_samples(
 @ray.remote
 def average_stats(
     avg,
-    sd
+    sd,
+    upd_xfm
     ):
     
-    """calculate median sd within mask"""
+    """calculate iteration summary: median sd of intensity and bias deformations"""
     try:
-        st=0
+        median_sd=0.0
+        median_def=[0.0,0.0,0.0]
+        median_mag=0.0
         with mincTools(verbose=0) as m:
+            m.grid_magnitude(upd_xfm.fw_grid,m.tmp("mag.mnc"))
+
             if avg.mask is not None:
-                st=float(m.stats(sd.scan,'-median', mask=avg.mask))
+                m.resample_labels(avg.mask,m.tmp("mag_mask.mnc"),like=m.tmp("mag.mnc"))
+
+            if avg.mask is not None:
+                median_sd=float(m.stats(sd.scan,'-median', mask=avg.mask))
+                median_mag=float(m.stats(m.tmp("mag.mnc"),'-median', mask=m.tmp("mag_mask.mnc")))
             else:
-                st=float(m.stats(sd.scan,'-median'))
-        return st
+                median_sd=float(m.stats(sd.scan,'-median'))
+                median_mag=float(m.stats(m.tmp("mag.mnc"),'-median'))
+
+            for i in range(3):
+                m.reshape(upd_xfm.fw_grid, m.tmp(f"dim_{i}.mnc"),dimrange=f"vector_dimension={i}")
+                if avg.mask is not None:
+                    m.resample_labels(avg.mask,m.tmp("dim_mask.mnc"),like=m.tmp(f"dim_{i}.mnc"))
+                    median_def[i]=float(m.stats(m.tmp(f"dim_{i}.mnc"), '-median', mask=m.tmp("dim_mask.mnc")))
+                else:
+                    median_def[i]=float(m.stats(m.tmp(f"dim_{i}.mnc"),'-median'))
+
+            
+        return {'intensity':median_sd, 'dx':median_def[0], 'dy':median_def[1], 'dz':median_def[2], 'mag':median_mag}
     except mincError as e:
         print("mincError in average_stats:{}".format(repr(e)))
         traceback.print_exc(file=sys.stdout)

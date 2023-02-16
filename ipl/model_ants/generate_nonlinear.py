@@ -43,7 +43,7 @@ def generate_nonlinear_average(
     corr=[]
 
     corr_transforms=[]
-    sd=[]
+    stat_results=[]
     corr_samples=[]
 
     protocol=options.get('protocol', [{'iter':4,'level':32},
@@ -186,21 +186,22 @@ def generate_nonlinear_average(
                 ray.wait(corr, num_returns=len(corr))
 
             # cleanup transforms
-            if cleanup :
-                for x in nl_transforms:
-                   x.cleanup()
-                update_group_transform.cleanup()
 
             # 4 average resampled samples to create new estimate
             if it>skip and it<stop_early:
                 result = average_samples.remote( corr_samples, next_model, 
-                    next_model_sd, symmetric=symmetric, 
+                    output_sd=next_model_sd, symmetric=symmetric, 
                     symmetrize=symmetric, 
-                    average_mode=average_mode)
+                    average_mode=average_mode,
+                    upd=update_group_transform)
                 # TODO: add sharpening here
                 ray.wait([result])
 
-            if cleanup and it>1:
+            if cleanup : # remove intermediate files if needed 
+                for x in nl_transforms:
+                   x.cleanup()
+                update_group_transform.cleanup()
+
                 # remove previous template estimate
                 models.append(next_model)
                 models_sd.append(next_model_sd)
@@ -209,14 +210,21 @@ def generate_nonlinear_average(
             current_model_sd=next_model_sd
 
             if it>skip and it<stop_early:
-                result = average_stats.remote( next_model, next_model_sd)
-                sd.append(result)
+                result = average_stats.remote( next_model, next_model_sd, update_group_transform )
+                stat_results.append(result)
     
     # copy output to the destination
-    ray.wait(sd, num_returns=len(sd))
-    with open(prefix+os.sep+'stats.txt','w') as f:
-        for s in sd:
-            f.write("{}\n".format(ray.get(s)))
+    ray.wait(stat_results, num_returns=len(stat_results))
+    _stat_results=[]
+    with open(prefix+os.sep+'stats.csv','w') as f:
+        fieldnames = ['it', 'intensity','dx','dy','dz','mag']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for i,s_ in enumerate(stat_results):
+            s=ray.get(s_)
+            s["it"]=str(i)
+            _stat_results.append(s)
+            writer.writerow(s)  
             
     results={
             'model':      current_model,
@@ -225,7 +233,8 @@ def generate_nonlinear_average(
             'biascorr':   None,
             'scan':       corr_samples,
             'symmetric':  symmetric,
-            'samples':    samples
+            'samples':    samples,
+            'stats':      _stat_results
             }
             
     with open(prefix+os.sep+'results.json','w') as f:

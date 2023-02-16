@@ -31,23 +31,25 @@ def concat_resample_nl_inv(
     try:
         with mincTools() as m:
             tfm=m.tmp('transform.xfm')
-            if corr_transform is not None:
+            # if corr_transform is not None:
 
-                m.xfmconcat( # HACK!!!
-                    [
-                     input_transform.fw,
-                     input_transform.lin_fw,
-                     # correction part
-                     corr_transform.lin_fw,
-                     corr_transform.fw, corr_transform.fw, 
-                     corr_transform.fw, corr_transform.fw,
-                     # standard part
-                     ],
-                    tfm)                
-            else:
-                m.xfmconcat(
-                    [ input_transform.fw, input_transform.lin_fw], 
-                    tfm)
+            #     m.xfmconcat( # HACK!!!
+            #         [
+            #          input_transform.fw,
+            #          input_transform.lin_fw,
+            #          # correction part
+            #          corr_transform.lin_fw,
+            #          corr_transform.fw, corr_transform.fw, 
+            #          corr_transform.fw, corr_transform.fw,
+            #          # standard part
+            #          ],
+            #         tfm)                
+            # else:
+            #     m.xfmconcat(
+            #         [ input_transform.fw, input_transform.lin_fw], 
+            #         tfm)
+            # apply only bw transform
+            m.xfmconcat([input_transform.lin_fw, input_transform.fw ], tfm)
             ref=model.scan
             # TODO: decide if needed?
             # m.xfm_normalize( tfm, ref, output_transform.fw,

@@ -1,18 +1,18 @@
 import ray
 import os
 
-from ipl.model.generate_nonlinear  import generate_nonlinear_model_csv
+from ipl.model_ants.generate_nonlinear  import generate_nonlinear_model_csv
 
 if __name__ == '__main__':
   
   # limit number of threads
-  os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='2'
-  ray.init(num_cpus=4)
+  os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='1'
+  ray.init(num_cpus=9)
   # setup data for parallel processing
   generate_nonlinear_model_csv('subjects.lst',
-    work_prefix='tmp_nl_ants',
+    work_prefix='tmp_nl_asym_ants',
     options={'symmetric':False,
-             'protocol': [{'iter':8,'level':4},
+             'protocol': [{'iter':24,'level':8},
                           ],
              'cleanup': False,
              'parameters':
@@ -24,11 +24,11 @@ if __name__ == '__main__':
                 'use_histogram_matching': True,
                 'winsorize_intensity': {'low':0.01, 'high':0.99},
              },
-             'lin_parameters':{'only_rigid':True},
+             'lin_parameters':{'only_rigid': True},
              'start_level':16,
-             'grad_step':0.25,
+             'grad_step':0.1,
              'refine': False,
-             'qc':True
+             'qc':False
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc'

@@ -795,7 +795,7 @@ def full_register_ants2(
         else:
             outputs=[f"{output_base}{n_out}_NL.xfm" ] 
         
-        print(">>>\n{}\n>>>>".format(' '.join(cmd)))
+        #print(">>>\n{}\n>>>>".format(' '.join(cmd)))
         
         minc.command(cmd, inputs=inputs, outputs=outputs)
 
