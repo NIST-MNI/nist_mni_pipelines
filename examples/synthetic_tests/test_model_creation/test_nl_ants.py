@@ -1,7 +1,7 @@
 import ray
 import os
 
-from ipl.model_ants.generate_nonlinear  import generate_nonlinear_model_csv
+from ipl.model.generate_nonlinear  import generate_nonlinear_model_csv
 
 if __name__ == '__main__':
   

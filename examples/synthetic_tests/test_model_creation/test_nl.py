@@ -1,7 +1,7 @@
 import ray
 import os
 
-from ipl.model_ants.generate_nonlinear  import generate_nonlinear_model_csv
+from ipl.model.generate_nonlinear  import generate_nonlinear_model_csv
 
 if __name__ == '__main__':
   # setup data for parallel processing
@@ -9,13 +9,12 @@ if __name__ == '__main__':
   ray.init(num_cpus=9)
 
   generate_nonlinear_model_csv('subjects.lst',
-    work_prefix='tmp_nl_sym',
-    options={'symmetric':True,
+    work_prefix='tmp_nl_asym',
+    options={'symmetric':False,
              'protocol': [{'iter':4,'level':16},
                           {'iter':4,'level':8}, ],
             'cleanup':True
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc'
-         
   )
