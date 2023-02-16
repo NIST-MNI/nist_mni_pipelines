@@ -119,7 +119,8 @@ def average_samples(
     output_sd=None,
     symmetric=False,
     symmetrize=False,
-    median=False
+    #median=False,
+    average_mode='std'
     ):
     """average individual samples"""
     try:
@@ -144,13 +145,18 @@ def average_samples(
             if output_sd:
                 out_sd=output_sd.scan
 
-            if median:
-                m.median(avg, out_scan,madfile=out_sd)
+            if average_mode == 'median':
+                m.median(avg, out_scan, madfile=out_sd)
+            elif average_mode == 'ants':
+                #m.cmd()#
+                cmd = ['AverageImages', '3', out_scan,'1']
+                cmd.extend(avg)
+                m.command(cmd, inputs=avg, outputs=[out_scan])
             else:
                 if have_minc2_simple:
                     faster_average(avg,out_scan,out_sd=out_sd)
                 else:
-                    m.average(avg, out_scan,sdfile=out_sd)
+                    m.average(avg, out_scan, sdfile=out_sd)
 
             if symmetrize:
                 # TODO: replace flipping of averages with averaging of flipped 

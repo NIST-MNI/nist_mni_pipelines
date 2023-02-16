@@ -58,7 +58,6 @@ def generate_nonlinear_average(
              'transformation': 'SyN[ .1, 3, 0 ]',
              'use_histogram_matching': True,
              'winsorize_intensity': {'low':0.01, 'high':0.99},
-             
              }
             )
     lin_parameters=options.get('lin_parameters',{})
@@ -67,6 +66,7 @@ def generate_nonlinear_average(
     start_level=   options.get('start_level',32)
     use_median=    options.get('median',False)
     grad_step =    options.get('grad_step',0.25)
+    average_mode = options.get('average_mode', 'ants')
 
     models=[]
     models_sd=[]
@@ -90,7 +90,7 @@ def generate_nonlinear_average(
         ray.wait(flip_all, num_returns=len(flip_all))
     # go through all the iterations
     it=0
-    
+
     for (i,p) in enumerate(protocol):
         downsample=p.get('downsample',downsample_)
         for j in range(1,p['iter']+1):
@@ -197,7 +197,8 @@ def generate_nonlinear_average(
                 result = average_samples.remote( corr_samples, next_model, 
                     next_model_sd, symmetric=symmetric, 
                     symmetrize=symmetric, 
-                    median=use_median)
+                    median=use_median,
+                    average_mode=average_mode)
                 # TODO: add sharpening here
                 ray.wait([result])
 

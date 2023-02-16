@@ -784,7 +784,7 @@ def full_register_ants2(
                 '[{},{}]'.format(winsorize_intensity.get('low', 0.01),
                                  winsorize_intensity.get('high',0.99))])
             else:
-                cmd.append( '--winsorize-image-intensities')
+                cmd.append('--winsorize-image-intensities')
             
         
         if verbose>0: ## HACK!
