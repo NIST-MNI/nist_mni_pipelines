@@ -238,7 +238,7 @@ def generate_update_transform(
             ## transform nonlinear part 
             # ${ANTSPATH}/WarpImageMultiTransform ${dim} ${templatename}0warp.nii.gz ${templatename}0warp.nii.gz -i  ${templatename}0Affine.txt -R ${template}
             # TODO: figure out order?
-            m.resample_smooth(out_nl_grid, output.fw_grid, transform=out_lin, order=1) # CHECK!
+            m.resample_smooth(out_nl_grid, output.fw_grid, transform=out_lin, order=1, invert_transform=True) # CHECK!
             m.xfminvert(out_lin, output.lin_fw)
 
             ## HACK : generate grid header

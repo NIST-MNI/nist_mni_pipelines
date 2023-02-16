@@ -138,7 +138,7 @@ def average_samples(
 
             if upd is not None:
                 corr_xfm=m.tmp("correction.xfm")
-                m.xfmconcat([upd.fw, upd.fw, upd.fw, upd.fw, upd.lin_fw], corr_xfm)
+                m.xfmconcat([ upd.fw, upd.fw, upd.fw, upd.fw, upd.lin_fw], corr_xfm)
                 
             for s in samples:
                 avg.append(s.scan)
@@ -255,7 +255,7 @@ def average_stats(
             for i in range(3):
                 m.reshape(upd_xfm.fw_grid, m.tmp(f"dim_{i}.mnc"),dimrange=f"vector_dimension={i}")
                 if avg.mask is not None:
-                    m.resample_labels(avg.mask,m.tmp("dim_mask.mnc"),like=m.tmp(f"dim_{i}.mnc"))
+                    if i==0: m.resample_labels(avg.mask,m.tmp("dim_mask.mnc"),like=m.tmp(f"dim_{i}.mnc"))
                     median_def[i]=float(m.stats(m.tmp(f"dim_{i}.mnc"), '-median', mask=m.tmp("dim_mask.mnc")))
                 else:
                     median_def[i]=float(m.stats(m.tmp(f"dim_{i}.mnc"),'-median'))
