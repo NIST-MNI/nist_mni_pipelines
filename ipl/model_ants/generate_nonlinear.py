@@ -64,7 +64,6 @@ def generate_nonlinear_average(
     qc=            options.get('qc',False)
     downsample_=   options.get('downsample',None)
     start_level=   options.get('start_level',32)
-    use_median=    options.get('median',False)
     grad_step =    options.get('grad_step',0.25)
     average_mode = options.get('average_mode', 'ants')
 
@@ -197,7 +196,6 @@ def generate_nonlinear_average(
                 result = average_samples.remote( corr_samples, next_model, 
                     next_model_sd, symmetric=symmetric, 
                     symmetrize=symmetric, 
-                    median=use_median,
                     average_mode=average_mode)
                 # TODO: add sharpening here
                 ray.wait([result])
