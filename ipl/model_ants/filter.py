@@ -3,6 +3,7 @@ import os
 import sys
 import csv
 import traceback
+import shutil
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
@@ -138,7 +139,7 @@ def average_samples(
 
             if upd is not None:
                 corr_xfm=m.tmp("correction.xfm")
-                m.xfmconcat([ upd.fw, upd.fw, upd.fw, upd.fw, upd.lin_fw], corr_xfm)
+                m.xfmconcat([ upd.lin_fw, upd.fw, upd.fw, upd.fw, upd.fw], corr_xfm)
                 
             for s in samples:
                 avg.append(s.scan)
@@ -160,14 +161,14 @@ def average_samples(
                 m.command(cmd, inputs=avg, outputs=[out_scan])
 
                 #HACK to create a "standard" average
-                out_scan_mean=out_scan.rsplit(".mnc",1)[0]+'_mean.mnc'
+                out_scan_mean=output.scan.rsplit(".mnc",1)[0]+'_mean.mnc'
                 if have_minc2_simple:
-                    faster_average(avg,m.tmp('avg_mean.mnc'),out_sd=out_sd)
+                    faster_average(avg, m.tmp('avg_mean.mnc'),out_sd=out_sd)
                 else:
                     m.average(avg, m.tmp('avg_mean.mnc'), sdfile=out_sd)
             else:
                 if have_minc2_simple:
-                    faster_average(avg,out_scan,out_sd=out_sd)
+                    faster_average(avg, out_scan,out_sd=out_sd)
                 else:
                     m.average(avg, out_scan, sdfile=out_sd)
 
@@ -177,6 +178,8 @@ def average_samples(
                     m.resample_smooth(out_sd,output_sd.scan,transform=corr_xfm,invert_transform=True)
                 if out_scan_mean is not None:
                     m.resample_smooth(m.tmp('avg_mean.mnc'),out_scan_mean, transform=corr_xfm, invert_transform=True)
+                # DEBUG
+                shutil.copyfile(out_scan, output.scan.rsplit(".mnc",1)[0]+'_nc.mnc')
                 
             # if symmetrize: # TODO: fix this
             #     # TODO: replace flipping of averages with averaging of flipped 

@@ -49,7 +49,7 @@ def concat_resample_nl_inv(
             #         [ input_transform.fw, input_transform.lin_fw], 
             #         tfm)
             # apply only bw transform
-            m.xfmconcat([input_transform.lin_fw, input_transform.fw ], tfm)
+            m.xfmconcat([input_transform.fw, input_transform.lin_fw], tfm)
             ref=model.scan
             # TODO: decide if needed?
             # m.xfm_normalize( tfm, ref, output_transform.fw,
