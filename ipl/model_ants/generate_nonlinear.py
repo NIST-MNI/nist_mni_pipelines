@@ -104,6 +104,9 @@ def generate_nonlinear_average(
     # go through all the iterations
     it=0
 
+    prev_transforms=[]
+    update_group_transform=None
+
     for (i,p) in enumerate(protocol):
         downsample=p.get('downsample',downsample_)
         for j in range(1,p['iter']+1):
@@ -159,9 +162,11 @@ def generate_nonlinear_average(
             if cleanup and it>1 :
                 # remove information from previous iteration
                 for s in corr_samples:
-                   s.cleanup(verbose=True)
-                for x in corr_transforms:
-                   x.cleanup(verbose=True)
+                   s.cleanup()
+                for x in prev_transforms:
+                   x.cleanup()
+                if update_group_transform is not None:
+                    update_group_transform.cleanup()
 
             # here all the transforms should exist
             update_group_transform = MriTransform(name='upd_group', 
@@ -193,7 +198,7 @@ def generate_nonlinear_average(
                         current_model,
                         level=p['level'], 
                         symmetric=symmetric, qc=qc ))
-                corr_transforms.append(x)
+                #corr_transforms.append(x)
                 corr_samples.append(c)
 
             if it>skip and it<stop_early:
@@ -205,21 +210,10 @@ def generate_nonlinear_average(
             if it>skip and it<stop_early:
                 result = average_samples.remote( corr_samples, next_model, 
                     output_sd=next_model_sd, symmetric=symmetric, 
-                    symmetrize=symmetric, 
+                    symmetrize=symmetric,
                     average_mode=average_mode,
-                    #upd=update_group_transform
                     )
-                # TODO: add sharpening here
                 ray.wait([result])
-
-            if cleanup : # remove intermediate files if needed 
-                for x in nl_transforms:
-                   x.cleanup()
-                update_group_transform.cleanup()
-
-                # remove previous template estimate
-                models.append(next_model)
-                models_sd.append(next_model_sd)
 
             current_model=next_model
             current_model_sd=next_model_sd
@@ -244,7 +238,13 @@ def generate_nonlinear_average(
                     plt.savefig(prefix+os.sep+'progress.png', bbox_inches='tight', dpi=100)
                     plt.close()
                     plt.close('all')
-
+                else:
+                    ray.wait([result])
+                    # remove previous template estimate
+                    models.append(next_model)
+                    models_sd.append(next_model_sd)
+            # save for next iteration
+            prev_transforms=nl_transforms
     
     # copy output to the destination
     ray.wait(stat_results, num_returns=len(stat_results))
@@ -262,21 +262,24 @@ def generate_nonlinear_average(
     results={
             'model':      current_model,
             'model_sd':   current_model_sd,
-            'xfm':        corr_transforms,
+            #'xfm':        corr_transforms,
+            'xfm':        nl_transforms,
             'biascorr':   None,
             'scan':       corr_samples,
+            'upd':        update_group_transform,
             'symmetric':  symmetric,
             'samples':    samples,
             'stats':      _stat_results
             }
-            
+    
     with open(prefix+os.sep+'results.json','w') as f:
          json.dump(results, f, indent=1, cls=MRIEncoder)
 
     if cleanup and stop_early==100000:
         # keep the final model
-        models.pop()
-        models_sd.pop()
+        if any(models):
+            models.pop()
+            models_sd.pop()
         
         # delete unneeded models
         for m in models:

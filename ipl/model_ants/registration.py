@@ -13,7 +13,6 @@ import ipl.ants_registration
 import numpy as np
 
 from .structures import *
-from .filter import build_approximation
 
 try:
     # needed to read and write XFM files
