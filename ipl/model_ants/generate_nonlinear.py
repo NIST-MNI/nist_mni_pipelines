@@ -18,6 +18,20 @@ from ipl.model_ants.resample         import concat_resample_nl_inv
 
 import ray
 
+# optional , for visualization 
+try:
+    import matplotlib
+    matplotlib.use('AGG')
+    import matplotlib.pyplot as plt
+    import matplotlib.cm  as cmx
+    import matplotlib.colors as colors
+    import numpy as np
+    have_matplot=True
+except ImportError:
+    # minc2_simple not available :(
+    have_matplot=False
+
+
 
 def generate_nonlinear_average(
     samples,
@@ -213,6 +227,24 @@ def generate_nonlinear_average(
             if it>skip and it<stop_early:
                 result = average_stats.remote( next_model, next_model_sd, update_group_transform )
                 stat_results.append(result)
+
+                if have_matplot:
+                    # do a little progress visualization
+                    fig = plt.figure()
+
+                    x=np.arange(len(stat_results))
+                    for c in ['dx','dy','dz','mag']:
+                        # Plot some data on the (implicit) axes.
+                        plt.plot(x, [ray.get(i)[c] for i in stat_results], label=c)  
+                    
+                    plt.xlabel('Iteration')
+                    plt.ylabel('NL update (mm)')
+                    plt.legend()
+
+                    plt.savefig(prefix+os.sep+'progress.png', bbox_inches='tight', dpi=100)
+                    plt.close()
+                    plt.close('all')
+
     
     # copy output to the destination
     ray.wait(stat_results, num_returns=len(stat_results))
