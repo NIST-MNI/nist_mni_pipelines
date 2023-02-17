@@ -193,7 +193,8 @@ def generate_nonlinear_average(
                     output_sd=next_model_sd, symmetric=symmetric, 
                     symmetrize=symmetric, 
                     average_mode=average_mode,
-                    upd=update_group_transform)
+                    #upd=update_group_transform
+                    )
                 # TODO: add sharpening here
                 ray.wait([result])
 

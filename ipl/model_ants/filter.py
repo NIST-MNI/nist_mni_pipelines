@@ -117,7 +117,7 @@ def normalize_sample(input,
 def average_samples(
     samples,
     output,
-    upd=None,
+    #upd=None,
     output_sd=None,
     symmetric=False,
     symmetrize=False,
@@ -129,17 +129,16 @@ def average_samples(
         with mincTools() as m:
             avg = []
 
-            # out_scan=output.scan
-            # out_mask=output.mask
+            out_scan=output.scan
+            out_mask=output.mask
             
-            # if symmetrize: TODO: fix this
-            #     out_scan=m.tmp('avg.mnc')
-            #     out_mask=m.tmp('avg_mask.mnc')
-            out_scan=m.tmp('avg.mnc')
+            if symmetrize: #TODO: fix this
+                out_scan=m.tmp('avg.mnc')
+                out_mask=m.tmp('avg_mask.mnc')
 
-            if upd is not None:
-                corr_xfm=m.tmp("correction.xfm")
-                m.xfmconcat([ upd.lin_fw, upd.fw, upd.fw, upd.fw, upd.fw], corr_xfm)
+            # if upd is not None:
+            #     corr_xfm=m.tmp("correction.xfm")
+            #     m.xfmconcat([ upd.lin_fw, upd.fw, upd.fw, upd.fw, upd.fw], corr_xfm)
                 
             for s in samples:
                 avg.append(s.scan)
@@ -147,6 +146,7 @@ def average_samples(
             if symmetric:
                 for s in samples:
                     avg.append(s.scan_f)
+
             out_sd=None
             if output_sd:
                 out_sd=output_sd.scan
@@ -163,23 +163,23 @@ def average_samples(
                 #HACK to create a "standard" average
                 out_scan_mean=output.scan.rsplit(".mnc",1)[0]+'_mean.mnc'
                 if have_minc2_simple:
-                    faster_average(avg, m.tmp('avg_mean.mnc'),out_sd=out_sd)
+                    faster_average(avg, out_scan_mean,out_sd=out_sd)
                 else:
-                    m.average(avg, m.tmp('avg_mean.mnc'), sdfile=out_sd)
+                    m.average(avg, out_scan_mean, sdfile=out_sd)
             else:
                 if have_minc2_simple:
                     faster_average(avg, out_scan,out_sd=out_sd)
                 else:
                     m.average(avg, out_scan, sdfile=out_sd)
 
-            if upd is not None:
-                m.resample_smooth(out_scan, output.scan, transform=corr_xfm, invert_transform=True)
-                if out_sd is not None: 
-                    m.resample_smooth(out_sd,output_sd.scan,transform=corr_xfm,invert_transform=True)
-                if out_scan_mean is not None:
-                    m.resample_smooth(m.tmp('avg_mean.mnc'),out_scan_mean, transform=corr_xfm, invert_transform=True)
-                # DEBUG
-                shutil.copyfile(out_scan, output.scan.rsplit(".mnc",1)[0]+'_nc.mnc')
+            # if upd is not None:
+            #     m.resample_smooth(out_scan, output.scan, transform=corr_xfm, invert_transform=True)
+            #     if out_sd is not None: 
+            #         m.resample_smooth(out_sd,output_sd.scan,transform=corr_xfm,invert_transform=True)
+            #     if out_scan_mean is not None:
+            #         m.resample_smooth(m.tmp('avg_mean.mnc'),out_scan_mean, transform=corr_xfm, invert_transform=True)
+            #     # DEBUG
+            #     shutil.copyfile(out_scan, output.scan.rsplit(".mnc",1)[0]+'_nc.mnc')
                 
             # if symmetrize: # TODO: fix this
             #     # TODO: replace flipping of averages with averaging of flipped 
@@ -211,13 +211,12 @@ def average_samples(
                         if have_minc2_simple:
                             faster_average(avg,m.tmp('avg_mask.mnc'))
                         else:
-                            m.average(avg,m.tmp('avg_mask_.mnc'),datatype='-float')
+                            m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
 
-
-                    if upd is not None:
-                        m.resample_smooth(m.tmp('avg_mask_.mnc'),m.tmp('avg_mask.mnc'), transform=corr_xfm,invert_transform=True)
-                    else:
-                        m.resample_smooth(m.tmp('avg_mask_.mnc'),m.tmp('avg_mask.mnc')) # HACK
+                    # if upd is not None:
+                    #     m.resample_smooth(m.tmp('avg_mask_.mnc'),m.tmp('avg_mask.mnc'), transform=corr_xfm,invert_transform=True)
+                    # else:
+                    #    m.resample_smooth(m.tmp('avg_mask_.mnc'),m.tmp('avg_mask.mnc')) # HACK
                     # apply correction!
                     m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
         return  True
