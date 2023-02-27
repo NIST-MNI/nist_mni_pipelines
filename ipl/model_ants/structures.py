@@ -67,7 +67,7 @@ class MriTransform(object):
     Output from ANTs transform
     """
 
-    def __init__(self, prefix, name, iter=None):
+    def __init__(self, prefix, name, iter=None,disable_linear=False):
         self.prefix = prefix
         self.name = name
         self.iter = iter
@@ -79,18 +79,32 @@ class MriTransform(object):
             self.base = self.prefix + os.sep + self.name+'.{:03d}_'.format(iter)
             self.base_f = self.prefix + os.sep + self.name+'.{:03d}_f_'.format(iter)
 
-        self.fw   = self.base   + '1_NL.xfm'
-        self.fw_f = self.base_f + '1_NL.xfm'
-        self.fw_grid    = self.base + '1_NL_grid_0.mnc'
-        self.fw_grid_f  = self.base_f + '1_NL_grid_0.mnc'
+        if disable_linear:
+            self.fw   = self.base   + '0_NL.xfm'
+            self.fw_f = self.base_f + '0_NL.xfm'
+            self.fw_grid    = self.base + '0_NL_grid_0.mnc'
+            self.fw_grid_f  = self.base_f + '0_NL_grid_0.mnc'
 
-        self.bw   = self.base   + '1_inverse_NL.xfm'
-        self.bw_f = self.base_f + '1_inverse_NL.xfm'
-        self.bw_grid    = self.base + '1_inverse_NL_grid_0.mnc'
-        self.bw_grid_f  = self.base_f + '1_inverse_NL_grid_0.mnc'
+            self.bw   = self.base   + '0_inverse_NL.xfm'
+            self.bw_f = self.base_f + '0_inverse_NL.xfm'
+            self.bw_grid    = self.base + '0_inverse_NL_grid_0.mnc'
+            self.bw_grid_f  = self.base_f + '0_inverse_NL_grid_0.mnc'
 
-        self.lin_fw   = self.base   + '0_GenericAffine.xfm'
-        self.lin_fw_f = self.base_f + '0_GenericAffine.xfm'
+            self.lin_fw   = None
+            self.lin_fw_f = None
+        else:
+            self.fw   = self.base   + '1_NL.xfm'
+            self.fw_f = self.base_f + '1_NL.xfm'
+            self.fw_grid    = self.base + '1_NL_grid_0.mnc'
+            self.fw_grid_f  = self.base_f + '1_NL_grid_0.mnc'
+
+            self.bw   = self.base   + '1_inverse_NL.xfm'
+            self.bw_f = self.base_f + '1_inverse_NL.xfm'
+            self.bw_grid    = self.base + '1_inverse_NL_grid_0.mnc'
+            self.bw_grid_f  = self.base_f + '1_inverse_NL_grid_0.mnc'
+
+            self.lin_fw   = self.base   + '0_GenericAffine.xfm'
+            self.lin_fw_f = self.base_f + '0_GenericAffine.xfm'
 
     def __repr__(self):
         return 'MriTransform(prefix="{}",name="{}",iter="{}")'.\

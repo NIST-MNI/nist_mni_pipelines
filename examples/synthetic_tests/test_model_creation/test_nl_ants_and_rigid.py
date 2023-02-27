@@ -10,9 +10,9 @@ if __name__ == '__main__':
   ray.init(num_cpus=9)
   # setup data for parallel processing
   generate_nonlinear_model_csv('subjects.lst',
-    work_prefix='tmp_nl_asym_ants',
+    work_prefix='tmp_nl_ants_and_rigid',
     options={'symmetric':False,
-             'protocol': [{'iter':24,'level':8},
+             'protocol': [{'iter':8,'level':4},
                           ],
              'cleanup': False,
              'parameters':

@@ -220,7 +220,8 @@ def generate_update_transform(
 
             for i in samples:
                 avg.append(i.fw)
-                avg_lin.append(i.lin_fw)
+                if i.lin_fw is not None:
+                    avg_lin.append(i.lin_fw)
 
             if symmetric:
                 for i in samples:
@@ -232,13 +233,18 @@ def generate_update_transform(
             out_lin=m.tmp("avg_lin.xfm")
 
             xfmavg(avg,     out_nl,  mult_grid=-grad_step )
-            xfmavg(avg_lin, out_lin, out_lin )
+            if len(avg_lin) == len(avg):
+                xfmavg(avg_lin, out_lin, out_lin )
 
             ## transform nonlinear part 
             # ${ANTSPATH}/WarpImageMultiTransform ${dim} ${templatename}0warp.nii.gz ${templatename}0warp.nii.gz -i  ${templatename}0Affine.txt -R ${template}
             # TODO: figure out order?
-            m.resample_smooth(out_nl_grid, output.fw_grid, transform=out_lin, order=1) 
-            m.xfminvert(out_lin, output.lin_fw)
+            
+            if  output.lin_fw is not None:
+                m.resample_smooth(out_nl_grid, output.fw_grid, transform=out_lin, order=1)
+                m.xfminvert(out_lin, output.lin_fw)
+            else:
+                shutil.copyfile(out_nl_grid, output.fw_grid)
 
             ## HACK : generate grid header
             with open(output.fw, "w") as f:

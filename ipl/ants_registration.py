@@ -627,8 +627,6 @@ def full_register_ants2(
         modalities=len(sources)
         n_out=0
 
-
-
         if parameters is None:
             #TODO add more options here
             parameters={'conf':{},

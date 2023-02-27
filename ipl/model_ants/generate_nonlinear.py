@@ -65,6 +65,7 @@ def generate_nonlinear_average(
 
     cleanup=       options.get('cleanup',False)
     symmetric=     options.get('symmetric',False)
+
     parameters=    options.get('parameters',
             {'convergence':'1.e-9,10',
              'cost_function': 'CC',
@@ -74,6 +75,7 @@ def generate_nonlinear_average(
              'winsorize_intensity': {'low':0.01, 'high':0.99},
              }
             )
+    # To disable linear part specify lin_parameters as None
     lin_parameters=options.get('lin_parameters',{})
     qc=            options.get('qc',False)
     downsample_=   options.get('downsample',None)
@@ -83,6 +85,8 @@ def generate_nonlinear_average(
 
     models=[]
     models_sd=[]
+    #
+    disable_linear=lin_parameters is None
 
     if symmetric:
         flipdir=prefix+os.sep+'flip'
@@ -108,7 +112,7 @@ def generate_nonlinear_average(
     update_group_transform=None
 
     for (i,p) in enumerate(protocol):
-        downsample=p.get('downsample',downsample_)
+        downsample=p.get('downsample', downsample_)
         for j in range(1,p['iter']+1):
             it+=1
             if it>stop_early:
@@ -116,9 +120,9 @@ def generate_nonlinear_average(
             # this will be a model for next iteration actually
 
             # 1 register all subjects to current template
-            next_model   =MriDataset(prefix=prefix,iter=it,name='avg',
+            next_model   =MriDataset(prefix=prefix, iter=it, name='avg',
                 has_mask=current_model.has_mask())
-            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd' ,
+            next_model_sd=MriDataset(prefix=prefix, iter=it, name='sd' ,
                 has_mask=current_model.has_mask())
 
             it_prefix=prefix+os.sep+str(it)
@@ -129,7 +133,7 @@ def generate_nonlinear_average(
             nl_transforms=[]
 
             for (i, s) in enumerate(samples):
-                sample_xfm     = MriTransform(name=s.name,       prefix=it_prefix,iter=it)
+                sample_xfm     = MriTransform(name=s.name, prefix=it_prefix,iter=it,disable_linear=disable_linear)
                 prev_transform = None
 
 #                if it > 1:
@@ -170,7 +174,7 @@ def generate_nonlinear_average(
 
             # here all the transforms should exist
             update_group_transform = MriTransform(name='upd_group', 
-                prefix=it_prefix, iter=it)
+                prefix=it_prefix, iter=it,disable_linear=disable_linear)
 
             # 2 average all transformations
             if it>skip and it<stop_early:

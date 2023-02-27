@@ -33,25 +33,40 @@ def concat_resample_nl_inv(
             tfm=m.tmp('transform.xfm')
 
             if corr_transform is not None:
-                m.xfmconcat( 
-                    [
-                     # correction part
-                     corr_transform.lin_fw,
-                     corr_transform.fw, corr_transform.fw, 
-                     corr_transform.fw, corr_transform.fw,
-                     
-                     # standard part
-                     input_transform.fw,
-                     input_transform.lin_fw,
-                     ],
-                    tfm)
-            else:
-                m.xfmconcat(
-                    [ input_transform.fw, input_transform.lin_fw], 
-                    tfm)
-            
-            #m.xfmconcat([input_transform.fw, input_transform.lin_fw], tfm)
+                if corr_transform.lin_fw is not None and \
+                   input_transform.lin_fw is not None:
+                    m.xfmconcat( 
+                        [
+                        # correction part
+                        corr_transform.lin_fw,
+                        corr_transform.fw, corr_transform.fw, 
+                        corr_transform.fw, corr_transform.fw,
+                        
+                        # standard part
+                        input_transform.fw,
+                        input_transform.lin_fw,
+                        ],
+                        tfm)
+                else:
+                    m.xfmconcat(
+                        [
+                        # correction part
+                        corr_transform.fw, corr_transform.fw, 
+                        corr_transform.fw, corr_transform.fw,
+                        
+                        # standard part
+                        input_transform.fw,
+                        ],
+                        tfm)
 
+            else:
+                if input_transform.lin_fw is not None:
+                    m.xfmconcat(
+                        [ input_transform.fw, input_transform.lin_fw], 
+                        tfm)
+                else:
+                    tfm = input_transform.fw
+            
             ref=model.scan
             # TODO: decide if needed?
             # m.xfm_normalize( tfm, ref, output_transform.fw,
