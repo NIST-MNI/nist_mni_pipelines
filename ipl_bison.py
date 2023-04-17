@@ -356,7 +356,7 @@ def parse_options():
                         help='Output probabilities' )
 
     parser.add_argument('--method',
-                        choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA'],
+                        choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA','C0'],
                         default='RF1',
                         help='Classification algorithm')
 
@@ -499,6 +499,13 @@ if __name__ == "__main__":
             clf = LinearDiscriminantAnalysis(solver='eigen')
         elif options.method == 'QDA':
             clf = QuadraticDiscriminantAnalysis(reg_param=1e-6) # new version!
+        elif options.method == 'C0':
+            from catboost import CatBoostClassifier, Pool
+            clf = CatBoostClassifier(iterations=128,
+                           task_type="GPU",
+                           devices='0:1',
+                           loss_function='MultiClass',
+                           verbose=True)
         else:
             raise  Error(f"Unsupported classifier: {options.method}")
         
@@ -584,7 +591,9 @@ if __name__ == "__main__":
             print("Saving results to ", path_save_classifier)
             joblib.dump(clf, path_save_classifier)
 
-    elif options.infer is not None and options.output is not None and options.load is not None:
+    elif options.infer is not None and \
+         options.output is not None and \
+         options.load is not None:
         infer = read_csv_dict(options.infer)
         # recoginized headers:
         # t1,t2,pd,flair,ir
