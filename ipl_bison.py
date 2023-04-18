@@ -145,13 +145,40 @@ def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
         m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
+def resample_labels_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
+    with mincTools() as m:
+        m.resample_labels(in_mnc, out_mnc, like=ref, transform=xfm, invert_transform=invert_xfm)
+    return out_mnc
+
+
 def load_all_volumes(train, n_cls, 
     modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
     resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
     sample_vol={}
 
     sample_vol["subject"] = np.array(train["subject"])
-    sample_vol["mask"]    = load_bin_volumes(train["mask"])
+    # find reference modality
+    for m in modalities:
+        if m in train:
+            ref_m=m
+            break
+
+    if "mask" in train:
+        sample_vol["mask"]    = load_bin_volumes(train["mask"])
+    elif resample: # warp atlas mask
+        with mincTools() as minc:
+            with Pool(processes=n_jobs) as pool: 
+                jobs=[]
+                for i,xfm in enumerate(train["xfm"]):
+                    jobs.append(
+                        pool.apply_async(
+                            resample_labels_job, (f"{atlas_pfx}mask.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
+                                    train[ref_m][i],xfm,inverse_xfm)
+                            )
+                    )
+                r=[i.get() for i in jobs]
+                sample_vol["mask"] = load_bin_volumes(r)
+
     if ran_subset<1.0:
         #remove random voxels from the mask
         for i,_ in enumerate(sample_vol["mask"]):
@@ -174,12 +201,11 @@ def load_all_volumes(train, n_cls,
                 for m in modalities:
                     if m in train:
                         jobs[f'av_{m}']=[]
-
                         for i,xfm in enumerate(train["xfm"]):
                             jobs[f'av_{m}'].append(
                                 pool.apply_async(
                                     resample_job, (f"{atlas_pfx}{m}.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
-                                         train["mask"][i],xfm,inverse_xfm)
+                                         train[ref_m][i],xfm,inverse_xfm)
                                     )
                             )
                 
@@ -189,7 +215,7 @@ def load_all_volumes(train, n_cls,
                         jobs[f'p{c+1}'].append(
                                 pool.apply_async(
                                     resample_job, (f"{atlas_pfx}{c+1}.mnc",minc.tmp(f"{i}_p{c+1}.mnc"),
-                                         train["mask"][i], xfm, inverse_xfm)
+                                         train[ref_m][i], xfm, inverse_xfm)
                                     )
                             )
                 # collect results of all jobs
@@ -200,7 +226,7 @@ def load_all_volumes(train, n_cls,
                 for c in range(n_cls):
                     r=[i.get() for i in jobs[f'p{c+1}']]
                     sample_vol[f'p{c+1}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
-        # here all temp files should be removed    
+        # here all temp files should be removed
     else:
         for m in modalities:
             if m in train:
@@ -592,9 +618,11 @@ if __name__ == "__main__":
             joblib.dump(clf, path_save_classifier)
 
     elif options.infer is not None and \
-         options.output is not None and \
          options.load is not None:
         infer = read_csv_dict(options.infer)
+
+        if "out" not in infer and options.output is None:
+            raise Error("need to specify --output prefix or provide out column")
         # recoginized headers:
         # t1,t2,pd,flair,ir
         # pCls<n>,labels,mask
@@ -603,8 +631,8 @@ if __name__ == "__main__":
         if 'subject' not in infer:
             raise Error('subject is missing')
         
-        if 'mask' not in infer: # TODO: train with whole image?
-            raise Error('mask is missing')
+        if 'mask' not in infer and not options.resample: # TODO: train with whole image?
+            raise Error('mask is missing and no resample')
         
         present_modalities = []
         hist = {}
@@ -614,7 +642,9 @@ if __name__ == "__main__":
                     raise Error(f'missing av_{m}')
                 present_modalities.append(m)
                 hist[m] = joblib.load(options.load + os.sep + f'{m}_Label.pkl')
-        
+        # use this modality as a reference
+        ref_m = present_modalities[0]
+
         # load classifier
         clf = joblib.load(options.load + os.sep + f'{options.method}.pkl') # TODO: use appropriate name
         if options.n_jobs is not None:
@@ -637,16 +667,22 @@ if __name__ == "__main__":
             for i,subj in enumerate( infer_vol['subject'] ):
                 X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
                 out  = clf.predict(X_)
-                outf = options.output + os.sep + subj +f'_{options.method}.mnc'
+                if "out" in infer_sub:
+                    outf = infer_sub["out"][i]
+                else:
+                    outf = options.output + os.sep + subj +f'_{options.method}.mnc'
                 print("Saving:", outf, flush=True)
-                save_labels(outf, infer['mask'][i], out, mask=infer_vol['mask'][i])
+                save_labels(outf, infer[ref_m][i], out, mask=infer_vol['mask'][i])
                 if options.prob:
                     # saving probabilites
                     out_p = clf.predict_proba(X_)
                     for c in range(out_p.shape[1]):
-                        outf = options.output + os.sep + infer['subject'][i]+f'_p{c}_{options.method}.mnc'
+                        if "out" in infer_sub:
+                            outf = infer_sub["out"][i].rsplit(".mnc",2)[0]+f'_p{c}_{options.method}.mnc'
+                        else:
+                            outf = options.output + os.sep + infer['subject'][i]+f'_p{c}_{options.method}.mnc'
                         print("Saving:", outf, flush=True)
-                        save_cnt(outf, infer['mask'][i], out_p[:,c], mask=infer_vol['mask'][i])
+                        save_cnt(outf, infer[ref_m][i], out_p[:,c], mask=infer_vol['mask'][i])
             print(f"{b}\t",flush=True,end='')
         print("")
     else:
