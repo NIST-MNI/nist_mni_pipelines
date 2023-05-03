@@ -140,28 +140,55 @@ def read_csv_dict(fname):
     return train
 
 
-def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
+def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm, flip):
     with mincTools() as m:
-        m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
+        if flip:
+            m.param2xfm(m.tmp("flip.xfm"), scales=[-1.0,1.0,1.0])
+            if invert_xfm:
+                m.xfmconcat([m.tmp("flip.xfm"), xfm],m.tmp("flipped.xfm"))
+            else:
+                m.xfmconcat([xfm,m.tmp("flip.xfm")],m.tmp("flipped.xfm"))
+            m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=m.tmp("flipped.xfm"), invert_transform=invert_xfm)
+        else:
+            m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
-def resample_labels_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
+def resample_labels_job(in_mnc, out_mnc, ref, xfm, invert_xfm,flip):
     with mincTools() as m:
-        m.resample_labels(in_mnc, out_mnc, like=ref, transform=xfm, invert_transform=invert_xfm)
+        if flip:
+            m.param2xfm(m.tmp("flip.xfm"), scales=[-1.0,1.0,1.0])
+            if invert_xfm:
+                m.xfmconcat([m.tmp("flip.xfm"), xfm],m.tmp("flipped.xfm"))
+            else:
+                m.xfmconcat([xfm,m.tmp("flip.xfm")],m.tmp("flipped.xfm"))
+            
+            m.resample_labels(in_mnc, out_mnc, like=ref, transform=m.tmp("flipped.xfm"), invert_transform=invert_xfm)
+        else:
+            m.resample_labels(in_mnc, out_mnc, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
 
 def load_all_volumes(train, n_cls, 
     modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
-    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
+    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0,
+    flip=False):
     sample_vol={}
 
-    sample_vol["subject"] = np.array(train["subject"])
+    sample_vol["subject"] = train["subject"]
     # find reference modality
     for m in modalities:
         if m in train:
             ref_m=m
             break
+
+    sample_vol["reference"] = train[ref_m]
+
+    if flip:
+        if "out_flipped" in train:
+            sample_vol["out"] = train["out_flipped"]
+    else:
+        if "out" in train:
+            sample_vol["out"] = train["out"]
 
     if "mask" in train:
         sample_vol["mask"]    = load_bin_volumes(train["mask"])
@@ -173,7 +200,7 @@ def load_all_volumes(train, n_cls,
                     jobs.append(
                         pool.apply_async(
                             resample_labels_job, (f"{atlas_pfx}mask.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
-                                    train[ref_m][i],xfm,inverse_xfm)
+                                    train[ref_m][i], xfm, inverse_xfm, flip)
                             )
                     )
                 r=[i.get() for i in jobs]
@@ -205,7 +232,7 @@ def load_all_volumes(train, n_cls,
                             jobs[f'av_{m}'].append(
                                 pool.apply_async(
                                     resample_job, (f"{atlas_pfx}{m}.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
-                                         train[ref_m][i],xfm,inverse_xfm)
+                                         train[ref_m][i],xfm,inverse_xfm, flip)
                                     )
                             )
                 
@@ -215,7 +242,7 @@ def load_all_volumes(train, n_cls,
                         jobs[f'p{c+1}'].append(
                                 pool.apply_async(
                                     resample_job, (f"{atlas_pfx}{c+1}.mnc",minc.tmp(f"{i}_p{c+1}.mnc"),
-                                         train[ref_m][i], xfm, inverse_xfm)
+                                         train[ref_m][i], xfm, inverse_xfm, flip)
                                     )
                             )
                 # collect results of all jobs
@@ -239,6 +266,10 @@ def load_all_volumes(train, n_cls,
 
     return sample_vol
 
+###
+### Concatenate lists stored as elements of dictionarys
+def concatenate_lists(in1,in2):
+    return { k:in1[k]+in2[k] for k in in1.keys()}
 
 def estimate_histograms(scans, labels, n_cls, n_bins, subset=None):
     global_hist = np.zeros(shape=(n_bins , n_cls),dtype=float)
@@ -312,7 +343,8 @@ def estimate_all_histograms(sample_vol, n_cls, n_bins,
     return hist
 
 
-def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni')):
+def load_XY_item(i, sample_vol, hist,n_cls, n_bins, 
+                    modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni')):
     if 'labels' in sample_vol:
         Y__ = sample_vol['labels'][i]
     else:
@@ -423,6 +455,12 @@ def parse_options():
                         dest="resample",
                         default=False,
                         help='Resample priors on line, need "xfm" column' )
+
+    parser.add_argument('--symmetric', action="store_true",
+                        dest="symmetric",
+                        default=False,
+                        help='Produce two outputs in inference mode, one regular, another is flipped' )
+
 
     parser.add_argument('--inverse_xfm', action="store_true",
                         dest="inverse_xfm",
@@ -544,7 +582,7 @@ if __name__ == "__main__":
             folds = options.CV
             # create subset
             subject     = sample_vol['subject']
-            unique_subj = np.unique(subject)
+            unique_subj = np.unique(np.array(subject))
 
             _state = None
             if options.random is not None:
@@ -642,8 +680,9 @@ if __name__ == "__main__":
                     raise Error(f'missing av_{m}')
                 present_modalities.append(m)
                 hist[m] = joblib.load(options.load + os.sep + f'{m}_Label.pkl')
+
         # use this modality as a reference
-        ref_m = present_modalities[0]
+        ref_m = "reference" # present_modalities[0]
 
         # load classifier
         clf = joblib.load(options.load + os.sep + f'{options.method}.pkl') # TODO: use appropriate name
@@ -658,31 +697,46 @@ if __name__ == "__main__":
         print(f"Processing {nsamp} volumes, batch size:{options.batch}...",flush=True)
         for b in range(math.ceil(nsamp/options.batch)):
             infer_sub = get_batch(infer, b, options.batch)
-            infer_vol = load_all_volumes(infer_sub, n_cls, modalities=modalities,
+            infer_vol = load_all_volumes(infer_sub, 
+                            n_cls, modalities=modalities,
                             resample=options.resample, 
                             atlas_pfx=options.atlas_pfx, 
                             inverse_xfm=options.inverse_xfm,
                             n_jobs=options.n_jobs)
-            
-            for i,subj in enumerate( infer_vol['subject'] ):
+            if options.symmetric:
+                infer_vol_f = load_all_volumes(infer_sub, 
+                                n_cls, modalities=modalities,
+                                resample=options.resample, 
+                                atlas_pfx=options.atlas_pfx, 
+                                inverse_xfm=options.inverse_xfm,
+                                n_jobs=options.n_jobs,
+                                flip=True)
+                #
+                infer_vol = concatenate_lists(infer_vol, infer_vol_f)
+
+            for i, subj in enumerate( infer_vol['subject'] ):
+                # 
                 X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
                 out  = clf.predict(X_)
-                if "out" in infer_sub:
-                    outf = infer_sub["out"][i]
+
+                if "out" in infer_vol:
+                    outf = infer_vol["out"][i]
                 else:
                     outf = options.output + os.sep + subj +f'_{options.method}.mnc'
+                
                 print("Saving:", outf, flush=True)
-                save_labels(outf, infer[ref_m][i], out, mask=infer_vol['mask'][i])
+                save_labels(outf, infer_vol[ref_m][i], out, mask=infer_vol['mask'][i])
                 if options.prob:
                     # saving probabilites
                     out_p = clf.predict_proba(X_)
                     for c in range(out_p.shape[1]):
-                        if "out" in infer_sub:
-                            outf = infer_sub["out"][i].rsplit(".mnc",2)[0]+f'_p{c}_{options.method}.mnc'
+                        if "out" in infer_vol:
+                            outf = infer_vol["out"][i].rsplit(".mnc",2)[0]+f'_p{c}_{options.method}.mnc'
                         else:
                             outf = options.output + os.sep + infer['subject'][i]+f'_p{c}_{options.method}.mnc'
                         print("Saving:", outf, flush=True)
-                        save_cnt(outf, infer[ref_m][i], out_p[:,c], mask=infer_vol['mask'][i])
+                        save_cnt(outf, infer_vol[ref_m][i], out_p[:,c], mask=infer_vol['mask'][i])
+
             print(f"{b}\t",flush=True,end='')
         print("")
     else:
