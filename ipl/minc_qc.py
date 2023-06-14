@@ -9,8 +9,9 @@ import copy
 
 import numpy as np
 import numpy.ma as ma
+import math
 
-import scipy 
+#import scipy 
 import matplotlib
 matplotlib.use('AGG')
 
@@ -164,6 +165,8 @@ def qc(
         else:
             omin=mask_range[0]
             omax=mask_range[1]
+            ### set values below mask_range[0] to NaN
+            _ovl_data[_ovl_data<omin]=math.nan
         _odata=_ovl_data
         
         if mask_bg is not None:
