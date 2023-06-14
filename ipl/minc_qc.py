@@ -106,7 +106,8 @@ def qc(
     format=None,
     bg_color=None,
     fg_color=None,
-    style=None
+    style=None,
+    crop=None
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -134,6 +135,8 @@ def qc(
         format -- file format override
         bg_color -- background color
         fg_color -- foreground color
+        style    -- name of the matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
+        crop     -- Crop input image: [x1,x2,y1,y2,z1,z2]
     """
     
     _img=minc2_file(input)
@@ -171,7 +174,15 @@ def qc(
         
         if mask_bg is not None:
             _odata=ma.masked_less(_odata, mask_bg)
-        
+    
+
+    if crop is not None:
+        # apply cropping here
+        _idata=_idata[crop[4]:crop[5],crop[2]:crop[3],crop[0]:crop[1]]
+        if mask is not None:
+            _odata=_odata[crop[4]:crop[5],crop[2]:crop[3],crop[0]:crop[1]]
+        data_shape=_idata.shape
+
     slices=[]
     
     # setup ranges

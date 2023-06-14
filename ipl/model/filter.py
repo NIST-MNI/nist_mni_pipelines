@@ -71,14 +71,14 @@ def faster_average(infiles, out_avg, out_sd=None, binary=False, threshold=0.5):
         # binarize:
         vol_avg=np.greater(vol_avg,threshold).astype('int8')
     else:
-        vol_avg=vol_avg.astype(np.float)
+        vol_avg=vol_avg.astype(np.float64)
     
     o_avg.save_complete_volume(vol_avg)
     
     if out_sd is not None:
         vol_sd/=lll
         vol_sd-=vol_avg*vol_avg
-        vol_sd=np.sqrt(vol_sd).astype(np.float)
+        vol_sd=np.sqrt(vol_sd).astype(np.float64)
         o_sd.save_complete_volume(vol_sd)
 
 @ray.remote
@@ -168,8 +168,7 @@ def average_samples(
                     for s in samples:
                         avg.append(s.mask_f)
 
-                if not os.path.exists(output.mask):
-                    
+                if not os.path.exists(output.mask):                    
                     if symmetrize:
                         if have_minc2_simple:
                             faster_average(avg,m.tmp('avg_mask.mnc'))
@@ -185,11 +184,6 @@ def average_samples(
                         else:
                             m.average(avg,m.tmp('avg_mask.mnc'),datatype='-float')
                         m.calc([m.tmp('avg_mask.mnc')],'A[0]>=0.5?1:0',output.mask, datatype='-byte',labels=True)
-
-
-                    
-                    
-
         return  True
     except mincError as e:
         print("Exception in average_samples:{}".format(str(e)))
@@ -210,7 +204,7 @@ def average_stats(
         st=0
         with mincTools(verbose=2) as m:
             if avg.mask is not None:
-                st=float(m.stats(sd.scan,'-median',mask=avg.mask))
+                st=float(m.stats(sd.scan,'-median', mask=avg.mask))
             else:
                 st=float(m.stats(sd.scan,'-median'))
         return st
