@@ -64,6 +64,12 @@ def parse_options():
                     nargs=2,
                     default=None,
                     help="Mask range" )
+
+    parser.add_argument("--crop",type=int,
+                    dest="crop",
+                    nargs=6,
+                    default=None,
+                    help="Crop volumes x1,x2,y1,y2,z1,z2" )
     
     parser.add_argument("--over",
                     dest="use_over",
@@ -160,7 +166,8 @@ def main():
                 title=options.title,
                 show_image_bar=options.image_bar,
                 show_overlay_bar=options.mask_bar,
-                style=options.style
+                style=options.style,
+                crop=options.crop
                 )
     else:
         print("Refusing to run without input data, run --help")

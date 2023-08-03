@@ -94,10 +94,16 @@ def save_cnt( outfile, reference, data, mask=None, history=None ):
         out.save_complete_volume(_out)
 
 def load_cnt_volumes(vol_files, mask=None):
-    out=[]
-    for v,m in zip(vol_files,mask):
-        vol=load_image(v)
-        out+=[vol[m>0]]
+    out = []
+    for v,m in zip(vol_files, mask):
+        vol = load_image(v)
+        vv = vol[m>0]
+
+        if np.any( np.logical_not( np.isfinite( vv ) ) ):
+            print("Warning:",v,"Has NaNs!")
+        if len(vv)==0:
+            print("Warning:",v,"produces zero length volume")
+        out += [vv]
     return out
 
 def load_bin_volumes(vol_files, mask=None):
@@ -105,12 +111,17 @@ def load_bin_volumes(vol_files, mask=None):
 
     if mask is None:
         mask=[None]*len(vol_files)
-    for v,m in zip(vol_files,mask):
-        vol=load_labels(v)
+    for v,m in zip(vol_files, mask):
+        vol = load_labels(v)
         if m is not None:
-            out+=[vol[m>0]]
+            vv=vol[m>0]
         else:
-            out+=[vol]
+            vv=vol
+
+        if len(vv)==0:
+            print("Warning:",v,"produces zero length volume")
+
+        out += [vv]
     return out
 
 
@@ -129,17 +140,22 @@ def read_csv_dict(fname):
     return train
 
 
-def resample_job(in_mnc,out_mnc,ref,xfm,invert_xfm):
+def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
     with mincTools() as m:
-        m.resample_smooth(in_mnc,out_mnc,order=2,like=ref,transform=xfm,invert_transform=invert_xfm)
+        m.resample_smooth(in_mnc, out_mnc, order=2, like=ref, transform=xfm, invert_transform=invert_xfm)
     return out_mnc
 
-def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
-    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False):
+def load_all_volumes(train, n_cls, 
+    modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
+    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
     sample_vol={}
 
     sample_vol["subject"] = np.array(train["subject"])
     sample_vol["mask"]    = load_bin_volumes(train["mask"])
+    if ran_subset<1.0:
+        #remove random voxels from the mask
+        for i,_ in enumerate(sample_vol["mask"]):
+           sample_vol["mask"][i] = np.logical_and(sample_vol["mask"][i]>0, np.random.rand(*sample_vol["mask"][i].shape)<=ran_subset)
 
     if "labels" in train:
         sample_vol["labels"] = load_bin_volumes(train["labels"], mask=sample_vol["mask"])
@@ -198,12 +214,15 @@ def load_all_volumes(train, n_cls, modalities=('t1','t2','pd','flair','ir'),
     return sample_vol
 
 
-def estimate_histograms(scans, labels, n_cls, n_bins,subset=None):
+def estimate_histograms(scans, labels, n_cls, n_bins, subset=None):
     global_hist = np.zeros(shape=(n_bins , n_cls),dtype=float)
     #print("Estimating histogram:",end=' ',flush=True)
     if subset is None:
-        subset=np.arange(len(scans))
+        subset = np.arange(len(scans))
     
+    if len(subset)==0:
+        print("Error: estimate_histograms is called with zero-length subset")
+
     for i in subset:
         img = scans[i]
         lab = labels[i]
@@ -255,15 +274,19 @@ def draw_histograms(hist,out,modality='',dpi=100 ):
     plt.close('all')
 
 
-def estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=('t1','t2','pd','flair','ir'),subset=None):
+def estimate_all_histograms(sample_vol, n_cls, n_bins, 
+        modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'), 
+        subset=None):
     hist={}
     for m in modalities:
         if m in sample_vol:
+            if len(sample_vol[m])==0:
+                print("Error: zero length sample for modality ", m)
             hist[m] = estimate_histograms(sample_vol[m], sample_vol['labels'], n_cls, n_bins, subset=subset)
     return hist
 
 
-def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir')):
+def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni')):
     if 'labels' in sample_vol:
         Y__ = sample_vol['labels'][i]
     else:
@@ -288,8 +311,8 @@ def load_XY_item(i, sample_vol, hist,n_cls, n_bins, modalities=('t1','t2','pd','
     return X__,Y__
 
 
-def load_XY(sample_vol, hist, n_cls, n_bins, 
-            modalities=('t1','t2','pd','flair','ir'),
+def load_XY(sample_vol, hist, n_cls, n_bins,
+            modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
             subset=None, noconcat=False):
     X_=[]
     if 'labels' in train:
@@ -349,7 +372,7 @@ def parse_options():
         
     parser.add_argument('--random', type=int,default=None,
                         dest="random",
-                        help='Provide random state if needed' )
+                        help='Provide random state if needed for shuffling' )
 
     parser.add_argument('--n_cls', type=int,
                         dest="n_cls",
@@ -380,6 +403,13 @@ def parse_options():
                         default=False,
                         help='Use invers of the xfm files for resampling (faster for nonlinear xfm)' )
 
+    parser.add_argument('--ran_subset', type=float,
+                        dest="ran_subset",
+                        help='Random subset (fraction)', default=1.0 )
+
+    parser.add_argument('--subset_seed', type=int,
+                        dest="subset_seed",
+                        help='Seed for RNG to perform random subset', default=1 )
 
     options = parser.parse_args()
     
@@ -397,12 +427,12 @@ if __name__ == "__main__":
     options = parse_options()
     n_cls = options.n_cls
     n_bins = 256
-    modalities = ('t1', 't2', 'pd', 'flair', 'ir')
+    modalities = ('t1', 't2', 'pd', 'flair', 'ir','mp2t1', 'mp2uni')
 
     if options.train is not None and options.output is not None:
         train = read_csv_dict(options.train)
         # recognized headers:
-        # t1,t2,pd,flair,ir
+        # t1,t2,pd,flair,ir,mp2t1,mp2uni
         # pCls<n>,labels,mask
         # minimal set: one modality, p<n>, av_modality, labels, mask  for training 
 
@@ -424,10 +454,16 @@ if __name__ == "__main__":
                     exit(1)
 
         print("Loading all volumes")
+        if options.ran_subset<1.0: print("Using random subset:",options.ran_subset)
+
+        _state = np.random.get_state()
+        np.random.seed(options.subset_seed)
+
         sample_vol=load_all_volumes(train, n_cls, modalities=modalities,
             resample=options.resample,atlas_pfx=options.atlas_pfx,inverse_xfm=options.inverse_xfm,
-            n_jobs=options.n_jobs)
+            n_jobs=options.n_jobs,ran_subset=options.ran_subset)
 
+        np.random.set_state(_state)
         n_feat = n_cls # p_spatial 
 
         # Random Forest
@@ -496,7 +532,7 @@ if __name__ == "__main__":
                 testing  = set( unique_subj[(fold * n_samples // folds): ((fold + 1) * n_samples // folds)] )
 
                 train_subset = np.array([ i for i,s in enumerate(subject) if s in training ],dtype=int)
-                test_subset = np.array([ i for i,s in enumerate(subject)  if s in testing ],dtype=int)
+                test_subset  = np.array([ i for i,s in enumerate(subject) if s in testing  ],dtype=int)
                 print("Estimating histogram")
                 hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities, subset=train_subset)
 
@@ -514,8 +550,8 @@ if __name__ == "__main__":
                         gt = (y      == (c+1))
                         sa = (te_out == (c+1))
                         kappa = 2.0 * (gt * sa).sum()/(gt.sum() + sa.sum())
-                        gt_vol = gt.sum()
-                        sa_vol = sa.sum()
+                        gt_vol = float(gt.sum())
+                        sa_vol = float(sa.sum())
                         #res[s][str(c)] = kappa
                         print(f"\t{s},{c+1},{kappa},{gt_vol},{sa_vol}")
                         cv_res['fold'].append(fold)
@@ -584,8 +620,10 @@ if __name__ == "__main__":
         for b in range(math.ceil(nsamp/options.batch)):
             infer_sub = get_batch(infer, b, options.batch)
             infer_vol = load_all_volumes(infer_sub, n_cls, modalities=modalities,
-                resample=options.resample,atlas_pfx=options.atlas_pfx,inverse_xfm=options.inverse_xfm,
-                n_jobs=options.n_jobs)
+                            resample=options.resample, 
+                            atlas_pfx=options.atlas_pfx, 
+                            inverse_xfm=options.inverse_xfm,
+                            n_jobs=options.n_jobs)
             
             for i,subj in enumerate( infer_vol['subject'] ):
                 X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)

@@ -7,7 +7,9 @@ import traceback
 import json
 
 class MriDataset(object):
-    def __init__(self, prefix=None, name=None, iter=None, scan=None, mask=None, protect=False, par_int=[],par_def=[]):
+    def __init__(self, prefix=None, name=None, 
+                 iter=None, scan=None, mask=None, 
+                 protect=False, par_int=[],par_def=[], has_mask=True):
         self.prefix=prefix
         self.name=name
         self.iter=iter
@@ -20,14 +22,14 @@ class MriDataset(object):
         if scan is None:
             if self.iter is None:
                 self.scan=self.prefix+os.sep+self.name+'.mnc'
-                self.mask=self.prefix+os.sep+self.name+'_mask.mnc'
+                self.mask=self.prefix+os.sep+self.name+'_mask.mnc' if has_mask else None
                 self.scan_f=self.prefix+os.sep+self.name+'_f.mnc'
-                self.mask_f=self.prefix+os.sep+self.name+'_f_mask.mnc'
+                self.mask_f=self.prefix+os.sep+self.name+'_f_mask.mnc'  if has_mask else None
             else:
                 self.scan=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'.mnc'
-                self.mask=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_mask.mnc'
+                self.mask=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_mask.mnc'  if has_mask else None
                 self.scan_f=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_f.mnc'
-                self.mask_f=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_f_mask.mnc'
+                self.mask_f=self.prefix+os.sep+self.name+'.{:03d}'.format(iter)+'_f_mask.mnc'  if has_mask else None
         else:
             self.scan=scan
             self.mask=mask
@@ -37,6 +39,9 @@ class MriDataset(object):
 
         if self.prefix is None:
             self.prefix=os.path.dirname(self.scan)
+
+    def has_mask(self):
+        return self.mask is not None
 
     def __repr__(self):
         return 'MriDataset(prefix="{}",name="{}",iter="{}",scan="{}",mask="{}",protect={},par_int={},par_def={})'.\

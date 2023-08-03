@@ -99,8 +99,8 @@ def generate_nonlinear_average(
             # this will be a model for next iteration actually
 
             # 1 register all subjects to current template
-            next_model=MriDataset(prefix=prefix,iter=it,name='avg')
-            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd')
+            next_model   =MriDataset(prefix=prefix,iter=it,name='avg',has_mask=current_model.has_mask())
+            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd' ,has_mask=current_model.has_mask())
             transforms=[]
 
             it_prefix=prefix+os.sep+str(it)
@@ -299,7 +299,10 @@ def generate_nonlinear_model_csv(input_csv, model=None, mask=None, work_prefix=N
     with open(input_csv, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
         for row in reader:
-            internal_sample.append(MriDataset(scan=row[0],mask=row[1]))
+            if len(row)>=2:
+                internal_sample.append(MriDataset(scan=row[0],mask=row[1]))
+            else:
+                internal_sample.append(MriDataset(scan=row[0]))
 
     internal_model=None
     if model is not None:
