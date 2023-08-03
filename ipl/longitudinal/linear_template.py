@@ -272,7 +272,7 @@ def linearlngtemplate_v11(patient):
         # Here we are relying on the time point order (1)
         if patient.skullreg:
             print("linearlngtemplate_v11: skullreg")
-            samples= [ [tp.stx_ns_mnc['t1'],    tp.stx_ns_mnc['masknoles']]
+            samples= [ [tp.stx_ns_mnc['t1'], tp.stx_ns_mnc['masknoles']]
                         for (i, tp) in patient.items() ]
             unscale_xfms = [ tp.stx_ns_xfm['unscale_t1'] 
                         for (i, tp) in patient.items() ]
@@ -355,7 +355,7 @@ def linearlngtemplate_v11(patient):
             shutil.copyfile(output['model_sd'].scan,patient.template['linear_template_sd'])
 
         # Create the new stx space using the template
-        if patient.skullreg: 
+        if patient.skullreg:
             # registering using skull is extremely unstable :(
             ipl.registration.linear_register(patient.template['linear_template'],
                                 atlas, patient.template['stx2_xfm'],

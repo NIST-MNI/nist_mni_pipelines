@@ -141,7 +141,7 @@ def run_redskull_ov(in_t1w, out_redskull,
         unscale_xfm, out_ns_skull,out_ns_head, 
         out_qc=None,qc_title=None,reference=None,
         py_deep_seg="py_deep_seg",
-        redskull_model="/data/data01/vfonov/PreventAD/redskull.xml" ):
+        redskull_model=None ):
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_redskull):
@@ -149,7 +149,7 @@ def run_redskull_ov(in_t1w, out_redskull,
             #os.environ['OMP_NUM_THREADS']='4'
             # 
             subprocess.run(['python', os.path.join(py_deep_seg,'apply_multi_model_ov.py'), 
-                            redskull_model, 
+                            redskull_model,
                             '--stride', '32', '--patch', '96', '--crop', '8', '--padvol', '16', '--threads', '4',
                             in_t1w, out_redskull ])
         
