@@ -295,34 +295,42 @@ def resample_and_correct_bias(
         with mincTools() as m:
             
             m.calc([sample.scan, avg_bias.scan],
-                        'A[1]>0.1?A[0]/A[1]:1.0', m.tmp('corr_bias.mnc'))
+                    'A[1]>0.1&&A[0]>0.1?log(A[0]/A[1]):0.0', 
+                    m.tmp('corr_bias.mnc'))
 
             m.resample_smooth(m.tmp('corr_bias.mnc'), 
                               m.tmp('corr_bias2.mnc'), 
                               like=sample.scan,
+                              order=1,
                               transform=transform.xfm,
-                              invert_transform=True)
+                              invert_transform=True )
             if previous:
-                m.calc([previous.scan, m.tmp('corr_bias2.mnc') ], 'A[0]*A[1]',
+                m.calc([previous.scan, m.tmp('corr_bias2.mnc') ], 
+                    'A[0]*exp(A[1])',
                     output.scan, datatype='-float')
             else:
-                shutil.copy(m.tmp('corr_bias2.mnc'), output.scan)
+                m.calc([previous.scan], 'exp(A[0])',
+                    output.scan, datatype='-float')
                 
             if symmetric:
                 m.calc([sample.scan_f, avg_bias.scan],
-                            'A[1]>0.1?A[0]/A[1]:1.0', m.tmp('corr_bias_f.mnc'))
+                        'A[1]>0.1&&A[0]>0.1?log(A[0]/A[1]):0.0', 
+                        m.tmp('corr_bias_f.mnc'))
 
                 m.resample_smooth(m.tmp('corr_bias_f.mnc'), 
                                   m.tmp('corr_bias2_f.mnc'), 
                                   like=sample.scan,
+                                  order=1,
                                   transform=transform.xfm,
                                   invert_transform=True)
                 if previous:
                     m.calc([previous.scan_f, m.tmp('corr_bias2_f.mnc')], 
-                        'A[0]*A[1]',
+                        'A[0]*exp(A[1])',
                         output.scan_f, datatype='-float')
                 else:
-                    shutil.copy(m.tmp('corr_bias2_f.mnc'), output.scan)
+                    m.calc([m.tmp('corr_bias2_f.mnc')], 
+                        'exp(A[0])',
+                        output.scan_f, datatype='-float')
             
         return True
     except mincError as e:

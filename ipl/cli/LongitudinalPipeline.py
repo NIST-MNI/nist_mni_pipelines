@@ -126,7 +126,6 @@ def launchPipeline(options):
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
 
-
         if 'vbm_options' in _opts:
             options.vbm_blur = _opts['vbm_options'].get('vbm_blur',4.0)
             options.vbm_res  = _opts['vbm_options'].get('vbm_res',2 )
@@ -141,6 +140,15 @@ def launchPipeline(options):
 
         if 'rigid' in _opts:
             options.rigid = _opts['rigid']
+
+        if 'nl_ants' in _opts:
+            options.nl_ants = _opts['nl_ants']
+            
+        if 'nl_cost_fun' in _opts:
+            options.nl_cost_fun = _opts['nl_cost_fun']
+
+        if 'nl_step' in _opts:
+            options.nl_step = _opts['nl_step']
 
         # TODO: add more options
     # patients dictionary
@@ -267,14 +275,18 @@ def launchPipeline(options):
                 patients[id].rigid    = options.rigid
                 patients[id].add      = options.add
 
-                patients[id].vbm_options = { 'vbm_fwhm':options.vbm_blur,
+                patients[id].vbm_options = { 'vbm_fwhm':      options.vbm_blur,
                                              'vbm_resolution':options.vbm_res,
-                                             'vbm_nl_level':options.vbm_nl,
+                                             'vbm_nl_level':  options.vbm_nl,
                                              'vbm_nl_method':'minctracc' }
 
-                #if options.sym == True:
-                    #patients[id].nl_method = 'bestsym1stepnlreg.pl'
+                patients[id].nl_step = options.nl_step
 
+                if options.nl_ants :
+                    patients[id].nl_method = 'ANTS'
+                    patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
+
+                patients[id].nl_cost_fun = options.nl_cost_fun
                 # end of creating a patient
 
             # ## Add timepoint to the patient
@@ -795,6 +807,7 @@ def parse_options():
         '--vbm_res',
         dest='vbm_res',
         help='VBM resolution',
+        type=float,
         default=2.0,
         )
 
@@ -803,9 +816,6 @@ def parse_options():
         dest='vbm_nl',
         help='VBM nl level'
         )
-
-
-    # group.add_argument("-b", "--beast-res", dest="beastres", help="Beast resolution (def: 1mm)",default="1")
 
     group.add_argument(
         '--nogeo',
@@ -899,6 +909,31 @@ def parse_options():
         action='store_true',
         default=False
         )
+
+    group.add_argument(
+        '--nl_ants',
+        dest='nl_ants',
+        help='Use ANTs for nonlinear registration',
+        action='store_true',
+        default=False,
+        )
+
+    group.add_argument(
+        '--nl_cost_fun',
+        dest='nl_cost_fun',
+        help='ANTs cost function',
+        default='CC',
+        choices=['CC', 'MI', 'Mattes']
+        )
+
+    group.add_argument(
+        '--nl_step',
+        dest='nl_step',
+        help='Nonlinear registration step',
+        type=float,
+        default=2.0
+        )
+
 
     group.add_argument(
         '--add',

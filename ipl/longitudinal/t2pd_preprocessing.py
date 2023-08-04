@@ -14,6 +14,8 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
+
 import ipl.registration
 import ipl.ants_registration
 import ipl.elastix_registration
@@ -62,16 +64,15 @@ def pipeline_t2pdpreprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_mnc['t2']):
 
         with mincTools( ) as minc:
-            minc.qc(
+            minc_qc.qc(
                 patient[tp].stx_mnc['t1'],
                 patient[tp].qc_jpg['t1t2'],
                 title=patient[tp].qc_title,
                 image_range=[0, 100],
                 mask=patient[tp].stx_mnc['t2'],
-                big=True,
-                clamp=True,
-                red=True,
-                green_mask=True
+                samples=20,dpi=200,use_max=True,
+                image_cmap='red',
+                mask_cmap='green',
                 )
     return True
 
@@ -281,6 +282,7 @@ def t2pdpreprocessing_v10(patient, tp):
             tmpstats = minc.tmp('volpol_pd.stats')
             tmp_pd_t1_xfm = minc.tmp('pd_t1_0.xfm')
             tmp_pd_stx_xfm = minc.tmp('pd_stx_0.xfm')
+            init_xfm = None
 
             # 0. Convert to float (repair brokenfiles)
             minc.reshape(patient[tp].native['pd'], tmppd,
@@ -307,7 +309,6 @@ def t2pdpreprocessing_v10(patient, tp):
                 # tmp_xfm=tmpdir+'tmp_t1pd.xfm"'
                 print(' -- Using PD to register to T1')  # TODO: convert to minctools
                 
-                init_xfm = None
                 # VF: this is probably incorrect!
                 if 'stx_pd' in patient[tp].manual \
                     and os.path.exists(patient[tp].manual['stx_pd']):
@@ -434,7 +435,6 @@ def t2pdpreprocessing_v10(patient, tp):
 
             if 'pd' in patient[tp].geo and patient.geo_corr:
                 pd_corr = patient[tp].corr['pd']
-                
                 minc.resample_smooth( patient[tp].clp['pd'],
                                     pd_corr,
                                     transform=patient[tp].geo['t2'] )
@@ -445,7 +445,7 @@ def t2pdpreprocessing_v10(patient, tp):
                     pd_corr,
                     t1_corr,
                     patient[tp].clp['pdt1xfm'],
-                    init_xfm=tmp_t2_t1_xfm,
+                    init_xfm=init_xfm,
                     nocrop=True,
                     noautothreshold=True,
                     close=True,

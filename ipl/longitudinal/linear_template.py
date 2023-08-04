@@ -15,6 +15,7 @@ import traceback
 
 from ipl.model.generate_linear             import generate_linear_model
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 
 import ipl.registration
 #import ipl.ants_registration
@@ -65,28 +66,26 @@ def pipeline_linearlngtemplate(patient):
             atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
             # qc linear template
-            minc.qc(
+            minc_qc.qc(
                 patient.template['linear_template'],
                 patient.qc_jpg['linear_template'],
                 title=patient.id,
                 image_range=[0, 120],
-                big=True,
-                clamp=True,
+                samples=20,dpi=200,use_max=True,
+                bg_color="black",fg_color="white",
                 mask=atlas_outline
                 )
 
             # qc stx2
 
             for (i, tp) in patient.items():
-                minc.qc(
+                minc_qc.qc(
                     tp.stx2_mnc['t1'],
                     tp.qc_jpg['stx2_t1'],
                     title=tp.qc_title,
                     image_range=[0, 120],
-                    mask=atlas_outline,
-                    big=True,
-                    clamp=True,
-                    )
+                    mask=atlas_outline,use_max=True,
+                    samples=20,dpi=200,bg_color="black",fg_color="white"   )
     except mincError as e:
         print("Exception in average_transforms:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
@@ -120,22 +119,34 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False):
             stx_bias = biascorr.scan
 
             # 1. Transform the stn bias into native
-            native_bias = minc.tmp('tmpbias_' + patient.id + '.mnc')
-            
+            native_log_bias = minc.tmp('tmpbias_' + patient.id + '.mnc')
+            minc.calc([stx_bias],"A[0]>0.1?log(A[0]):0.0",minc.tmp('logbias_' + patient.id + '.mnc'))
+
+            # TODO: maybe better to resample with different fill value here?
             minc.resample_smooth(
-                stx_bias,
-                native_bias,
+                minc.tmp('logbias_' + patient.id + '.mnc'),
+                native_log_bias,
                 transform=stx_xfm_file,
                 like=tp.clp['t1'],
                 invert_transform=True,
                 resample='linear',
+                order=1
                 )
 
             # 2. Apply correction to clp image
-            minc.calc([clp_tp, native_bias],
-                    'A[1]>0.2?A[0]/A[1]:A[0]/0.2', tp.clp2['t1'], datatype='-short')
+            minc.calc([clp_tp, native_log_bias],
+                    'A[0]/exp(A[1])', minc.tmp('clp2_t1.mnc'), datatype='-short')
+            # apply normalization once again
+            minc.volume_pol(
+                minc.tmp('clp2_t1.mnc'),
+                modelt1,
+                tp.clp2['t1'],
+                source_mask=tp.clp['mask'],
+                target_mask=modelmask,
+                datatype='-short' )
+
             clp_tp=tp.clp2['t1']
-            
+
         else: # just run Nu correct one more time
             minc.nu_correct(clp_tp, 
                             output_image=minc.tmp('clp2_t1.mnc'), 

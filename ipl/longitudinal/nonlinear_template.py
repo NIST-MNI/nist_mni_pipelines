@@ -13,7 +13,7 @@ import shutil
 from .general import *
 from ipl.model.generate_nonlinear             import generate_nonlinear_model
 from ipl.minc_tools import mincTools,mincError
-
+from ipl import minc_qc
 
 version = '1.1'
 
@@ -87,13 +87,12 @@ def lngtemplate_v11(patient):
         #options.output_regu_0 = patient.template['regu_0']
         #options.output_regu_1 = patient.template['regu_1']
 
-        minc.qc(
+        minc_qc.qc(
             patient.template['nl_template'],
             patient.qc_jpg['nl_template'],
             title=patient.id,
             image_range=[0, 120],
-            big=True,
-            clamp=True,
+            samples=20,bg_color="black",fg_color="white"
             )
 
         # copy each timepoint images too

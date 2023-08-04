@@ -62,6 +62,8 @@ class LngPatient(dict):
         self.mask_n3 = False  # Use brain mask for N3
         self.n4 = True  # Use N4 for non-uniformity correction
         self.nl_method = 'nlfit_s'  # Do non-linear registration
+        self.nl_cost_fun = 'CC'  # NL registration cost function (only for ANTs)
+        self.nl_step = 2.0 # nonlinear registration step
         self.deface = False  # Do defacing (not implemented yet)
         self.mri3T  = True  # Using 3T
         self.beastresolution = '2'  # Beast resolution
@@ -98,6 +100,7 @@ class LngPatient(dict):
         # self.stx2v0_mnc={}  # containing images in the improved template (stx2) space
 
         self.nl_xfm = ''  # transformations of the lng template to stx space
+        self.inv_nl_xfm = ''  # inverted transformations of the lng template to stx space
         self.qc_jpg = {}  # qc images
         
         # additional outputs
@@ -117,8 +120,9 @@ class LngPatient(dict):
         cleanImages(self.qc_jpg)
 
         if not os.path.exists(self.nl_xfm):
-            # self.stx2v0_xfm={}
             self.nl_xfm = ''
+        if not os.path.exists(self.inv_nl_xfm):
+            self.inv_nl_xfm = ''
 
         # do it in the timepoints to
 
@@ -422,7 +426,7 @@ def setFilenames(patient):
                 + tp + '_' + s + '.mnc'
 
             patient[tp].clp2[s] = clp2dir + 'clp2_' + patient.id + '_' \
-                + tp + '_t1.mnc'
+                + tp + '_' + s + '.mnc'
 
             # stx space
             patient[tp].stx_mnc[s] = stxdir + 'stx_' + patient.id + '_' \
@@ -660,6 +664,7 @@ def setFilenames(patient):
     patient.template['regu_1'] = patient.template['nl_template_prefix'] + '_t1_regu_param_1_grid.mnc'
     
     patient.nl_xfm = lngtmpldir + 'nl_' + patient.id + '.xfm'
+    patient.inv_nl_xfm = lngtmpldir + 'nl_' + patient.id + '_inverse.xfm'
     patient.nl_det = lngtmpldir + "nl_" + patient.id + "_det.mnc"
     patient.lock = patient.patientdir + os.sep + patient.id + '.sge.lock'
 
@@ -678,6 +683,7 @@ def setFilenames(patient):
         patient.template['nl_template'] = patient[tp].stx2_mnc['t1']
         patient.template['nl_template_mask'] = patient[tp].stx2_mnc['masknoles']
         patient.nl_xfm = patient[tp].tpdir + 'nl/nl_' + patient.id + '_' + tp + '.xfm'
+        patient.inv_nl_xfm = patient[tp].tpdir + 'nl/nl_' + patient.id + '_' + tp + '_inverse.xfm'
 
         # setting the patient and the timepoint to be the same nl_xfm
 
