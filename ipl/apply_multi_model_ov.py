@@ -22,8 +22,8 @@ from minc2_simple import minc2_file
 # import torch.nn.functional as F
 
 #from openvino.inference_engine import IECore
-from openvino.runtime import Core
-from openvino.runtime.properties import inference_num_threads
+from openvino.runtime import Core,Shape
+import openvino.runtime as ov
 
 
 def format_history(argv):
@@ -147,6 +147,17 @@ def parse_options():
 
     # parser.add_argument('--likelihood',
     #                     help='Output likelihood volume(s)' )
+    parser.add_argument('--whole', action="store_true",
+                        default=False,
+                        help='Apply model to the whole image, without overlapping patches' )
+    
+    parser.add_argument('--freesurfer', action="store_true",
+                        default=False,
+                        help='Apply model using freesurfer coordinate convention' )
+    
+    parser.add_argument('--normalize', action="store_true",
+                        default=False,
+                        help='Apply intensity normalization between 0 and 1 using quantiles' )
 
     params = parser.parse_args()
     
@@ -165,6 +176,60 @@ def log_softmax(x, axis=1):
 def softmax(x,axis=1):
     e_x = np.exp(x - np.max(x,axis=axis))
     return e_x / e_x.sum(axis=axis)
+
+
+def segment_with_patches_whole(
+    dataset, model, 
+    quant_size=64,
+    normalize=False,
+    freesurfer=False,
+    dist_border=None, largest_component=False,
+    out_fuzzy=False
+    ):
+    seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
+
+    target_shape = np.clip(np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5)
+
+    if np.any(target_shape != dataset.shape[2:]):
+        conformed = np.zeros( (1,1, *target_shape), dtype='float32')
+        conformed[:,:, :dataset.shape[2], :dataset.shape[3], :dataset.shape[4]] = dataset
+    else:
+        conformed = dataset.astype('float32') # to be compatible with spatial expectation of the model
+
+    if freesurfer:
+        conformed=conformed.transpose([0,1,4,2,3])[:,:,:,::-1,:].copy()
+
+    if normalize:
+        conformed -= conformed.min()
+        conformed = np.clip(conformed / np.percentile(conformed,99),0, 1)
+
+    out = model([conformed], shared_memory=True)[seg_idx]
+
+    if freesurfer:
+        out=out[:,:,:,::-1,:].transpose([0,1,3,4,2])
+
+    if np.any(target_shape != dataset.shape[2:]):
+        out=out[:,:,:dataset.shape[2], :dataset.shape[3], :dataset.shape[4]]
+
+    if dist_border is not None:
+        output_seg = (out < dist_border)
+        output_fuzzy = out
+    else:
+        output_fuzzy = log_softmax(out, axis=1)
+        output_seg = np.expand_dims( np.argmax(output_fuzzy, axis=1).astype(np.uint8), axis=1)
+
+    if largest_component:
+        from scipy.ndimage import label
+        # find largest CC 
+        structure = np.ones((3, 3, 3), dtype=np.int32)
+        labeled, ncomponents = label(output_seg.squeeze(), structure)
+        output_seg= np.expand_dims(np.expand_dims(labeled==1,axis=0),axis=0) # To be compatible
+    
+    if out_fuzzy :
+        return output_seg, output_fuzzy
+    else:
+        return output_seg 
+    
 
 def segment_with_patches_overlap_ov(
         dataset, model, 
@@ -190,9 +255,14 @@ def segment_with_patches_overlap_ov(
     """
 
     # find seg output
-    #input_layer=model.inputs[0] # expect single input
-    seg_idx=next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
+    seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
     out_shape = model.outputs[seg_idx].shape
+
+    if not isinstance(patch_sz, list):
+        patch_sz = [patch_sz, patch_sz, patch_sz]
+
+    if not isinstance(stride, list):
+        stride = [stride, stride, stride]
 
     dsize = dataset.shape
     output_size = list( dsize )
@@ -203,29 +273,32 @@ def segment_with_patches_overlap_ov(
     output_fuzzy = np.zeros( output_size_fuzzy, dtype=np.float32 )
     output_weight = np.zeros( output_size, dtype=np.float32 )
 
-    patch_sz_ = patch_sz - crop*2 
+    patch_sz_ = [patch_sz[0] - crop*2,patch_sz[1] - crop*2,patch_sz[2] - crop*2]
     
-    out_roi = [ dsize[2]-crop*2, dsize[3]-crop*2, dsize[4]-crop*2 ]
+    out_roi = [dsize[2]-crop*2, dsize[3]-crop*2, dsize[4]-crop*2 ]
 
-    for k in range(math.ceil( out_roi[0]/stride )):
-        for l in range(math.ceil( out_roi[1]/stride )):
-            for m in range(math.ceil( out_roi[2]/stride )):
-                c = [k*stride + crop, l*stride + crop, m*stride + crop]
+    for k in range(math.ceil( out_roi[0]/stride[0] )):
+        for l in range(math.ceil( out_roi[1]/stride[1] )):
+            for m in range(math.ceil( out_roi[2]/stride[2] )):
+                c = [k*stride[0] + crop, l*stride[1] + crop, m*stride[2] + crop]
 
                 for i in range(3):
-                    c[i] = min(c[i], dsize[i+2] - patch_sz + crop-1)
-                                
+                    c[i] = min(c[i], dsize[i+2] - patch_sz[i] + crop-1)
+
                 # extract a patch
-                in_data = dataset[:, :, c[0]-crop: c[0]-crop+patch_sz, c[1]-crop: c[1]-crop+patch_sz, c[2]-crop: c[2]-crop+patch_sz]
-                
-                out = model([in_data])[seg_idx]
+                in_data = np.ascontiguousarray(
+                        dataset[:, :, c[0]-crop: c[0]-crop+patch_sz[0], c[1]-crop: c[1]-crop+patch_sz[1], c[2]-crop: c[2]-crop+patch_sz[2]]
+                    )
+
+                out = model([in_data], shared_memory=True)[seg_idx]
+
                 patch_output = log_softmax(out, axis=1)
 
                 # accumulate data
-                output_fuzzy[:, :, c[0]: c[0]+patch_sz_, c[1]: c[1]+patch_sz_, c[2]: c[2]+patch_sz_] += \
-                        patch_output[:, :, crop: crop+patch_sz_, crop: crop+patch_sz_, crop: crop+patch_sz_]
+                output_fuzzy[:, :, c[0]: c[0]+patch_sz_[0], c[1]: c[1]+patch_sz_[1], c[2]: c[2]+patch_sz_[2]] += \
+                        patch_output[:, :, crop: crop+patch_sz_[0], crop: crop+patch_sz_[1], crop: crop+patch_sz_[2]]
 
-                output_weight[:, :, c[0]: c[0]+patch_sz_, c[1]: c[1]+patch_sz_, c[2]: c[2]+patch_sz_] += 1.0
+                output_weight[:, :, c[0]: c[0]+patch_sz_[0], c[1]: c[1]+patch_sz_[1], c[2]: c[2]+patch_sz_[2]] += 1.0
                     
     # aggregate weights
     invalid = output_weight<1.0
@@ -251,12 +324,17 @@ def segment_with_patches_overlap_ov(
 """
 High level function to apply segmentation
 """
-def segment_with_openvino(in_scans, out_seg, 
+def segment_with_openvino(
+                        in_scans, out_seg, 
                         mask=None,
                         model=None,
-                        patch_sz=64, stride=32, cpu=True, threads=None,
+                        patch_sz=64, stride=32, 
+                        cpu=True, threads=None,
                         crop=0,cropvol=0,padvol=0,padfill=0.0,bck=0,
-                        history=None,fuzzy=None):
+                        history=None,fuzzy=None,
+                        whole=False,
+                        quant_size=64,
+                        freesurfer=False,normalize=False):
     inputs=[]
     # load all inputs
     # TODO: deal with floating point values
@@ -269,13 +347,33 @@ def segment_with_openvino(in_scans, out_seg,
     # prepare model
     core = Core()
     if threads is not None:
-        core.set_property("CPU", {inference_num_threads():threads})
+        core.set_property("CPU", {"INFERENCE_NUM_THREADS":threads})
     
+    core.set_property("CPU", {
+        "PERFORMANCE_HINT_NUM_REQUESTS": "1"
+        })
+
+    #cpu_optimization_capabilities = core.get_property("CPU", "OPTIMIZATION_CAPABILITIES")
+    #print("CPU optimization capabilities:", cpu_optimization_capabilities)
     model=core.read_model(model=model)
-    if cpu:
-        compiled_model = core.compile_model(model=model, device_name="CPU")
-    else:
-        compiled_model = core.compile_model(model=model, device_name="GPU")
+    print(f"{dset.shape=}")
+
+    if whole:
+        patch_sz = np.clip(np.ceil((np.array(dset.shape[2:]) - cropvol*2 + padvol*2) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5).tolist()
+        stride = patch_sz
+    elif not isinstance(patch_sz, list):
+        patch_sz = [patch_sz, patch_sz, patch_sz]
+    # determine if we need to reshape model
+    #input_shape=model.inputs[0].shape
+    if model.inputs[0].shape != Shape([1, 1, *patch_sz]):
+        print(f"Reshaping model to {patch_sz}")
+        model.reshape({'scan':[1,1, *patch_sz]})
+
+    # if cpu:
+    #     compiled_model = core.compile_model(model=model, device_name="CPU")
+    # else:
+    #     compiled_model = core.compile_model(model=model, device_name="GPU")
+    compiled_model = core.compile_model(model=model, device_name="AUTO")
 
     if cropvol>0:
         orig_size = dset.shape
@@ -289,21 +387,30 @@ def segment_with_openvino(in_scans, out_seg,
         print("dset:",dset.shape)
         dset = np.ascontiguousarray( np.pad(dset, pad_width=((0,0),(0,0),(padvol,padvol),(padvol,padvol),(padvol,padvol)), 
             mode='constant', constant_values = padfill))
+    
     # apply model
-
     if fuzzy is not None : # or params.vae is not None or params.latent is not None
-        dset_out, dset_out_fuzzy = segment_with_patches_overlap_ov(
-            dset, compiled_model,  
-            patch_sz=patch_sz, crop=crop, 
-            bck=bck, stride=stride, 
-            out_fuzzy=True) 
-            # out_vae=(vae is not None),
-            # out_latent_vectors=(latent is not None)                 
+        if whole:
+            dset_out, dset_out_fuzzy = segment_with_patches_whole(
+                dset, compiled_model,
+                dist_border=(0 if freesurfer else None), largest_component=freesurfer,
+                out_fuzzy=True,freesurfer=freesurfer,normalize=normalize) 
+        else:
+            dset_out, dset_out_fuzzy = segment_with_patches_overlap_ov(
+                dset, compiled_model,  
+                patch_sz=patch_sz, crop=crop, 
+                bck=bck, stride=stride, 
+                out_fuzzy=True) 
     else:
-        dset_out = segment_with_patches_overlap_ov(dset, compiled_model, 
-            patch_sz=patch_sz, crop=crop, 
-            bck=bck, stride=stride, out_fuzzy=False)
-
+        if whole:
+            dset_out = segment_with_patches_whole(
+                dset, compiled_model,
+                dist_border=(0 if freesurfer else None), largest_component=freesurfer,
+                out_fuzzy=False, freesurfer=freesurfer, normalize=normalize)
+        else:
+            dset_out = segment_with_patches_overlap_ov(dset, compiled_model, 
+                patch_sz=patch_sz, crop=crop, 
+                bck=bck, stride=stride, out_fuzzy=False)
     if cropvol>0:
         dset_out_ = np.full(orig_size,bck,dtype=np.int8)
 
@@ -383,7 +490,10 @@ if __name__ == '__main__':
                               padvol=params.padvol, cropvol=params.cropvol,
                               mask=params.mask, fuzzy=params.fuzzy, 
                               threads=params.threads, cpu=params.cpu,
-                              history=_history)
+                              history=_history,whole=params.whole,
+                              freesurfer=params.freesurfer,
+                              normalize=params.normalize,
+                              quant_size=64)
 
 
     else:
