@@ -18,6 +18,9 @@ from optparse import OptionGroup  # to change when python updates in the machine
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
+from .t1_preprocessing import run_synthstrip_ov
+import ray
+
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -118,7 +121,7 @@ def pipeline_stx2_skullstripping(patient, tp):
 
     if not os.path.exists(params.stx_mask) \
         or not os.path.exists(params.qc_stx_mask):
-        runSkullstripping(params)
+        runSkullstripping(params,synthstrip_ov=patient.synthstrip_ov)
     else:
         print(' -- pipeline_stx2_skullstripping is done')
 
@@ -136,9 +139,9 @@ def pipeline_stx2_skullstripping(patient, tp):
 
 # Last preprocessing (or more common one)
 
-def runSkullstripping(params):
+def runSkullstripping(params,synthstrip_ov=None):
     if params.pipeline_version == '1.0':
-        skullstripping_v10(params)  # beast by simon fristed
+        skullstripping_v10(params,synthstrip_ov=synthstrip_ov)  # beast by simon fristed
     else:
         print(' -- Chosen version not found!')
 
@@ -146,51 +149,55 @@ def runSkullstripping(params):
 # function using beast
 # needs image in standard space
 
-def skullstripping_v10(params):
+def skullstripping_v10(params,synthstrip_ov=None):
 
     with mincTools()  as minc:
 
-    # temporary images in the dimensions of beast database
 
-        tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
-        tmpmask = minc.tmp('beast_stx_mask.mnc')
+        if synthstrip_ov is not None:
+            # apply synthstrip in the native space to ease everything else
+            # need to resample to 1x1x1mm^2
+            ray.get(run_synthstrip_ov.remote(params.stxt1, params.stx_mask,synthstrip_model=synthstrip_ov))
+        else:
+            # temporary images in the dimensions of beast database
+            tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
+            tmpmask = minc.tmp('beast_stx_mask.mnc')
 
-        beast_v10_template = params.beastdir + os.sep \
-            + 'intersection_mask.mnc'
-        beast_v10_margin = params.beastdir + os.sep + 'margin_mask.mnc'
+            beast_v10_template = params.beastdir + os.sep \
+                + 'intersection_mask.mnc'
+            beast_v10_margin = params.beastdir + os.sep + 'margin_mask.mnc'
 
-        beast_v10_conffile = {'1': params.beastdir + os.sep \
-                              + 'default.1mm.conf',
-                              '2': params.beastdir + os.sep \
-                              + 'default.2mm.conf'}
-        beast_v10_intersect = params.beastdir + os.sep \
-            + 'intersection_mask.mnc'
+            beast_v10_conffile = {'1': params.beastdir + os.sep \
+                                + 'default.1mm.conf',
+                                '2': params.beastdir + os.sep \
+                                + 'default.2mm.conf'}
+            beast_v10_intersect = params.beastdir + os.sep \
+                + 'intersection_mask.mnc'
 
-        if not os.path.exists(params.stx_mask):
+            if not os.path.exists(params.stx_mask):
 
-      # changing the size of stx if necessary to fit with the beast images dimensions
+                # changing the size of stx if necessary to fit with the beast images dimensions
+                minc.resample_smooth(params.stxt1, tmpstxt1,
+                                    like=beast_v10_template)
 
-            minc.resample_smooth(params.stxt1, tmpstxt1,
-                                 like=beast_v10_template)
+                # perform segmentation
 
-      # perform segmentation
+                comm = [
+                    'mincbeast',
+                    params.beastdir,
+                    tmpstxt1,
+                    tmpmask,
+                    '-median',
+                    '-fill',
+                    '-conf',
+                    beast_v10_conffile[params.final],
+                    '-same_resolution',
+                    ]
+                minc.command(comm, [tmpstxt1], [tmpmask])
 
-            comm = [
-                'mincbeast',
-                params.beastdir,
-                tmpstxt1,
-                tmpmask,
-                '-median',
-                '-fill',
-                '-conf',
-                beast_v10_conffile[params.final],
-                '-same_resolution',
-                ]
-            minc.command(comm, [tmpstxt1], [tmpmask])
-
-            # reformat into the orginial stx size
-            minc.resample_labels(tmpmask, params.stx_mask,
-                                 like=params.stxt1)
+                # reformat into the orginial stx size
+                minc.resample_labels(tmpmask, params.stx_mask,
+                                    like=params.stxt1)
 
         # reformat mask into native space
 

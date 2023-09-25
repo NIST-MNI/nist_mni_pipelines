@@ -84,9 +84,8 @@ class LngPatient(dict):
         self.modelname = ''  # model name
         self.beastdir = ''  # beast library directory
 
-        self.redskull_ov = None # Redskull segmentation library for omnivision
-        self.redskull_pytorch = None # Redskull segmentation library for pytorch
-        self.py_deep_seg = None # Location of deep segmentation script
+        self.redskull_ov = None # Redskull segmentation library for openvino
+        self.synthstrip_ov = None # Synthstrip segmentation library for openvino
 
         # patient data
         self.id = id  # subject id
@@ -514,10 +513,12 @@ def setFilenames(patient):
         # non-scaled
         patient[tp].stx_ns_mnc["mask"]  = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx_ns_mnc["skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_skull.mnc"
+        patient[tp].stx_ns_mnc["redskull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_redskull.mnc"
         patient[tp].stx_ns_mnc["head"]  = segdir+"nsstx_"+patient.id+"_"+tp+"_head.mnc"
 
 
         patient[tp].qc_jpg['stx_mask'] = patient.qcdir+"qc_stx_mask_"+patient.id+"_"+tp+".jpg"
+        patient[tp].qc_jpg['synthstrip'] = patient.qcdir+"qc_synthstrip_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_mask']= patient.qcdir+"qc_stx2_mask_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_rhc']= patient.qcdir+"qc_stx2_rhc_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_lhc']= patient.qcdir+"qc_stx2_lhc_"+patient.id+"_"+tp+".jpg"
@@ -650,6 +651,7 @@ def setFilenames(patient):
     patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' + patient.id + '_t1.xfm'
     patient.qc_jpg['linear_template'] = patient.qcdir + 'qc_lin_template_' + patient.id + '.jpg'
     patient.template['linear_template_skull'] = lngtmpldir + 'lin_template_' + patient.id + '_skull.mnc'
+    patient.template['linear_template_redskull'] = lngtmpldir + 'lin_template_' + patient.id + '_redskull.mnc'
 
     # b) non-linear
 

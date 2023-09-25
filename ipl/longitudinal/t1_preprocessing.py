@@ -30,6 +30,15 @@ import shutil
 
 import ray
 
+try:
+    from ipl.apply_multi_model_ov import segment_with_openvino
+    _have_segmentation_ov=True
+except:
+    _have_segmentation_ov=False
+
+
+
+
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
 # - pipeline_version is employed to select the correct version of the pipeline
@@ -44,7 +53,7 @@ def pipeline_t1preprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
         and   os.path.exists(patient[tp].stx_ns_mnc['t1']) \
-        and ( os.path.exists(patient[tp].stx_ns_mnc['skull']) or patient.redskull_ov is None ):
+        and ( os.path.exists(patient[tp].stx_ns_mnc['redskull']) or patient.redskull_ov is None ):
         print(' -- pipeline_t1preprocessing was already performed')
     else:
         # # Run the appropiate version
@@ -67,9 +76,9 @@ def pipeline_t1preprocessing(patient, tp):
     return True
 
 
-### HACK 
+### OBSOLETE 
 # to share GPUs properly
-@ray.remote(num_gpus=1,num_cpus=1)
+@ray.remote(num_gpus=1, num_cpus=1)
 def run_redskull_gpu(in_t1w, out_redskull, out_skull, out_qc=None,qc_title=None,
     redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth"):
     with mincTools() as minc:
@@ -95,7 +104,7 @@ def run_redskull_gpu(in_t1w, out_redskull, out_skull, out_qc=None,qc_title=None,
                 clamp=True
                 )
 
-### HACK 
+### OBSOLETE 
 # to share GPUs properly
 @ray.remote(num_cpus=4)
 def run_redskull_cpu(in_t1w, out_redskull, 
@@ -135,32 +144,30 @@ def run_redskull_cpu(in_t1w, out_redskull,
                 clamp=True
                 )
 
-### HACK 
 @ray.remote(num_cpus=4)
 def run_redskull_ov(in_t1w, out_redskull, 
-        unscale_xfm, out_ns_skull,out_ns_head, 
+        unscale_xfm, out_ns_skull, out_ns_redskull, 
         out_qc=None,qc_title=None,reference=None,
-        py_deep_seg="py_deep_seg",
         redskull_model=None ):
+    assert _have_segmentation_ov, "Failed to import segment_with_openvino"
+
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_redskull):
-            # HACK : TODO: figure out why it is so slow!
-            #os.environ['OMP_NUM_THREADS']='4'
-            # 
-            subprocess.run(['python', os.path.join(py_deep_seg,'apply_multi_model_ov.py'), 
-                            redskull_model,
-                            '--stride', '32', '--patch', '96', '--crop', '8', '--padvol', '16', '--threads', '4',
-                            in_t1w, out_redskull ])
+
+            segment_with_openvino([in_t1w], out_redskull,
+                                model=redskull_model,
+                                whole=True, freesurfer=True, normalize=True, 
+                                dist=True, largest=True,
+                                threads=4 # HACK ! Openvino uses half of requested for some reason
+                                ) # 
         
         # generate unscaling transform
         minc.calc([out_redskull],'abs(A[0]-2)<0.5?1:0', 
             minc.tmp("skull.mnc"), labels=True)
-        # minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
-        #     minc.tmp("head.mnc"), labels=True)
         
-        minc.resample_labels(minc.tmp("skull.mnc"),out_ns_skull,transform=unscale_xfm,like=reference)
-        #minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
+        minc.resample_labels(minc.tmp("skull.mnc"), out_ns_skull, transform=unscale_xfm,like=reference)
+        minc.resample_labels(out_redskull, out_ns_redskull, transform=unscale_xfm,like=reference)
         
         if out_qc is not None:
             minc_qc.qc(
@@ -171,6 +178,43 @@ def run_redskull_ov(in_t1w, out_redskull,
                 mask=minc.tmp("skull.mnc"),dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white"
                 )
+
+
+
+@ray.remote(num_cpus=4)
+def run_synthstrip_ov(in_t1w, out_synthstrip, 
+        out_qc=None, qc_title=None, normalize_1x1x1=False,
+        synthstrip_model=None ):
+    assert _have_segmentation_ov, "Failed to import segment_with_openvino"
+
+    with mincTools() as minc:
+        # run redskull segmentation to create skull mask
+        if not os.path.exists(out_synthstrip):
+            if normalize_1x1x1:
+                minc.resample_smooth(in_t1w,minc.tmp('t1_1x1x1.mnc'),unistep=1.0)
+                segment_with_openvino([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
+                                    model=synthstrip_model,
+                                    whole=True,freesurfer=True,normalize=True,
+                                    threads=4 # HACK ! Openvino uses half of requested for some reason
+                                    ) # 
+                minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
+            else:
+                segment_with_openvino([in_t1w], out_synthstrip,
+                                    model=synthstrip_model,
+                                    whole=True,freesurfer=True,normalize=True,
+                                    threads=4 # HACK ! Openvino uses half of requested for some reason
+                                    ) # 
+
+        
+        if out_qc is not None:
+            minc_qc.qc(
+                in_t1w,
+                out_qc,
+                title=qc_title,
+                mask=out_synthstrip,dpi=200,use_max=True,
+                samples=20,bg_color="black",fg_color="white"
+                )
+
 
 
 def t1preprocessing_v10(patient, tp):
@@ -200,6 +244,18 @@ def t1preprocessing_v10(patient, tp):
             shutil.copyfile(patient[tp].manual['clp_t1'],  patient[tp].clp['t1'])
             tmpt1 = patient[tp].clp['t1']  # In order to make the registration if needed
 
+        if patient.synthstrip_ov is not None:
+            tmpmask = patient[tp].clp['mask']
+            if not os.path.exists(patient[tp].clp['mask']):
+                # apply synthstrip in the native space to ease everything else
+                # need to resample to 1x1x1mm^2
+                ray.get(run_synthstrip_ov.remote(
+                            patient[tp].native['t1'], patient[tp].clp['mask'], 
+                            out_qc=patient[tp].qc_jpg['synthstrip'],
+                            normalize_1x1x1=True,
+                            synthstrip_model=patient.synthstrip_ov))
+                
+
         if not os.path.exists( patient[tp].clp['t1'] ):
 
             minc.convert( patient[tp].native['t1'], tmpt1 )
@@ -220,39 +276,54 @@ def t1preprocessing_v10(patient, tp):
                 or not os.path.exists( patient[tp].nuc['t1']):
 
                 if patient.n4:
-                    minc.winsorize_intensity(tmpt1,minc.tmp('trunc_t1.mnc'))
-                    minc.binary_morphology(minc.tmp('trunc_t1.mnc'),'',minc.tmp('otsu_t1.mnc'),binarize_bimodal=True)
-                    minc.defrag(minc.tmp('otsu_t1.mnc'),minc.tmp('otsu_defrag_t1.mnc'))
-                    minc.autocrop(minc.tmp('otsu_defrag_t1.mnc'),minc.tmp('otsu_defrag_expanded_t1.mnc'),isoexpand='50mm')
-                    minc.binary_morphology(minc.tmp('otsu_defrag_expanded_t1.mnc'),'D[25] E[25]',minc.tmp('otsu_expanded_closed_t1.mnc'))
-                    minc.resample_labels(minc.tmp('otsu_expanded_closed_t1.mnc'),minc.tmp('otsu_closed_t1.mnc'),like=minc.tmp('trunc_t1.mnc'))
+                    if patient.synthstrip_ov is not None: # using synthstrip for N4 mask
+                        dist=200
+                        if patient.mri3T: dist=50 # ??
+                        
+                        minc.n4(tmpt1,
+                                output_field=patient[tp].nuc['t1'],
+                                output_corr=tmpn3,
+                                iter='200x200x200x200',
+                                weight_mask=tmpmask,
+                                mask=tmpmask,
+                                distance=dist,
+                                downsample_field=4,
+                                datatype='short'
+                                )
+                    else:
+                        minc.winsorize_intensity(tmpt1,minc.tmp('trunc_t1.mnc'))
+                        minc.binary_morphology(minc.tmp('trunc_t1.mnc'),'',minc.tmp('otsu_t1.mnc'),binarize_bimodal=True)
+                        minc.defrag(minc.tmp('otsu_t1.mnc'),minc.tmp('otsu_defrag_t1.mnc'))
+                        minc.autocrop(minc.tmp('otsu_defrag_t1.mnc'),minc.tmp('otsu_defrag_expanded_t1.mnc'),isoexpand='50mm')
+                        minc.binary_morphology(minc.tmp('otsu_defrag_expanded_t1.mnc'),'D[25] E[25]',minc.tmp('otsu_expanded_closed_t1.mnc'))
+                        minc.resample_labels(minc.tmp('otsu_expanded_closed_t1.mnc'),minc.tmp('otsu_closed_t1.mnc'),like=minc.tmp('trunc_t1.mnc'))
+                        
+                        minc.calc([minc.tmp('trunc_t1.mnc'),minc.tmp('otsu_closed_t1.mnc')], 'A[0]*A[1]',  minc.tmp('trunc_masked_t1.mnc'))
+                        minc.calc([tmpt1,minc.tmp('otsu_closed_t1.mnc')],'A[0]*A[1]' ,minc.tmp('masked_t1.mnc'))
+                        
+                        ipl.registration.linear_register( minc.tmp('trunc_masked_t1.mnc'), modelt1, tmpxfm,
+                                init_xfm=init_xfm, 
+                                objective='-nmi', conf=patient.linreg )
+                        
+                        minc.resample_labels( modelmask, minc.tmp('brainmask_t1.mnc'),
+                                transform=tmpxfm, invert_transform=True,
+                                like=minc.tmp('otsu_defrag_t1.mnc') )
+                        
+                        minc.calc([minc.tmp('otsu_defrag_t1.mnc'),minc.tmp('brainmask_t1.mnc')],'A[0]*A[1]',minc.tmp('weightmask_t1.mnc'))
                     
-                    minc.calc([minc.tmp('trunc_t1.mnc'),minc.tmp('otsu_closed_t1.mnc')], 'A[0]*A[1]',  minc.tmp('trunc_masked_t1.mnc'))
-                    minc.calc([tmpt1,minc.tmp('otsu_closed_t1.mnc')],'A[0]*A[1]' ,minc.tmp('masked_t1.mnc'))
-                    
-                    ipl.registration.linear_register( minc.tmp('trunc_masked_t1.mnc'), modelt1, tmpxfm,
-                            init_xfm=init_xfm, 
-                            objective='-nmi', conf=patient.linreg )
-                    
-                    minc.resample_labels( modelmask, minc.tmp('brainmask_t1.mnc'),
-                            transform=tmpxfm, invert_transform=True,
-                            like=minc.tmp('otsu_defrag_t1.mnc') )
-                    
-                    minc.calc([minc.tmp('otsu_defrag_t1.mnc'),minc.tmp('brainmask_t1.mnc')],'A[0]*A[1]',minc.tmp('weightmask_t1.mnc'))
-                    
-                    dist=200
-                    if patient.mri3T: dist=50 # ??
-                    
-                    minc.n4(minc.tmp('masked_t1.mnc'),
-                            output_field=patient[tp].nuc['t1'],
-                            output_corr=tmpn3,
-                            iter='200x200x200x200',
-                            weight_mask=minc.tmp('weightmask_t1.mnc'),
-                            mask=minc.tmp('otsu_closed_t1.mnc'),
-                            distance=dist,
-                            downsample_field=4,
-                            datatype='short'
-                            )
+                        dist=200
+                        if patient.mri3T: dist=50 # ??
+                        
+                        minc.n4(minc.tmp('masked_t1.mnc'),
+                                output_field=patient[tp].nuc['t1'],
+                                output_corr=tmpn3,
+                                iter='200x200x200x200',
+                                weight_mask=minc.tmp('weightmask_t1.mnc'),
+                                mask=minc.tmp('otsu_closed_t1.mnc'),
+                                distance=dist,
+                                downsample_field=4,
+                                datatype='short'
+                                )
                     # shrink?
                     minc.volume_pol(
                         tmpn3,
@@ -264,21 +335,22 @@ def t1preprocessing_v10(patient, tp):
                         )
                 elif patient.mask_n3:
                     # 2. Reformat mask
-                    ipl.registration.linear_register( tmpt1, modelt1, tmpxfm,
-                            init_xfm=init_xfm, 
-                            objective='-nmi', 
-                            conf=patient.linreg )
+                    if patient.synthstrip_ov is None:
+                        ipl.registration.linear_register( tmpt1, modelt1, tmpxfm,
+                                init_xfm=init_xfm, 
+                                objective='-nmi', 
+                                conf=patient.linreg )
 
-                    minc.resample_labels( modelmask, tmpmask,
-                            transform=tmpxfm, invert_transform=True,
-                            like=tmpnlm )
+                        minc.resample_labels( modelmask, tmpmask,
+                                transform=tmpxfm, invert_transform=True,
+                                like=tmpnlm )
 
                     minc.nu_correct( tmpnlm, output_image=tmpn3,
-                                     mask=tmpmask, 
-                                     mri3t=patient.mri3T,
-                                     output_field=patient[tp].nuc['t1'],
-                                     downsample_field=4,
-                                     datatype='short')
+                                    mask=tmpmask, 
+                                    mri3t=patient.mri3T,
+                                    output_field=patient[tp].nuc['t1'],
+                                    downsample_field=4,
+                                    datatype='short')
 
                     minc.volume_pol(
                         tmpn3,
@@ -289,7 +361,8 @@ def t1preprocessing_v10(patient, tp):
                         datatype='-short',
                         )
                 else:
-                    minc.nu_correct( tmpnlm, 
+                    minc.nu_correct( tmpnlm,
+                                     mask=(tmpmask if patient.synthstrip_ov is not None else None),
                                      output_image=tmpn3,
                                      mri3t=patient.mri3T,
                                      output_field=patient[tp].nuc['t1'],
@@ -307,21 +380,38 @@ def t1preprocessing_v10(patient, tp):
                                   t1_corr,
                                   transform=patient[tp].geo['t1'] )
 
+        # TODO: implement skull-based scaling here?
         if not os.path.exists( patient[tp].stx_xfm['t1']):
-            ipl.registration.linear_register( t1_corr, modelt1,
-                                  patient[tp].stx_xfm['t1'],
-                                  init_xfm=init_xfm,
-                                  objective='-nmi', 
-                                  conf=patient.linreg)
+            if patient.synthstrip_ov is not None:
+                # HACK: using masks for initial registration
+                ipl.registration.linear_register( tmpmask, modelmask,
+                                    minc.tmp('mask_init.xfm'),
+                                    init_xfm=init_xfm,
+                                    objective='-xcorr',  # should use -zscore or -ssc ??
+                                    conf=patient.linreg)
 
-                                  # target_mask=modelmask
+                ipl.registration.linear_register( t1_corr, modelt1,
+                                    patient[tp].stx_xfm['t1'],
+                                    init_xfm=minc.tmp('mask_init.xfm'),
+                                    objective='-nmi', 
+                                    conf=patient.linreg,
+                                    source_mask=tmpmask,
+                                    target_mask=modelmask)
+            else:
+                ipl.registration.linear_register( t1_corr, modelt1,
+                                    patient[tp].stx_xfm['t1'],
+                                    init_xfm=init_xfm,
+                                    objective='-nmi', 
+                                    conf=patient.linreg)
+                                    # target_mask=modelmask
+            
 
         minc.resample_smooth( t1_corr,
                               patient[tp].stx_mnc['t1'], like=modelt1,
                               transform=patient[tp].stx_xfm['t1'] )
 
         # stx no scale
-        minc.xfm_noscale( patient[tp].stx_xfm['t1'],patient[tp].stx_ns_xfm['t1'],
+        minc.xfm_noscale( patient[tp].stx_xfm['t1'], patient[tp].stx_ns_xfm['t1'],
                           unscale=patient[tp].stx_ns_xfm['unscale_t1'])
 
         minc.resample_smooth(t1_corr,
@@ -329,19 +419,21 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
-        print("===DEBUG===",patient.py_deep_seg,patient.redskull_ov)
-        if patient.py_deep_seg is not None and patient.redskull_ov is not None:
+        print("===DEBUG===",patient.redskull_ov)
+
+        if patient.redskull_ov is not None:
             ray.get(run_redskull_ov.remote(
                 patient[tp].stx_mnc['t1'], 
                 patient[tp].stx_mnc['redskull'],
                 patient[tp].stx_ns_xfm['unscale_t1'],
                 patient[tp].stx_ns_mnc["skull"], 
-                patient[tp].stx_ns_mnc["head"],
+                patient[tp].stx_ns_mnc["redskull"],
                 out_qc=patient[tp].qc_jpg['stx_skull'],
                 qc_title=patient[tp].qc_title, 
                 reference=modelmask,
-                py_deep_seg=patient.py_deep_seg,
                 redskull_model=patient.redskull_ov ))
+            
+            # adjust scaling factor based on the skull here? 
 
 if __name__ == '__main__':
 

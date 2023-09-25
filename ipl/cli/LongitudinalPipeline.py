@@ -51,7 +51,6 @@ from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 
 # parallel processing
 import ray
-#ray.init(address='auto') # address='auto' local_mode=True
 
 version = '1.0'
 
@@ -98,8 +97,8 @@ def launchPipeline(options):
         if 'redskull_ov' in _opts:
             options.redskull_ov=_opts['redskull_ov']
 
-        if 'py_deep_seg' in _opts:
-            options.py_deep_seg=_opts['py_deep_seg']
+        if 'synthstrip_ov' in _opts:
+            options.synthstrip_ov=_opts['synthstrip_ov']
 
         if 'large_atrophy' in _opts:
             options.large_atrophy=_opts['large_atrophy']
@@ -183,7 +182,7 @@ def launchPipeline(options):
 
     options.add=_add
 
-    mkdir(options.output)
+    os.makedirs(options.output, exist_ok=True)
     options.output = os.path.abspath(options.output) + os.sep  # always use abs paths for sge
     if options.workdir is not None:
         options.workdir = os.path.abspath(options.workdir) + os.sep  # always use abs paths for sge
@@ -195,7 +194,6 @@ def launchPipeline(options):
         for line in p:
 
             # remove the last character of the line... the '\n'
-
             sp = line[:-1].split(',')
 
             size = len(sp)  # depending the number of items not all information was given
@@ -210,7 +208,6 @@ def launchPipeline(options):
             # ## Add patient id if not found
 
             if id not in patients:  # search key in the dictionary
-
                 patients[id] = LngPatient(id)  # create new LngPatient
 
                 if size > 6:
@@ -222,11 +219,11 @@ def launchPipeline(options):
                 # create patient's dir
 
                 patients[id].patientdir = options.output + os.sep + id + os.sep
-                mkdir(patients[id].patientdir)
+                os.makedirs(patients[id].patientdir,exist_ok=True)
 
                 if options.workdir is None:
                     patients[id].workdir = patients[id].patientdir + os.sep + 'tmp' + os.sep
-                    mkdir(patients[id].workdir)
+                    os.makedirs(patients[id].workdir,exist_ok=True)
                 else:
                     patients[id].workdir=options.workdir
 
@@ -278,7 +275,7 @@ def launchPipeline(options):
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
                 patients[id].redskull_ov = options.redskull_ov
-                patients[id].py_deep_seg = options.py_deep_seg
+                patients[id].synthstrip_ov = options.synthstrip_ov
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
                 patients[id].linreg   = options.linreg
@@ -378,7 +375,7 @@ def launchPipeline(options):
                 i.write(i.pickle)
             pickles.append(i.pickle)
         
-        jobs=[runPipeline.remote(i) for i in pickles] 
+        jobs=[runPipeline.remote(i) for i in pickles]
         # wait for all jobs to finish
         print("waiting for {} jobs".format(len(jobs)))
         ray.get(jobs)
@@ -401,13 +398,13 @@ def launchPipeline(options):
             if not os.path.exists(i.pickle):
                 i.write(i.pickle)
 
-
-            # tell python to use SCOOP module to run program
-            comm=['unset PE_HOSTFILE'] # HACK SCOOP not to rely on PE setting to prevent it from SSHing
+            # tell python to use ray to run program
+            #comm=['unset PE_HOSTFILE'] # HACK SCOOP not to rely on PE setting to prevent it from SSHing
+            comm=[]
             comm.extend(['export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={}'.format(slots)])
             comm.extend(['export OMP_NUM_THREADS={}'.format(slots)])
             comm.extend(['export OMP_DYNAMIC=TRUE'])
-            comm.extend(['python -m scoop -n {} {} -p {}'.format(str(slots),os.path.abspath(sys.argv[0]),i.pickle)])
+            comm.extend(['python {} --ray_start {} -p {}'.format(os.path.abspath(sys.argv[0]),str(slots),i.pickle)])
 
             qsub_pe(comm,options.pe,
                     options.peslots,
@@ -443,7 +440,6 @@ def runTimePoint_FirstStage(tp, patient):
 
         # t2/pd preprocessing
         # ################
-
         pipeline_t2pdpreprocessing(patient, tp)
 
         return True
@@ -902,10 +898,11 @@ def parse_options():
                      default='redskull.xml'
                      )
     
-    group.add_argument('--py_deep_seg', 
-                     dest='py_deep_seg',
-                     help='Location of py_deep_seg scripts '
+    group.add_argument('--synthstrip_ov', 
+                     dest='synthstrip_ov',
+                     help='omnivision library for synthstrip segmentation'
                      )
+    
     
 
     group.add_argument(

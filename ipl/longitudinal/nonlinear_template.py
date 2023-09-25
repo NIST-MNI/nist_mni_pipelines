@@ -54,8 +54,8 @@ def lngtemplate_v11(patient):
     with mincTools() as minc: 
         biascorr = False
         atlas = patient.modeldir + os.sep + patient.modelname + '.mnc'
-        atlas_mask = patient.modeldir + os.sep + patient.modelname \
-            + '_mask.mnc'
+        atlas_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
+        atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
 
         options={'symmetric':False,
                  'protocol':[{'iter':1,'level':16},
@@ -92,8 +92,9 @@ def lngtemplate_v11(patient):
             patient.qc_jpg['nl_template'],
             title=patient.id,
             image_range=[0, 120],
-            samples=20,
-            bg_color='black',fg_color='white'
+            samples=20,dpi=200,use_max=True,
+            bg_color='black',fg_color='white',
+            mask=atlas_outline
             )
 
         # copy each timepoint images too

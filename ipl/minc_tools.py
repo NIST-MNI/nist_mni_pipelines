@@ -921,13 +921,35 @@ class mincTools(temp_files):
         cmd.extend(inputs)
         cmd.append(output)
 
-        if madfile:
+        if madfile is not None:
             cmd.extend(['--mad', madfile])
-        if datatype:
+        if datatype is not None:
             cmd.append(datatype)
             
         self.command(cmd, inputs=inputs, outputs=[output], verbose=self.verbose)
 
+    def multiple_volume_similarity(
+            self,
+            inputs,
+            maj=None,
+            ovl=None,
+            bg=False):
+        """ Calculate multiple labelled volume similarity"""
+        cmd = ['multiple_volume_similarity']
+        cmd += inputs
+        outputs=[]
+        if maj is not None:
+            cmd+=['--maj', maj]
+            outputs+=[maj]
+        if ovl is not None:
+            cmd+=['--ovl', ovl]
+            outputs+=[ovl]
+        if bg:
+            cmd+=['--bg']
+
+        out=self.execute_w_output(cmd, verbose=self.verbose)
+
+        return float(out)
 
     def calc(
         self,
@@ -1863,7 +1885,7 @@ class mincTools(temp_files):
         stxtemplate_xfm=None,
         ):
         """perform linear registration based on the skull segmentaton"""
-        assert(False,"Obsolete do not use")
+        assert False, "Obsolete do not use"
 
     def binary_morphology(self, source, expression, target , binarize_bimodal=False, binarize_threshold=None):
         cmd=['itk_morph',source,target]

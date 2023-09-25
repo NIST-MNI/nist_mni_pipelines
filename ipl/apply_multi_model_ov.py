@@ -87,8 +87,9 @@ def parse_options():
                         nargs='+',
                         help="Input minc file")
 
-    parser.add_argument("--patch_sz", 
-                        type=int, default=64,
+    parser.add_argument("--patch_sz",
+                        nargs='+',
+                        type=int, default=[64, 64, 64],
                         help="Patch size")
                         
     parser.add_argument("--stride", type=int, default=None,
@@ -147,6 +148,10 @@ def parse_options():
 
     # parser.add_argument('--likelihood',
     #                     help='Output likelihood volume(s)' )
+    parser.add_argument('--distance', action="store_true",
+                        default=False,
+                        help='Uses Distance model' )
+
     parser.add_argument('--whole', action="store_true",
                         default=False,
                         help='Apply model to the whole image, without overlapping patches' )
@@ -158,13 +163,20 @@ def parse_options():
     parser.add_argument('--normalize', action="store_true",
                         default=False,
                         help='Apply intensity normalization between 0 and 1 using quantiles' )
+    
+    parser.add_argument('--largest', action="store_true",
+                        default=False,
+                        help='Apply largest component filtering' )
 
     params = parser.parse_args()
     
     params.instance_norm=False
 
     if params.stride is None:
-        params.stride = params.patch_sz-params.crop*2
+        if isinstance(params.patch_sz, list):
+            params.stride = min(params.patch_sz[0]-params.crop*2,params.patch_sz[1]-params.crop*2,params.patch_sz[2]-params.crop*2)
+        else:
+            params.stride = params.patch_sz-params.crop*2
 
     return params
 
@@ -177,16 +189,29 @@ def softmax(x,axis=1):
     e_x = np.exp(x - np.max(x,axis=axis))
     return e_x / e_x.sum(axis=axis)
 
+def find_largest_component(input):
+    from scipy.ndimage import label
+    structure = np.ones((3, 3, 3), dtype=np.int32)
+    labeled, ncomponents = label(input, structure)
+    largest = np.argmax([np.sum(labeled==i) for i in range(1,ncomponents+1)])+1
+    return labeled == largest
+
 
 def segment_with_patches_whole(
     dataset, model, 
     quant_size=64,
     normalize=False,
     freesurfer=False,
-    dist_border=None, largest_component=False,
-    out_fuzzy=False
+    dist_border=1.0, 
+    largest_component=False,
+    out_fuzzy=False,
+    dist=False
     ):
-    seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
+
+    if dist:
+        seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="dist")
+    else:
+        seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
 
     target_shape = np.clip(np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5)
 
@@ -201,7 +226,7 @@ def segment_with_patches_whole(
 
     if normalize:
         conformed -= conformed.min()
-        conformed = np.clip(conformed / np.percentile(conformed,99),0, 1)
+        conformed = np.clip(conformed / np.percentile(conformed,99),0.0, 1.0)
 
     out = model([conformed], shared_memory=True)[seg_idx]
 
@@ -211,9 +236,12 @@ def segment_with_patches_whole(
     if np.any(target_shape != dataset.shape[2:]):
         out=out[:,:,:dataset.shape[2], :dataset.shape[3], :dataset.shape[4]]
 
-    if dist_border is not None:
-        output_seg = (out < dist_border)
+    if out.shape[1]==1 : # single channel distance 
         output_fuzzy = out
+        output_seg = (out < dist_border)
+    elif dist:
+        output_fuzzy = out
+        output_seg = np.expand_dims( np.argmin(output_fuzzy, axis=1).astype(np.uint8), axis=1)
     else:
         output_fuzzy = log_softmax(out, axis=1)
         output_seg = np.expand_dims( np.argmax(output_fuzzy, axis=1).astype(np.uint8), axis=1)
@@ -222,8 +250,20 @@ def segment_with_patches_whole(
         from scipy.ndimage import label
         # find largest CC 
         structure = np.ones((3, 3, 3), dtype=np.int32)
-        labeled, ncomponents = label(output_seg.squeeze(), structure)
-        output_seg= np.expand_dims(np.expand_dims(labeled==1,axis=0),axis=0) # To be compatible
+        if out.shape[1]==1 or out.shape[1]==2:
+            # To be compatible
+            output_seg= np.expand_dims(np.expand_dims(
+                find_largest_component(output_seg.squeeze()),axis=0),axis=0) 
+        else:
+            # need to iterate over all labels
+            output_seg = output_seg.squeeze()
+            output_seg_ = np.zeros_like(output_seg,dtype=np.uint8)
+
+            for l in range(1,out.shape[1]):
+                tmp=find_largest_component(output_seg==l)
+                output_seg_[tmp ] = l
+           
+            output_seg = np.expand_dims(np.expand_dims(output_seg_,axis=0),axis=0) # To be compatible
     
     if out_fuzzy :
         return output_seg, output_fuzzy
@@ -237,7 +277,8 @@ def segment_with_patches_overlap_ov(
         patch_sz = None, 
         stride = None,
         bck = 0, 
-        out_fuzzy=False):
+        out_fuzzy=False,
+        dist=False):
     """
     Apply model to dataset of arbitrary size
     Arguments:
@@ -253,9 +294,12 @@ def segment_with_patches_overlap_ov(
         3D segmentation , if out_fuzzy is False
         tuple: 3D segmentation, 4D fuzzy output if out_fuzzy is True
     """
-
+    print(f"{patch_sz=} {stride=}")
     # find seg output
-    seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
+    if dist:
+        seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="dist")
+    else:
+        seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
     out_shape = model.outputs[seg_idx].shape
 
     if not isinstance(patch_sz, list):
@@ -292,7 +336,10 @@ def segment_with_patches_overlap_ov(
 
                 out = model([in_data], shared_memory=True)[seg_idx]
 
-                patch_output = log_softmax(out, axis=1)
+                if dist:
+                    patch_output = out
+                else:
+                    patch_output = log_softmax(out, axis=1)
 
                 # accumulate data
                 output_fuzzy[:, :, c[0]: c[0]+patch_sz_[0], c[1]: c[1]+patch_sz_[1], c[2]: c[2]+patch_sz_[2]] += \
@@ -304,7 +351,10 @@ def segment_with_patches_overlap_ov(
     invalid = output_weight<1.0
     output_weight[invalid] = 1.0
     output_fuzzy /= output_weight
-    output_fuzzy = softmax(output_fuzzy, axis=1)
+
+    if not dist:
+        output_fuzzy = softmax(output_fuzzy, axis=1)
+
 
     # set BG to 1 where mask was invalid
     output_fuzzy[:,0:1,:,:,:][invalid] = 1.0 
@@ -313,8 +363,10 @@ def segment_with_patches_overlap_ov(
     for q in range(output_fuzzy.shape[1]-1):
         output_fuzzy[:,(q+1):(q+2),:,:,:][invalid]  = 0.0
      
-    output_dataset = np.expand_dims( np.argmax(output_fuzzy,axis=1).astype(np.uint8),axis=1)
-    # output_dataset[invalid] = bck
+    if dist:
+        output_dataset = np.expand_dims( np.argmin(output_fuzzy, axis=1).astype(np.uint8),axis=1)
+    else:
+        output_dataset = np.expand_dims( np.argmax(output_fuzzy, axis=1).astype(np.uint8),axis=1)
 
     if out_fuzzy :
         return output_dataset, output_fuzzy
@@ -334,7 +386,10 @@ def segment_with_openvino(
                         history=None,fuzzy=None,
                         whole=False,
                         quant_size=64,
-                        freesurfer=False,normalize=False):
+                        freesurfer=False,
+                        normalize=False,
+                        largest=False,
+                        dist=False):
     inputs=[]
     # load all inputs
     # TODO: deal with floating point values
@@ -367,7 +422,10 @@ def segment_with_openvino(
     #input_shape=model.inputs[0].shape
     if model.inputs[0].shape != Shape([1, 1, *patch_sz]):
         print(f"Reshaping model to {patch_sz}")
-        model.reshape({'scan':[1,1, *patch_sz]})
+        if freesurfer: # need to transpose transpose([0,1,4,2,3]
+            model.reshape({'scan':[1,1, patch_sz[2],patch_sz[0],patch_sz[1]]})
+        else:
+            model.reshape({'scan':[1,1, *patch_sz]})
 
     # if cpu:
     #     compiled_model = core.compile_model(model=model, device_name="CPU")
@@ -393,24 +451,34 @@ def segment_with_openvino(
         if whole:
             dset_out, dset_out_fuzzy = segment_with_patches_whole(
                 dset, compiled_model,
-                dist_border=(0 if freesurfer else None), largest_component=freesurfer,
-                out_fuzzy=True,freesurfer=freesurfer,normalize=normalize) 
+                #dist_border=(0 if freesurfer else None), 
+                largest_component=largest, 
+                # TODO: fix this
+                out_fuzzy=True,
+                freesurfer=freesurfer,
+                normalize=normalize,
+                dist=dist) 
         else:
             dset_out, dset_out_fuzzy = segment_with_patches_overlap_ov(
                 dset, compiled_model,  
                 patch_sz=patch_sz, crop=crop, 
                 bck=bck, stride=stride, 
-                out_fuzzy=True) 
+                out_fuzzy=True,
+                dist=dist)
     else:
         if whole:
             dset_out = segment_with_patches_whole(
                 dset, compiled_model,
-                dist_border=(0 if freesurfer else None), largest_component=freesurfer,
-                out_fuzzy=False, freesurfer=freesurfer, normalize=normalize)
+                # TODO: fix this
+                #dist_border=(0 if freesurfer else None),
+                largest_component=largest, 
+                out_fuzzy=False, freesurfer=freesurfer, normalize=normalize,
+                dist=dist)
         else:
             dset_out = segment_with_patches_overlap_ov(dset, compiled_model, 
                 patch_sz=patch_sz, crop=crop, 
-                bck=bck, stride=stride, out_fuzzy=False)
+                bck=bck, stride=stride, out_fuzzy=False,
+                dist=dist)
     if cropvol>0:
         dset_out_ = np.full(orig_size,bck,dtype=np.int8)
 
@@ -493,7 +561,9 @@ if __name__ == '__main__':
                               history=_history,whole=params.whole,
                               freesurfer=params.freesurfer,
                               normalize=params.normalize,
-                              quant_size=64)
+                              largest=params.largest,
+                              quant_size=64,
+                              dist=params.distance)
 
 
     else:

@@ -538,7 +538,12 @@ def register_elastix(
                             logger.error("Elastix output:\n{}".format("\n".join(out_)))
                             raise ipl.minc_tools.mincError("Elastix didn't report measure")
                     else:
-                        minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
+                        try:
+                            minc.command(cmd, inputs=inputs, outputs=outputs, verbose=verbose)
+                        except ipl.minc_tools.mincError as e:
+                            with open(it_output_dir+os.sep+'elastix.log','r') as f:
+                                print("Elastix output:\n{}".format(f.read()))
+                            raise e
                     
                     init_par = it_output_dir +os.sep+'TransformParameters.0.txt'
                     # end of iterations
@@ -554,6 +559,6 @@ def register_elastix(
                     
             finally:
                 if output_log is not None:
-                    shutil.copyfile(it_output_dir+os.sep+'elastix.log',output_log)
+                    shutil.copyfile(it_output_dir+os.sep+'elastix.log', output_log)
 
         return outcome
