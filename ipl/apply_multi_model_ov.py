@@ -278,6 +278,8 @@ def segment_with_patches_overlap_ov(
         stride = None,
         bck = 0, 
         out_fuzzy=False,
+        freesurfer=False,
+        normalize=False,
         dist=False):
     """
     Apply model to dataset of arbitrary size
@@ -307,6 +309,14 @@ def segment_with_patches_overlap_ov(
 
     if not isinstance(stride, list):
         stride = [stride, stride, stride]
+
+    if freesurfer:
+        dataset=dataset.transpose([0,1,4,2,3])[:,:,:,::-1,:].copy()
+
+    if normalize:
+        dataset -= dataset.min()
+        dataset = np.clip(dataset / np.percentile(dataset,99),0.0, 1.0)
+
 
     dsize = dataset.shape
     output_size = list( dsize )
@@ -367,6 +377,12 @@ def segment_with_patches_overlap_ov(
         output_dataset = np.expand_dims( np.argmin(output_fuzzy, axis=1).astype(np.uint8),axis=1)
     else:
         output_dataset = np.expand_dims( np.argmax(output_fuzzy, axis=1).astype(np.uint8),axis=1)
+
+    if freesurfer:
+        output_dataset=output_dataset[:,:,:,::-1,:].transpose([0,1,3,4,2])
+        if out_fuzzy:
+            output_fuzzy=output_fuzzy[:,:,:,::-1,:].transpose([0,1,3,4,2])
+
 
     if out_fuzzy :
         return output_dataset, output_fuzzy
@@ -463,6 +479,8 @@ def segment_with_openvino(
                 dset, compiled_model,  
                 patch_sz=patch_sz, crop=crop, 
                 bck=bck, stride=stride, 
+                freesurfer=freesurfer,
+                normalize=normalize,
                 out_fuzzy=True,
                 dist=dist)
     else:
@@ -478,6 +496,8 @@ def segment_with_openvino(
             dset_out = segment_with_patches_overlap_ov(dset, compiled_model, 
                 patch_sz=patch_sz, crop=crop, 
                 bck=bck, stride=stride, out_fuzzy=False,
+                freesurfer=freesurfer,
+                normalize=normalize,
                 dist=dist)
     if cropvol>0:
         dset_out_ = np.full(orig_size,bck,dtype=np.int8)
@@ -504,7 +524,7 @@ def segment_with_openvino(
         dset_out_fuzzy = np.ascontiguousarray(dset_out_fuzzy)
 
         for f in range(dset_out_fuzzy.shape[1]):
-            save_output(dset_out_fuzzy[0,f,:,:,:],fuzzy+'_{}.mnc'.format(f), ref_fname=ref_file, history=_history)
+            save_output(dset_out_fuzzy[0,f,:,:,:],fuzzy+'_{}.mnc'.format(f), ref_fname=ref_file, history=history)
 
     if mask is not None:
         mask = load_input(mask,as_byte=True)
