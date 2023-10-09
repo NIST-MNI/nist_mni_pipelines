@@ -390,7 +390,7 @@ def launchPipeline(options):
         while len(pickles)>0:
 
             jobs=[runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch]
-            pickles=pickles[len(jobs):-1]
+            pickles=pickles[len(jobs):]
             print(f"waiting for {len(jobs)} jobs")
 
             while jobs:
