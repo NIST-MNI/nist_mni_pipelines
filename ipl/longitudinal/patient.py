@@ -85,6 +85,7 @@ class LngPatient(dict):
         self.beastdir = ''  # beast library directory
 
         self.redskull_ov = None # Redskull segmentation library for openvino
+        self.redskull_var = None # Redskull variant
         self.synthstrip_ov = None # Synthstrip segmentation library for openvino
 
         # patient data
@@ -649,9 +650,12 @@ def setFilenames(patient):
     patient.template['linear_template_mask'] = lngtmpldir + 'lin_template_' + patient.id + '_mask.mnc'
     patient.template['scale_xfm'] = lngtmpldir + 'lin_template_scale_' + patient.id + '_t1.xfm'
     patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' + patient.id + '_t1.xfm'
-    patient.qc_jpg['linear_template'] = patient.qcdir + 'qc_lin_template_' + patient.id + '.jpg'
     patient.template['linear_template_skull'] = lngtmpldir + 'lin_template_' + patient.id + '_skull.mnc'
     patient.template['linear_template_redskull'] = lngtmpldir + 'lin_template_' + patient.id + '_redskull.mnc'
+
+    patient.qc_jpg['linear_template'] = patient.qcdir + 'qc_lin_template_' + patient.id + '_t1.jpg'
+    patient.qc_jpg['linear_template_redskull'] = patient.qcdir + 'qc_lin_template_' + patient.id + '_redskull.jpg'
+
 
     # b) non-linear
 

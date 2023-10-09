@@ -49,12 +49,14 @@ def pipeline_t1preprocessing(patient, tp):
 
     if os.path.exists(patient[tp].qc_jpg['stx_t1']) \
         and os.path.exists(patient[tp].clp['t1']) \
+        and (os.path.exists(patient[tp].clp['mask']) or patient.synthstrip_ov is None) \
         and os.path.exists(patient[tp].stx_xfm['t1']) \
         and os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
         and   os.path.exists(patient[tp].stx_ns_mnc['t1']) \
-        and ( os.path.exists(patient[tp].stx_ns_mnc['redskull']) or patient.redskull_ov is None ):
-        print(' -- pipeline_t1preprocessing was already performed')
+        and ( os.path.exists(patient[tp].stx_ns_mnc['redskull']) \
+              or patient.redskull_ov is None ):
+        pass
     else:
         # # Run the appropiate version
         t1preprocessing_v10(patient, tp)
@@ -144,23 +146,35 @@ def run_redskull_cpu(in_t1w, out_redskull,
                 clamp=True
                 )
 
-@ray.remote(num_cpus=4)
+@ray.remote(num_cpus=8, memory=20000 * 1024 * 1024) # 
 def run_redskull_ov(in_t1w, out_redskull, 
         unscale_xfm, out_ns_skull, out_ns_redskull, 
         out_qc=None,qc_title=None,reference=None,
-        redskull_model=None ):
+        redskull_model=None,
+        redskull_var='seg' ):
     assert _have_segmentation_ov, "Failed to import segment_with_openvino"
 
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_redskull):
-
-            segment_with_openvino([in_t1w], out_redskull,
-                                model=redskull_model,
-                                whole=True, freesurfer=True, normalize=True, 
-                                dist=True, largest=True,
-                                threads=4 # HACK ! Openvino uses half of requested for some reason
-                                ) # 
+            if redskull_var=='seg':
+                segment_with_openvino([in_t1w], out_redskull,
+                                    model=redskull_model,
+                                    whole=False, freesurfer=False, 
+                                    normalize=True, 
+                                    dist=False, largest=False,
+                                    patch_sz=[192, 192, 192],
+                                    stride=96,
+                                    threads=8 # HACK ! Openvino uses half of requested for some reason
+                                    ) # 
+            elif redskull_var=='synth':
+                segment_with_openvino([in_t1w], out_redskull,
+                                    model=redskull_model,
+                                    whole=True, freesurfer=True, 
+                                    normalize=True, 
+                                    dist=True, largest=True,
+                                    threads=8 # HACK ! Openvino uses half of requested for some reason
+                                    ) # 
         
         # generate unscaling transform
         minc.calc([out_redskull],'abs(A[0]-2)<0.5?1:0', 
@@ -181,7 +195,7 @@ def run_redskull_ov(in_t1w, out_redskull,
 
 
 
-@ray.remote(num_cpus=4)
+@ray.remote(num_cpus=12, memory=20000 * 1024 * 1024) # , memory=5000 * 1024 * 1024
 def run_synthstrip_ov(in_t1w, out_synthstrip, 
         out_qc=None, qc_title=None, normalize_1x1x1=False,
         synthstrip_model=None ):
@@ -195,14 +209,14 @@ def run_synthstrip_ov(in_t1w, out_synthstrip,
                 segment_with_openvino([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=4 # HACK ! Openvino uses half of requested for some reason
+                                    threads=6 # HACK ! Openvino uses half of requested for some reason
                                     ) # 
                 minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
             else:
                 segment_with_openvino([in_t1w], out_synthstrip,
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=4 # HACK ! Openvino uses half of requested for some reason
+                                    threads=6 # HACK ! Openvino uses half of requested for some reason
                                     ) # 
 
         
@@ -419,8 +433,6 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
-        print("===DEBUG===",patient.redskull_ov)
-
         if patient.redskull_ov is not None:
             ray.get(run_redskull_ov.remote(
                 patient[tp].stx_mnc['t1'], 
@@ -431,7 +443,8 @@ def t1preprocessing_v10(patient, tp):
                 out_qc=patient[tp].qc_jpg['stx_skull'],
                 qc_title=patient[tp].qc_title, 
                 reference=modelmask,
-                redskull_model=patient.redskull_ov ))
+                redskull_model=patient.redskull_ov,
+                redskull_var=patient.redskull_var ))
             
             # adjust scaling factor based on the skull here? 
 

@@ -97,6 +97,9 @@ def launchPipeline(options):
         if 'redskull_ov' in _opts:
             options.redskull_ov=_opts['redskull_ov']
 
+        if 'redskull_var' in _opts:
+            options.redskull_var=_opts['redskull_var']
+
         if 'synthstrip_ov' in _opts:
             options.synthstrip_ov=_opts['synthstrip_ov']
 
@@ -156,6 +159,9 @@ def launchPipeline(options):
 
         if 'nl_step' in _opts:
             options.nl_step = _opts['nl_step']
+
+        if 'ray_batch' in _opts:
+            options.ray_batch = _opts['ray_batch']
 
         # TODO: add more options
     # patients dictionary
@@ -275,6 +281,7 @@ def launchPipeline(options):
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
                 patients[id].redskull_ov = options.redskull_ov
+                patients[id].redskull_var = options.redskull_var
                 patients[id].synthstrip_ov = options.synthstrip_ov
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
@@ -297,7 +304,6 @@ def launchPipeline(options):
                 # end of creating a patient
 
             # ## Add timepoint to the patient
-
             if visit in patients[id]:
                 raise IplError(' -- ERROR : Timepoint ' + visit
                             + ' repeated in patient ' + id)
@@ -366,7 +372,8 @@ def launchPipeline(options):
             print('{} - {}'.format(id,visit) )
             # store patients in the pickle
 
-    if options.pe is None: # use ray to run all subjects in parallel
+    # use ray to run all subjects in parallel
+    if options.pe is None: 
         pickles = []
 
         for (id, i) in patients.items():
@@ -375,11 +382,29 @@ def launchPipeline(options):
                 i.write(i.pickle)
             pickles.append(i.pickle)
         
-        jobs=[runPipeline.remote(i) for i in pickles]
-        # wait for all jobs to finish
-        print("waiting for {} jobs".format(len(jobs)))
-        ray.get(jobs)
-        print('All subjects finished:{}'.format(len(jobs)))
+        if options.ray_batch==0:
+            options.ray_batch=len(pickles)
+
+        n_fail=0
+        jobs_done = []
+        while len(pickles)>0:
+
+            jobs=[runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch]
+            pickles=pickles[len(jobs):-1]
+            print(f"waiting for {len(jobs)} jobs")
+
+            while jobs:
+                try:
+                    ready_jobs, jobs = ray.wait(jobs, num_returns=1)
+                    jobs_done += ray.get(ready_jobs)
+                except ray.exceptions.RayTaskError as e:
+                    n_fail+=1
+                    print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
+                except KeyboardInterrupt:
+                    print("Aborting")
+                    exit(1)
+    
+        print(f'Work finished {len(jobs_done)}, failed:{n_fail} ')
 
     else: # USE SGE to submit one job per subject, using required peslots
         pickles = []
@@ -418,8 +443,6 @@ def runTimePoint_FirstStage(tp, patient):
     Process one timepoint for cross-sectional analysis
     First Stage : preprocessing and initial stereotaxic registration
     '''
-
-    print( 'runTimePoint_FirstStage %s %s' % (patient.id, tp))
 
     try:
         # preprocessing
@@ -464,7 +487,6 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         pipeline_stx2_skullstripping(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
-        print("pipeline_atlasregistration")
         pipeline_atlasregistration(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -552,7 +574,6 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         pipeline_vbm(patient, tp, vbm_options)
 
         if len(patient.add)>0:
-            print("Running add step:{}".format(patient.add))
             pipeline_run_add_tp(patient,tp)
 
 
@@ -581,12 +602,9 @@ def runPipeline(pickle, workdir=None):
 
         patient = LngPatient.read(pickle)
         if not version == patient.pipeline_version:
-            print(' #### NOT THE SAME PIPELINE VERSION!! ')
             raise IplError('       - Change the pipeline version or restart all processing' )
 
         setFilenames(patient)
-        #print("Processing:")
-        #patient.printself()
 
         if workdir is not None:
             patient.workdir=workdir
@@ -642,8 +660,6 @@ def runPipeline(pickle, workdir=None):
             # ############################
             if patient.dolngcls:
                 pipeline_lng_classification(patient)
-            else:
-                print(' -- Skipping Lng classification')
 
             jobs=[]
             for tp in tps:
@@ -895,9 +911,16 @@ def parse_options():
     group.add_argument('--redskull_ov', 
                      dest='redskull_ov',
                      help='omnivision library for redskull brain+skull',
-                     default='redskull.xml'
+                     default=None
                      )
     
+    group.add_argument('--redskull_var', 
+                     dest='redskull_var',
+                     help='Redskull variant',
+                     default='seg'
+                     )
+
+
     group.add_argument('--synthstrip_ov', 
                      dest='synthstrip_ov',
                      help='omnivision library for synthstrip segmentation'
@@ -1023,6 +1046,8 @@ def parse_options():
                         help='local ray (single process)')
     group.add_argument('--ray_host',
                         help='ray host address')
+    group.add_argument('--ray_batch',default=0,type=int,
+                        help='Submit ray jobs in batches')
     options = parser.parse_args()
 
     return options
@@ -1051,7 +1076,7 @@ def main():
             sys.exit(1)
         launchPipeline(opts)
     elif opts.pickle is not None:
-        runPipeline(opts.pickle,workdir=opts.workdir)
+        runPipeline(opts.pickle, workdir=opts.workdir)
     else:
         print("missing something...")
         sys.exit(1)

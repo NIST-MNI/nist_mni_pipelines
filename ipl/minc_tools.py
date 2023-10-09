@@ -305,7 +305,7 @@ class mincTools(temp_files):
                 logger.warn('     otime ' + str(otime) + ' < itime ' + str(itime))
                 return True
             else:
-                logger.warn(' -- Skipping: Output Exists:{}'.format(repr(exists)))
+                logger.debug(' -- Skipping: Output Exists:{}'.format(repr(exists)))
                 return False
         return True
 

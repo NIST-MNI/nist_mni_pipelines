@@ -54,6 +54,7 @@ def pipeline_stx_skullstripping(patient, tp):
     params.xfmt1 = patient[tp].stx_xfm['t1']
     params.ns_stxt1 = patient[tp].stx_ns_mnc['t1']
     params.ns_xfmt1 = patient[tp].stx_ns_xfm['t1']
+    params.ns_unscale_xfm = patient[tp].stx_ns_xfm['unscale_t1']
 
     # setting outputs
 
@@ -65,9 +66,8 @@ def pipeline_stx_skullstripping(patient, tp):
     if os.path.exists(params.stx_mask) \
         and os.path.exists(params.ns_stx_mask) \
         and os.path.exists(params.qc_stx_mask):
-        print(' -- pipeline_stx_skullstripping is done')
+        pass
     else:
-
         runSkullstripping(params)
 
     return True
@@ -95,15 +95,12 @@ def pipeline_stx2_skullstripping(patient, tp):
     params.novolpol = True
     params.final = patient.beastresolution
 
-  # timepoint files
-  # params.t2=patient[tp].clp["t2"]
-  # params.pd=patient[tp].clp["pd"]
-
     params.clpt1 = patient[tp].clp['t1']
     params.stxt1 = patient[tp].stx2_mnc['t1']
     params.xfmt1 = patient[tp].stx2_xfm['t1']
-    params.ns_stxt1 = None  # patient[tp].stx_ns_mnc["t1"]
-    params.ns_xfmt1 = None  # patient[tp].stx_ns_xfm["t1"]
+    params.ns_stxt1 = None #patient[tp].stx_ns_mnc['t1']
+    params.ns_xfmt1 = None #patient[tp].stx_ns_xfm["t1"]
+    params.ns_unscale_xfm = None
     params.beastdir = patient.beastdir
 
   # output files
@@ -121,9 +118,7 @@ def pipeline_stx2_skullstripping(patient, tp):
 
     if not os.path.exists(params.stx_mask) \
         or not os.path.exists(params.qc_stx_mask):
-        runSkullstripping(params,synthstrip_ov=patient.synthstrip_ov)
-    else:
-        print(' -- pipeline_stx2_skullstripping is done')
+        runSkullstripping(params, synthstrip_ov=patient.synthstrip_ov)
 
 
     if 't2les' in patient[tp].native:
@@ -139,9 +134,9 @@ def pipeline_stx2_skullstripping(patient, tp):
 
 # Last preprocessing (or more common one)
 
-def runSkullstripping(params,synthstrip_ov=None):
+def runSkullstripping(params, synthstrip_ov=None):
     if params.pipeline_version == '1.0':
-        skullstripping_v10(params,synthstrip_ov=synthstrip_ov)  # beast by simon fristed
+        skullstripping_v10(params, synthstrip_ov=synthstrip_ov)  # beast by simon fristed
     else:
         print(' -- Chosen version not found!')
 
@@ -149,15 +144,16 @@ def runSkullstripping(params,synthstrip_ov=None):
 # function using beast
 # needs image in standard space
 
-def skullstripping_v10(params,synthstrip_ov=None):
+def skullstripping_v10(params,
+                       synthstrip_ov=None):
 
     with mincTools()  as minc:
-
-
         if synthstrip_ov is not None:
             # apply synthstrip in the native space to ease everything else
             # need to resample to 1x1x1mm^2
-            ray.get(run_synthstrip_ov.remote(params.stxt1, params.stx_mask,synthstrip_model=synthstrip_ov))
+            ray.get(run_synthstrip_ov.remote(params.stxt1, 
+                    params.stx_mask, 
+                    synthstrip_model=synthstrip_ov))
         else:
             # temporary images in the dimensions of beast database
             tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
@@ -199,11 +195,14 @@ def skullstripping_v10(params,synthstrip_ov=None):
                 minc.resample_labels(tmpmask, params.stx_mask,
                                     like=params.stxt1)
 
-        # reformat mask into native space
+        # reformat mask into native space if needed
+        if params.clp_mask is not None and \
+            synthstrip_ov is None and \
+            os.path.exists(params.xfmt1) and \
+            os.path.exists(params.clpt1):
 
-        if params.clp_mask is not None and os.path.exists(params.xfmt1) \
-            and os.path.exists(params.clpt1):
-            minc.resample_labels(params.stx_mask, params.clp_mask,
+            minc.resample_labels(params.stx_mask, 
+                                 params.clp_mask,
                                  like=params.clpt1,
                                  invert_transform=True,
                                  transform=params.xfmt1)
@@ -212,9 +211,11 @@ def skullstripping_v10(params,synthstrip_ov=None):
         if params.ns_stx_mask is not None \
             and os.path.exists(params.ns_xfmt1) \
             and os.path.exists(params.ns_stxt1):
-            minc.resample_labels(params.clp_mask, params.ns_stx_mask,
+
+            minc.resample_labels(params.stx_mask, 
+                                 params.ns_stx_mask,
                                  like=params.ns_stxt1,
-                                 transform=params.ns_xfmt1)
+                                 transform=params.ns_unscale_xfm)
 
         if params.qc_stx_mask is not None:
             minc_qc.qc(

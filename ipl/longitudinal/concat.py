@@ -20,9 +20,7 @@ from ipl import minc_qc
 
 def pipeline_concat(patient, tp):
 
-    if os.path.exists(patient[tp].nl_xfm):
-        print(' -- pipeline_concat already done!')
-    else:
+    if not os.path.exists(patient[tp].nl_xfm):
         concat_v10(patient, tp)  # beast by simon fristed
 
     with mincTools()  as minc:

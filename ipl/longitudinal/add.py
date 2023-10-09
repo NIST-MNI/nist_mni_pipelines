@@ -84,9 +84,7 @@ def pipeline_run_add(patient):
 
                 library=ipl.segment.SegLibrary( library )
                 print(repr(library))
-                if os.path.exists(output_prefix+'_seg.mnc'):
-                    print('ADD:{} already done!'.format(output_name))
-                else:
+                if not os.path.exists(output_prefix+'_seg.mnc'):
                     ipl.segment.fusion_segment(patient.template['nl_template'],
                                 library,
                                 output_prefix,

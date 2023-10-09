@@ -296,7 +296,6 @@ def segment_with_patches_overlap_ov(
         3D segmentation , if out_fuzzy is False
         tuple: 3D segmentation, 4D fuzzy output if out_fuzzy is True
     """
-    print(f"{patch_sz=} {stride=}")
     # find seg output
     if dist:
         seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="dist")
@@ -427,7 +426,6 @@ def segment_with_openvino(
     #cpu_optimization_capabilities = core.get_property("CPU", "OPTIMIZATION_CAPABILITIES")
     #print("CPU optimization capabilities:", cpu_optimization_capabilities)
     model=core.read_model(model=model)
-    print(f"{dset.shape=}")
 
     if whole:
         patch_sz = np.clip(np.ceil((np.array(dset.shape[2:]) - cropvol*2 + padvol*2) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5).tolist()

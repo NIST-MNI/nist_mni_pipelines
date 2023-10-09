@@ -297,7 +297,6 @@ def qc(
         ax=None
         imgplot=None
         
-        print(f"rows:{rows} columns:{columns}")
         for i,j in enumerate(slices):
             ax =  fig.add_subplot(grid[ i//columns, i%columns])
             imgplot = ax.imshow(j, origin='lower',  cmap=cm, aspect=aspects[i])

@@ -25,7 +25,6 @@ from .general import *
 def pipeline_atlasregistration(patient, tp=None):
     
     if os.path.exists(patient.nl_xfm):
-        print(' -- pipeline_atlasregistration exists')
         return True
     return atlasregistration_v10(patient)
 

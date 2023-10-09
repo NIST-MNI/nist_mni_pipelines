@@ -37,12 +37,9 @@ def pipeline_lngtemplate(patient):
     allDone = True
     for i in outputImages:
         if not os.path.exists(i):
-            print(' - Does not exists : ' + i)
             allDone = False
             break
-    if allDone:
-        print(' -- pipeline_linearlngtemplate is done')
-    else:
+    if not allDone:
         lngtemplate_v11(patient)  # VF: using 1.1 version
 
     return True

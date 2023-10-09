@@ -20,7 +20,8 @@ from ipl import minc_qc
 def pipeline_classification(patient, tp):
     if os.path.exists(patient[tp].stx2_mnc['classification']) \
         and os.path.exists(patient[tp].qc_jpg['classification']):
-        print(' -- Classification - Processing already done!')
+        #print(' -- Classification - Processing already done!')
+        pass
     else:
         classification_v10(patient, tp)  # beast by simon fristed
 
