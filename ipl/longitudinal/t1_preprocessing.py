@@ -65,16 +65,29 @@ def pipeline_t1preprocessing(patient, tp):
     # #####################
     # qc stx registration
 
-    modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+    modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
+    outline_range=[1,2]
+    mask_cmap='autumn'
 
-    minc_qc.qc(
-        patient[tp].stx_mnc['t1'],
-        patient[tp].qc_jpg['stx_t1'],
-        title=patient[tp].qc_title,
-        image_range=[0, 120],
-        mask=modeloutline,dpi=200,use_max=True,
-        samples=20,bg_color="black",fg_color="white"
-        )
+    if not os.path.exists(modeloutline):
+        modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+        outline_range=[1,1]
+        mask_cmap='red'
+
+    if not os.path.exists(patient[tp].qc_jpg['stx_t1']):
+        minc_qc.qc(
+            patient[tp].stx_mnc['t1'],
+            patient[tp].qc_jpg['stx_t1'],
+            title=patient[tp].qc_title,
+            image_range=[0, 120],
+            mask=modeloutline,
+            dpi=200,use_max=True,ialpha=1.0,oalpha=1.0,
+            samples=20,
+            mask_range=outline_range,
+            bg_color="black",fg_color="white",
+            mask_cmap=mask_cmap
+            )
+    
     return True
 
 

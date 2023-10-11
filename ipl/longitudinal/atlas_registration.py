@@ -91,7 +91,14 @@ def atlasregistration_v10(patient):
         
         # make QC image, similar to linear ones
         if not os.path.exists(patient.qc_jpg['nl_template_nl']):
-            atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+
+            modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
+            outline_range=[0,2]
+
+            if not os.path.exists(modeloutline):
+                modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+                outline_range=[0,1]
+
             minc.resample_smooth(patient.template['nl_template'],minc.tmp('nl_atlas.mnc'),transform=patient.nl_xfm)
             minc_qc.qc(
                 minc.tmp('nl_atlas.mnc'),
@@ -100,7 +107,9 @@ def atlasregistration_v10(patient):
                 image_range=[0, 120],
                 samples=20,
                 dpi=200,
-                mask=atlas_outline,use_max=True,
+                mask=modeloutline,
+                mask_range=outline_range,
+                use_max=True,
                 bg_color='black',fg_color='white'
                 )
         

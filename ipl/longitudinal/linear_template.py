@@ -58,19 +58,31 @@ def pipeline_linearlngtemplate(patient):
         # # Writing QC images
         # ###################
         with mincTools() as minc:
-            atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+            #
+            modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
+            outline_range=[1,2]
+            mask_cmap='autumn'
+
+            if not os.path.exists(modeloutline):
+                modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+                outline_range=[1,1]
+                mask_cmap='red'
 
             # qc linear template
-            minc_qc.qc(
-                patient.template['linear_template'],
-                patient.qc_jpg['linear_template'],
-                title=patient.id,
-                image_range=[0, 120],
-                samples=20,dpi=200,use_max=True,
-                mask=atlas_outline
-                )
+            if not os.path.exists(patient.qc_jpg['linear_template']):
+                minc_qc.qc(
+                    patient.template['linear_template'],
+                    patient.qc_jpg['linear_template'],
+                    title=patient.id,
+                    image_range=[0, 120],
+                    samples=20,dpi=200,
+                    use_max=True, ialpha=1.0, oalpha=1.0,
+                    mask=modeloutline,
+                    mask_range=outline_range,
+                    mask_cmap=mask_cmap
+                    )
             
-            if patient.skullreg:
+            if patient.skullreg and not os.path.exists(patient.qc_jpg['linear_template_redskull']):
                 minc_qc.qc(
                     patient.template['linear_template'],
                     patient.qc_jpg['linear_template_redskull'],
@@ -83,13 +95,17 @@ def pipeline_linearlngtemplate(patient):
             # qc stx2
 
             for (i, tp) in patient.items():
-                minc_qc.qc(
-                    tp.stx2_mnc['t1'],
-                    tp.qc_jpg['stx2_t1'],
-                    title=tp.qc_title,
-                    image_range=[0, 120],
-                    mask=atlas_outline,use_max=True,
-                    samples=20,dpi=200  )
+                if not os.path.exists(tp.qc_jpg['stx2_t1']):
+                    minc_qc.qc(
+                        tp.stx2_mnc['t1'],
+                        tp.qc_jpg['stx2_t1'],
+                        title=tp.qc_title,
+                        image_range=[0, 120],
+                        mask=modeloutline,
+                        mask_range=outline_range,
+                        use_max=True,
+                        mask_cmap=mask_cmap,
+                        samples=20,dpi=200  )
     except mincError as e:
         print("Exception in pipeline_linearlngtemplate:{}".format(str(e)))
         traceback.print_exc(file=sys.stdout)
@@ -448,7 +464,13 @@ def linearlngtemplate_v11(patient):
         # REDSKULL version
         atlas_brain_skull = patient.modeldir + os.sep + patient.modelname + '_brain_skull.mnc' 
 
-        atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+        modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
+        outline_range=[0,2]
+
+        if not os.path.exists(modeloutline):
+            modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+            outline_range=[0,1]
+
         atlas_mask_novent = patient.modeldir + os.sep + patient.modelname + '_mask_novent.mnc'
 
         # parameters for the template

@@ -73,9 +73,9 @@ def over_blend(si,so, ialpha, oalpha):
     so_rgb =   so[..., :3]
     so_alpha = so[..., 3]*oalpha
     
-    out_alpha = np.maximum(si_alpha ,  so_alpha )
+    out_alpha = np.maximum(si_alpha,  so_alpha )
     
-    out_rgb = si_rgb * (si_alpha[..., None] - so_alpha[..., None]) + so_rgb * so_alpha[..., None] 
+    out_rgb = si_rgb * (1 - so_alpha[..., None]) + so_rgb * so_alpha[..., None] 
     
     out = np.zeros_like(si)
     out[..., :3] = out_rgb 
@@ -195,11 +195,14 @@ def qc(
     cmo= copy.copy(plt.get_cmap(mask_cmap))
 
     cm.set_bad('k', alpha = 1.0)
+
+    # make transparent background
     cmo.set_bad('k',alpha = 0.0)
+    cmo.set_under('k',alpha = 0.0)
 
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
     #print("Image range:",vmin,vmax)
-    oNorm  = colors.Normalize(vmin=omin, vmax=omax)
+    oNorm  = colors.Normalize(vmin=omin, vmax=omax, clip=False)
     
     scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
     oscalarMap = cmx.ScalarMappable(norm=oNorm, cmap=cmo)
