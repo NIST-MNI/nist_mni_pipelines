@@ -74,9 +74,10 @@ def pipeline_linearlngtemplate(patient):
                     patient.template['linear_template'],
                     patient.qc_jpg['linear_template'],
                     title=patient.id,
-                    image_range=[0, 120],
+                    image_range=[0, 150],
                     samples=20,dpi=200,
-                    use_max=True, ialpha=1.0, oalpha=1.0,
+                    use_over=True,  ialpha=1.0, oalpha=1.0,
+                    bg_color="black",fg_color="white",
                     mask=modeloutline,
                     mask_range=outline_range,
                     mask_cmap=mask_cmap
@@ -87,8 +88,9 @@ def pipeline_linearlngtemplate(patient):
                     patient.template['linear_template'],
                     patient.qc_jpg['linear_template_redskull'],
                     title=patient.id,
-                    image_range=[0, 120],
+                    image_range=[0, 150],
                     samples=20,dpi=200,use_max=True,
+                    bg_color="black",fg_color="white",
                     mask=patient.template['linear_template_redskull']
                     )
 
@@ -100,11 +102,12 @@ def pipeline_linearlngtemplate(patient):
                         tp.stx2_mnc['t1'],
                         tp.qc_jpg['stx2_t1'],
                         title=tp.qc_title,
-                        image_range=[0, 120],
+                        image_range=[0, 150],
                         mask=modeloutline,
                         mask_range=outline_range,
-                        use_max=True,
+                        use_over=True, 
                         mask_cmap=mask_cmap,
+                        bg_color="black",fg_color="white",
                         samples=20,dpi=200  )
     except mincError as e:
         print("Exception in pipeline_linearlngtemplate:{}".format(str(e)))
