@@ -356,7 +356,7 @@ def parse_options():
                         help='Output probabilities' )
 
     parser.add_argument('--method',
-                        choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA'],
+                        choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA','HGB1'],
                         default='RF1',
                         help='Classification algorithm')
 
@@ -467,7 +467,7 @@ if __name__ == "__main__":
         n_feat = n_cls # p_spatial 
 
         # Random Forest
-        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.ensemble import RandomForestClassifier,HistGradientBoostingClassifier
         from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
         from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
         from sklearn import svm
@@ -499,10 +499,12 @@ if __name__ == "__main__":
             clf = LinearDiscriminantAnalysis(solver='eigen')
         elif options.method == 'QDA':
             clf = QuadraticDiscriminantAnalysis(reg_param=1e-6) # new version!
+        elif options.method == 'HGB1':
+            clf = HistGradientBoostingClassifier(max_leaf_nodes = 31,  verbose=True, random_state=options.random)
         else:
             raise  Error(f"Unsupported classifier: {options.method}")
         
-        if options.n_jobs is not None:
+        if options.n_jobs is not None and not isinstance(clf, HistGradientBoostingClassifier):
             clf.n_jobs = options.n_jobs
 
         print("Classifier:", clf)
