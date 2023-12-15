@@ -356,7 +356,7 @@ def parse_options():
                         help='Output probabilities' )
 
     parser.add_argument('--method',
-                        choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA','HGB1'],
+                        choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA','HGB1','HGB2'],
                         default='RF1',
                         help='Classification algorithm')
 
@@ -501,6 +501,8 @@ if __name__ == "__main__":
             clf = QuadraticDiscriminantAnalysis(reg_param=1e-6) # new version!
         elif options.method == 'HGB1':
             clf = HistGradientBoostingClassifier(max_leaf_nodes = 31,  verbose=True, random_state=options.random)
+        elif options.method == 'HGB2':
+            clf = HistGradientBoostingClassifier(max_leaf_nodes = 64, max_iter=400, verbose=True, random_state=options.random)
         else:
             raise  Error(f"Unsupported classifier: {options.method}")
         
