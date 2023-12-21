@@ -91,6 +91,9 @@ def parse_options():
                         nargs='+',
                         type=int, default=[64, 64, 64],
                         help="Patch size")
+    
+    parser.add_argument("--quant", type=int, default=64,
+                        help="Spatial quantization factor for whole volume processing")
                         
     parser.add_argument("--stride", type=int, default=None,
                         help="Stride, default patch_sz-crop*2")
@@ -163,6 +166,10 @@ def parse_options():
     parser.add_argument('--normalize', action="store_true",
                         default=False,
                         help='Apply intensity normalization between 0 and 1 using quantiles' )
+
+    parser.add_argument('--max_normalize', action="store_true",
+                        default=False,
+                        help='Apply intensity normalization between 0 and 1 using maximum' )
     
     parser.add_argument('--largest', action="store_true",
                         default=False,
@@ -201,6 +208,7 @@ def segment_with_patches_whole(
     dataset, model, 
     quant_size=64,
     normalize=False,
+    normalize_max=False,
     freesurfer=False,
     dist_border=1.0, 
     largest_component=False,
@@ -213,7 +221,8 @@ def segment_with_patches_whole(
     else:
         seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="seg")
 
-    target_shape = np.clip(np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5)
+    target_shape = (np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size)
+    print(f"{target_shape=} {dataset.shape[2:]=} {quant_size=}")
 
     if np.any(target_shape != dataset.shape[2:]):
         conformed = np.zeros( (1,1, *target_shape), dtype='float32')
@@ -227,8 +236,10 @@ def segment_with_patches_whole(
     if normalize:
         conformed -= conformed.min()
         conformed = np.clip(conformed / np.percentile(conformed,99),0.0, 1.0)
+    elif normalize_max:
+        conformed = conformed / np.max(conformed)
 
-    out = model([conformed], shared_memory=True)[seg_idx]
+    out = model([conformed])[seg_idx]
 
     if freesurfer:
         out=out[:,:,:,::-1,:].transpose([0,1,3,4,2])
@@ -280,6 +291,7 @@ def segment_with_patches_overlap_ov(
         out_fuzzy=False,
         freesurfer=False,
         normalize=False,
+        normalize_max=False,
         dist=False):
     """
     Apply model to dataset of arbitrary size
@@ -296,7 +308,8 @@ def segment_with_patches_overlap_ov(
         3D segmentation , if out_fuzzy is False
         tuple: 3D segmentation, 4D fuzzy output if out_fuzzy is True
     """
-    # find seg output
+
+    #find correct output
     if dist:
         seg_idx = next(i for i,v in enumerate(model.outputs) if v.any_name=="dist")
     else:
@@ -315,7 +328,8 @@ def segment_with_patches_overlap_ov(
     if normalize:
         dataset -= dataset.min()
         dataset = np.clip(dataset / np.percentile(dataset,99),0.0, 1.0)
-
+    elif normalize_max:
+        dataset = dataset / np.max(dataset)
 
     dsize = dataset.shape
     output_size = list( dsize )
@@ -336,14 +350,14 @@ def segment_with_patches_overlap_ov(
                 c = [k*stride[0] + crop, l*stride[1] + crop, m*stride[2] + crop]
 
                 for i in range(3):
-                    c[i] = min(c[i], dsize[i+2] - patch_sz[i] + crop-1)
+                    c[i] = max(min(c[i], dsize[i+2] - patch_sz[i] + crop - 1),crop)
 
                 # extract a patch
                 in_data = np.ascontiguousarray(
                         dataset[:, :, c[0]-crop: c[0]-crop+patch_sz[0], c[1]-crop: c[1]-crop+patch_sz[1], c[2]-crop: c[2]-crop+patch_sz[2]]
                     )
 
-                out = model([in_data], shared_memory=True)[seg_idx]
+                out = model({'scan':in_data})[seg_idx] # , shared_memory=True
 
                 if dist:
                     patch_output = out
@@ -398,11 +412,13 @@ def segment_with_openvino(
                         patch_sz=64, stride=32, 
                         cpu=True, threads=None,
                         crop=0,cropvol=0,padvol=0,padfill=0.0,bck=0,
-                        history=None,fuzzy=None,
+                        history=None,
+                        fuzzy=None,
                         whole=False,
                         quant_size=64,
                         freesurfer=False,
                         normalize=False,
+                        normalize_max=False,
                         largest=False,
                         dist=False):
     inputs=[]
@@ -426,14 +442,20 @@ def segment_with_openvino(
     #cpu_optimization_capabilities = core.get_property("CPU", "OPTIMIZATION_CAPABILITIES")
     #print("CPU optimization capabilities:", cpu_optimization_capabilities)
     model=core.read_model(model=model)
+    print(f"{dset.shape=}")
 
     if whole:
-        patch_sz = np.clip(np.ceil((np.array(dset.shape[2:]) - cropvol*2 + padvol*2) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5).tolist()
+        print("Whole scan segmentation!")
+        patch_sz = (np.ceil((np.array(dset.shape[2:]) - cropvol*2 + padvol*2) / quant_size).astype(int) * quant_size).tolist()
         stride = patch_sz
+        print(f"{patch_sz=}")
     elif not isinstance(patch_sz, list):
         patch_sz = [patch_sz, patch_sz, patch_sz]
     # determine if we need to reshape model
     #input_shape=model.inputs[0].shape
+    print(f"{model.inputs[0].shape=}")
+    print(f"{patch_sz=}")
+
     if model.inputs[0].shape != Shape([1, 1, *patch_sz]):
         print(f"Reshaping model to {patch_sz}")
         if freesurfer: # need to transpose transpose([0,1,4,2,3]
@@ -467,6 +489,7 @@ def segment_with_openvino(
                 dset, compiled_model,
                 #dist_border=(0 if freesurfer else None), 
                 largest_component=largest, 
+                quant_size=quant_size,
                 # TODO: fix this
                 out_fuzzy=True,
                 freesurfer=freesurfer,
@@ -479,6 +502,7 @@ def segment_with_openvino(
                 bck=bck, stride=stride, 
                 freesurfer=freesurfer,
                 normalize=normalize,
+                normalize_max=normalize_max,
                 out_fuzzy=True,
                 dist=dist)
     else:
@@ -487,8 +511,11 @@ def segment_with_openvino(
                 dset, compiled_model,
                 # TODO: fix this
                 #dist_border=(0 if freesurfer else None),
+                quant_size=quant_size,
                 largest_component=largest, 
-                out_fuzzy=False, freesurfer=freesurfer, normalize=normalize,
+                out_fuzzy=False, freesurfer=freesurfer, 
+                normalize=normalize,
+                normalize_max=normalize_max,
                 dist=dist)
         else:
             dset_out = segment_with_patches_overlap_ov(dset, compiled_model, 
@@ -496,6 +523,7 @@ def segment_with_openvino(
                 bck=bck, stride=stride, out_fuzzy=False,
                 freesurfer=freesurfer,
                 normalize=normalize,
+                normalize_max=normalize_max,
                 dist=dist)
     if cropvol>0:
         dset_out_ = np.full(orig_size,bck,dtype=np.int8)
@@ -579,8 +607,9 @@ if __name__ == '__main__':
                               history=_history,whole=params.whole,
                               freesurfer=params.freesurfer,
                               normalize=params.normalize,
+                              normalize_max=params.max_normalize,
                               largest=params.largest,
-                              quant_size=64,
+                              quant_size=params.quant,
                               dist=params.distance)
 
 
