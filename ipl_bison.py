@@ -9,7 +9,7 @@ import csv
 import json
 import math
 
-from ipl.bison import init_clasifierr, train, run_cv, infer, read_csv_dict,load_all_volumes, bison_modalities
+from ipl.bison import init_clasifierr, train, run_cv, infer, read_csv_dict,load_all_volumes 
 
 import numpy as np
 
@@ -94,7 +94,7 @@ def parse_options():
 if __name__ == "__main__":
     options = parse_options()
     n_cls = options.n_cls
-    n_bins = 256
+    
     #modalities = ('t1', 't2', 'pd', 'flair', 'ir','mp2t1', 'mp2uni')
 
     clf = init_clasifierr(options.method, n_jobs=options.n_jobs, random=options.random)

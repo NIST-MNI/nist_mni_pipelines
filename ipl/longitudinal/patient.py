@@ -78,15 +78,25 @@ class LngPatient(dict):
         self.dovbm = False  #  default - do not create vbm files
         self.vbm_options = {} # VBM options
 
+        # Tissue classification BISON (GM,WM,CSF)
+        self.bison_pfx = None # BISON model prefix
+        self.bison_atlas_pfx = None # BISON atlas prefix
+        self.bison_method = None # BISON method
+
+        # WMH classification BISON, WMH will be set to WM in the tissue classification
+        self.wmh_bison_pfx = None # BISON model prefix
+        self.wmh_bison_atlas_pfx = None # BISON atlas prefix
+        self.wmh_bison_method = None # BISON method
+
         # model used in the processing
 
         self.modeldir = ''  # model directory
         self.modelname = ''  # model name
         self.beastdir = ''  # beast library directory
 
-        self.redskull_ov = None # Redskull segmentation library for openvino
+        self.redskull_onnx = None # Redskull segmentation library for ONNX
         self.redskull_var = None # Redskull variant
-        self.synthstrip_ov = None # Synthstrip segmentation library for openvino
+        self.synthstrip_onnx = None # Synthstrip segmentation library for ONNX
 
         # patient data
         self.id = id  # subject id
@@ -594,6 +604,8 @@ def setFilenames(patient):
         patient[tp].stx2_mnc['classification'] = clsdir + 'cls_' \
             + patient.id + '_' + tp + '.mnc'
         patient[tp].stx2_mnc['lng_classification'] = clsdir + 'lngcls_' \
+            + patient.id + '_' + tp + '.mnc'
+        patient[tp].stx2_mnc['wmh'] = clsdir + 'wmh_' \
             + patient.id + '_' + tp + '.mnc'
 
         patient[tp].stx2_mnc['lobes'] = clsdir + 'lob_' + patient.id \

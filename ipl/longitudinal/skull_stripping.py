@@ -18,7 +18,7 @@ from optparse import OptionGroup  # to change when python updates in the machine
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
-from .t1_preprocessing import run_synthstrip_ov
+from .t1_preprocessing import run_synthstrip_onnx
 import ray
 
 
@@ -118,7 +118,7 @@ def pipeline_stx2_skullstripping(patient, tp):
 
     if not os.path.exists(params.stx_mask) \
         or not os.path.exists(params.qc_stx_mask):
-        runSkullstripping(params, synthstrip_ov=patient.synthstrip_ov)
+        runSkullstripping(params, synthstrip_onnx=patient.synthstrip_onnx)
 
 
     if 't2les' in patient[tp].native:
@@ -134,9 +134,9 @@ def pipeline_stx2_skullstripping(patient, tp):
 
 # Last preprocessing (or more common one)
 
-def runSkullstripping(params, synthstrip_ov=None):
+def runSkullstripping(params, synthstrip_onnx=None):
     if params.pipeline_version == '1.0':
-        skullstripping_v10(params, synthstrip_ov=synthstrip_ov)  # beast by simon fristed
+        skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx)  # beast by simon fristed
     else:
         print(' -- Chosen version not found!')
 
@@ -145,15 +145,15 @@ def runSkullstripping(params, synthstrip_ov=None):
 # needs image in standard space
 
 def skullstripping_v10(params,
-                       synthstrip_ov=None):
+                       synthstrip_onnx=None):
 
     with mincTools()  as minc:
-        if synthstrip_ov is not None:
+        if synthstrip_onnx is not None:
             # apply synthstrip in the native space to ease everything else
             # need to resample to 1x1x1mm^2
-            ray.get(run_synthstrip_ov.remote(params.stxt1, 
+            ray.get(run_synthstrip_onnx.remote(params.stxt1, 
                     params.stx_mask, 
-                    synthstrip_model=synthstrip_ov))
+                    synthstrip_model=synthstrip_onnx))
         else:
             # temporary images in the dimensions of beast database
             tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
@@ -197,7 +197,7 @@ def skullstripping_v10(params,
 
         # reformat mask into native space if needed
         if params.clp_mask is not None and \
-            synthstrip_ov is None and \
+            synthstrip_onnx is None and \
             os.path.exists(params.xfmt1) and \
             os.path.exists(params.clpt1):
 

@@ -94,14 +94,32 @@ def launchPipeline(options):
         if 'skullreg' in _opts:
             options.skullreg=_opts['skullreg']
             
-        if 'redskull_ov' in _opts:
-            options.redskull_ov=_opts['redskull_ov']
+        if 'redskull_onnx' in _opts:
+            options.redskull_onnx=_opts['redskull_onnx']
 
         if 'redskull_var' in _opts:
             options.redskull_var=_opts['redskull_var']
 
-        if 'synthstrip_ov' in _opts:
-            options.synthstrip_ov=_opts['synthstrip_ov']
+        if 'synthstrip_onnx' in _opts:
+            options.synthstrip_onnx=_opts['synthstrip_onnx']
+
+        if 'bison_pfx' in _opts:
+            options.bison_pfx=_opts['bison_pfx']
+        
+        if 'bison_atlas_pfx' in _opts:
+            options.bison_atlas_pfx=_opts['bison_atlas_pfx']
+            
+        if 'bison_method' in _opts:
+            options.bison_method=_opts['bison_method']
+
+        if 'wmh_bison_pfx' in _opts:
+            options.wmh_bison_pfx=_opts['wmh_bison_pfx']
+
+        if 'wmh_bison_atlas_pfx' in _opts:
+            options.wmh_bison_atlas_pfx=_opts['wmh_bison_atlas_pfx']
+        
+        if 'wmh_bison_method' in _opts:
+            options.wmh_bison_method=_opts['wmh_bison_method']
 
         if 'large_atrophy' in _opts:
             options.large_atrophy=_opts['large_atrophy']
@@ -280,14 +298,25 @@ def launchPipeline(options):
                 patients[id].fast     = options.fast
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
-                patients[id].redskull_ov = options.redskull_ov
+                patients[id].redskull_onnx = options.redskull_onnx
                 patients[id].redskull_var = options.redskull_var
-                patients[id].synthstrip_ov = options.synthstrip_ov
+                patients[id].synthstrip_onnx = options.synthstrip_onnx
+
+                patients[id].bison_pfx = options.bison_pfx
+                patients[id].bison_atlas_pfx = options.bison_atlas_pfx
+                patients[id].bison_method = options.bison_method
+                patients[id].wmh_bison_pfx = options.wmh_bison_pfx
+                patients[id].wmh_bison_atlas_pfx = options.wmh_bison_atlas_pfx
+                patients[id].wmh_bison_method = options.wmh_bison_method
+
+
+
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
                 patients[id].linreg   = options.linreg
                 patients[id].rigid    = options.rigid
                 patients[id].add      = options.add
+
 
                 patients[id].vbm_options = { 'vbm_fwhm':      options.vbm_blur,
                                              'vbm_resolution':options.vbm_res,
@@ -908,8 +937,7 @@ def parse_options():
         default=False,
         )
 
-    group.add_argument('--redskull_ov', 
-                     dest='redskull_ov',
+    group.add_argument('--redskull_onnx', 
                      help='omnivision library for redskull brain+skull',
                      default=None
                      )
@@ -921,12 +949,29 @@ def parse_options():
                      )
 
 
-    group.add_argument('--synthstrip_ov', 
-                     dest='synthstrip_ov',
-                     help='omnivision library for synthstrip segmentation'
+    group.add_argument('--synthstrip_onnx', 
+                     dest='synthstrip_onnx',
+                     help='onnx library for synthstrip segmentation'
                      )
     
-    
+    group.add_argument('--bison_pfx', 
+                     help='Bison tissue classification model prefix'
+                     )
+    group.add_argument('--bison_atlas_pfx', 
+                     help='Bison atlas prefix'
+                     )
+    group.add_argument('--bison_method', 
+                     help='Bison method'
+                     )
+    group.add_argument('--wmh_bison_pfx', 
+                     help='Bison tissue classification model prefix'
+                     )
+    group.add_argument('--wmh_bison_atlas_pfx', 
+                     help='Bison atlas prefix'
+                     )
+    group.add_argument('--wmh_bison_method', 
+                     help='Bison method'
+                     )
 
     group.add_argument(
         '--large_atrophy',

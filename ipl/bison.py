@@ -385,7 +385,7 @@ def init_clasifierr(method,n_jobs=None,random=None):
 
 
 def infer(input,
-          modalities=bison_modalities, n_cls=None, n_bins=None, 
+          modalities=bison_modalities, n_cls=None, n_bins = 256, 
           resample=False,n_jobs=None,method=None,batch=1,
           load_pfx=None,atlas_pfx=None,inverse_xfm=False,
           output=None,prob=False,
@@ -468,7 +468,7 @@ def infer(input,
 
 
 def train(sample_vol, 
-          random=None, method=None, output=None, clf=None, n_cls=None, n_bins=None, modalities=bison_modalities):
+          random=None, method=None, output=None, clf=None, n_cls=None, n_bins=256, modalities=bison_modalities):
     # 1st stage : estimage intensity histograms
     hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities)
     for i,j in hist.items():
@@ -487,11 +487,9 @@ def train(sample_vol,
 
 
 def run_cv(CV, sample_vol, 
-           random=None, method=None, output=None,clf=None, n_cls=None, n_bins=None, modalities=bison_modalities):
+           random=None, method=None, output=None,clf=None, n_cls=None, n_bins=256, modalities=bison_modalities):
     assert(method is not None)
-    assert(n_bins is not None)
     assert(n_cls is not None)
-    assert(modalities is not None)
 
     folds = CV
     # create subset

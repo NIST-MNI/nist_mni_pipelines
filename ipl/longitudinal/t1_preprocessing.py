@@ -30,12 +30,18 @@ import shutil
 
 import ray
 
-try:
-    from ipl.apply_multi_model_ov import segment_with_openvino
-    _have_segmentation_ov=True
-except:
-    _have_segmentation_ov=False
+# try:
+#     from ipl.apply_multi_model_ov import segment_with_openvino
+#     _have_segmentation_ov=True
+# except:
+#     _have_segmentation_ov=False
 
+
+try:
+    from ipl.apply_multi_model_onnx import segment_with_onnx
+    _have_segmentation_onnx=True
+except:
+    _have_segmentation_onnx=False
 
 
 
@@ -55,7 +61,7 @@ def pipeline_t1preprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
         and   os.path.exists(patient[tp].stx_ns_mnc['t1']) \
         and ( os.path.exists(patient[tp].stx_ns_mnc['redskull']) \
-              or patient.redskull_ov is None ):
+              or patient.redskull_onnx is None ):
         pass
     else:
         # # Run the appropiate version
@@ -161,18 +167,18 @@ def run_redskull_cpu(in_t1w, out_redskull,
                 )
 
 @ray.remote(num_cpus=8, memory=20000 * 1024 * 1024) # 
-def run_redskull_ov(in_t1w, out_redskull, 
+def run_redskull_onnx(in_t1w, out_redskull, 
         unscale_xfm, out_ns_skull, out_ns_redskull, 
         out_qc=None,qc_title=None,reference=None,
         redskull_model=None,
         redskull_var='seg' ):
-    assert _have_segmentation_ov, "Failed to import segment_with_openvino"
+    assert _have_segmentation_onnx, "Failed to import segment_with_onnx"
 
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_redskull):
             if redskull_var=='seg':
-                segment_with_openvino([in_t1w], out_redskull,
+                segment_with_onnx([in_t1w], out_redskull,
                                     model=redskull_model,
                                     whole=False, freesurfer=False, 
                                     normalize=True, 
@@ -182,7 +188,7 @@ def run_redskull_ov(in_t1w, out_redskull,
                                     threads=8 # HACK ! Openvino uses half of requested for some reason
                                     ) # 
             elif redskull_var=='synth':
-                segment_with_openvino([in_t1w], out_redskull,
+                segment_with_onnx([in_t1w], out_redskull,
                                     model=redskull_model,
                                     whole=True, freesurfer=True, 
                                     normalize=True, 
@@ -208,29 +214,29 @@ def run_redskull_ov(in_t1w, out_redskull,
                 )
 
 
-
-@ray.remote(num_cpus=12, memory=20000 * 1024 * 1024) # , memory=5000 * 1024 * 1024
-def run_synthstrip_ov(in_t1w, out_synthstrip, 
+@ray.remote(num_cpus=4, memory=10000 * 1024 * 1024) # uses about 10GB of RAM
+def run_synthstrip_onnx(in_t1w, out_synthstrip, 
         out_qc=None, qc_title=None, normalize_1x1x1=False,
         synthstrip_model=None ):
-    assert _have_segmentation_ov, "Failed to import segment_with_openvino"
+    
+    assert _have_segmentation_onnx, "Failed to import segment_with_openvino"
 
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_synthstrip):
             if normalize_1x1x1:
-                minc.resample_smooth(in_t1w,minc.tmp('t1_1x1x1.mnc'),unistep=1.0)
-                segment_with_openvino([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
+                minc.resample_smooth(in_t1w, minc.tmp('t1_1x1x1.mnc'), unistep=1.0)
+                segment_with_onnx([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=6 # HACK ! Openvino uses half of requested for some reason
+                                    threads=4 
                                     ) # 
                 minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
             else:
-                segment_with_openvino([in_t1w], out_synthstrip,
+                segment_with_onnx([in_t1w], out_synthstrip,
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=6 # HACK ! Openvino uses half of requested for some reason
+                                    threads=4 
                                     ) # 
 
         
@@ -272,16 +278,16 @@ def t1preprocessing_v10(patient, tp):
             shutil.copyfile(patient[tp].manual['clp_t1'],  patient[tp].clp['t1'])
             tmpt1 = patient[tp].clp['t1']  # In order to make the registration if needed
 
-        if patient.synthstrip_ov is not None:
+        if patient.synthstrip_onnx is not None:
             tmpmask = patient[tp].clp['mask']
             if not os.path.exists(patient[tp].clp['mask']):
                 # apply synthstrip in the native space to ease everything else
                 # need to resample to 1x1x1mm^2
-                ray.get(run_synthstrip_ov.remote(
+                ray.get(run_synthstrip_onnx.remote(
                             patient[tp].native['t1'], patient[tp].clp['mask'], 
                             out_qc=patient[tp].qc_jpg['synthstrip'],
                             normalize_1x1x1=True,
-                            synthstrip_model=patient.synthstrip_ov))
+                            synthstrip_model=patient.synthstrip_onnx))
                 
 
         if not os.path.exists( patient[tp].clp['t1'] ):
@@ -447,8 +453,8 @@ def t1preprocessing_v10(patient, tp):
                              like=modelt1,
                              transform=patient[tp].stx_ns_xfm['t1'])
 
-        if patient.redskull_ov is not None:
-            ray.get(run_redskull_ov.remote(
+        if patient.redskull_onnx is not None:
+            ray.get(run_redskull_onnx.remote(
                 patient[tp].stx_mnc['t1'], 
                 patient[tp].stx_mnc['redskull'],
                 patient[tp].stx_ns_xfm['unscale_t1'],
@@ -457,7 +463,7 @@ def t1preprocessing_v10(patient, tp):
                 out_qc=patient[tp].qc_jpg['stx_skull'],
                 qc_title=patient[tp].qc_title, 
                 reference=modelmask,
-                redskull_model=patient.redskull_ov,
+                redskull_model=patient.redskull_onnx,
                 redskull_var=patient.redskull_var ))
             
             # adjust scaling factor based on the skull here? 

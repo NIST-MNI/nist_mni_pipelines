@@ -14,13 +14,14 @@ from .general import *
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
+from ipl  import bison
+
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
 
 def pipeline_classification(patient, tp):
     if os.path.exists(patient[tp].stx2_mnc['classification']) \
         and os.path.exists(patient[tp].qc_jpg['classification']):
-        #print(' -- Classification - Processing already done!')
         pass
     else:
         classification_v10(patient, tp)  # beast by simon fristed
@@ -33,19 +34,66 @@ def pipeline_classification(patient, tp):
 
 
 def classification_v10(patient, tp):
-    with mincTools() as minc:  # TODO: convert to using mincTools calls
-        scans= [patient[tp].stx2_mnc['t1']]
-        if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
-            scans.append(patient[tp].stx2_mnc['t2'])
-        if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
-            scans.append(patient[tp].stx2_mnc['pd'])
-            
-        minc.classify_clean(scans,patient[tp].stx2_mnc['classification'],
-                            mask=patient[tp].stx2_mnc['masknoles'],
-                            xfm=patient[tp].nl_xfm,
-                            model_name=patient.modelname,
-                            model_dir=patient.modeldir)
-    return 0
+
+    # first run WMH classification , if possible
+    if patient.wmh_bison_atlas_pfx is not None:
+        #
+        # generate input list in bison format
+        wmh_bison_input={
+            'subject': [patient.id+'_'+tp],
+            't1': [patient[tp].stx2_mnc['t1']],
+            'xfm':[patient[tp].nl_xfm],
+            'mask':[patient[tp].stx2_mnc['masknoles']],
+            'output': patient[tp].stx2_mnc['wmh'],
+        }
+
+        # FOR now, use only T1, even though it is bad
+        # if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
+        #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
+        # if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
+        #     wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
+        bison.infer(wmh_bison_input, n_cls=1, n_jobs=1, batch=1,
+                    load_pfx=patient.wmh_bison_pfx,
+                    atlas_pfx=patient.wmh_bison_atlas_pfx,
+                    method=patient.wmh_bison_method,
+                    resample=True, inverse_xfm=True)
+
+    if patient.bison_atlas_pfx is not None:
+        # TODO: exclude WMH from the mask ?
+        # generate input list in bison format
+        bison_input={
+            'subject': [patient.id+'_'+tp],
+            't1': [patient[tp].stx2_mnc['t1']],
+            'xfm':[patient[tp].nl_xfm],
+            'mask':[patient[tp].stx2_mnc['masknoles']],
+            'output': patient[tp].stx2_mnc['classification'],
+        }
+
+        # FOR now, use only T1, even though it is bad
+        # if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
+        #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
+        # if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
+        #     wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
+        bison.infer(bison_input, n_cls=1, n_jobs=1, batch=1,
+                    load_pfx=patient.bison_pfx,
+                    atlas_pfx=patient.bison_atlas_pfx,
+                    method=patient.bison_method,
+                    resample=True, inverse_xfm=True)
+
+    else: # fall back to the old method
+
+        with mincTools() as minc:  # TODO: convert to using mincTools calls
+            scans= [patient[tp].stx2_mnc['t1']]
+            if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
+                scans.append(patient[tp].stx2_mnc['t2'])
+            if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
+                scans.append(patient[tp].stx2_mnc['pd'])
+                
+            minc.classify_clean(scans,patient[tp].stx2_mnc['classification'],
+                                mask=patient[tp].stx2_mnc['masknoles'],
+                                xfm=patient[tp].nl_xfm,
+                                model_name=patient.modelname,
+                                model_dir=patient.modeldir)
 
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
