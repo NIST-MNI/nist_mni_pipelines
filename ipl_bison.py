@@ -423,11 +423,214 @@ def get_batch(dict_array,batch,batch_size):
         out[i]=dict_array[i][batch*batch_size:min((batch+1)*batch_size,n)]
     return out
 
+def init_clasifierr(method,n_jobs=None,random=None):
+    
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+    from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+    from sklearn import svm
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.pipeline import make_pipeline
+    from sklearn.naive_bayes import GaussianNB
+
+    if   method == 'RF-':
+        clf = RandomForestClassifier(n_estimators = 64,  max_depth=10, verbose=False, random_state=random)
+    elif method == 'RF0':
+        clf = RandomForestClassifier(n_estimators = 128,  max_depth=10, verbose=False, random_state=random)
+    elif method == 'RF1':
+        clf = RandomForestClassifier(n_estimators = 128,  max_depth=20, verbose=True, random_state=random)
+    elif method == 'RF2':
+        clf = RandomForestClassifier(n_estimators = 128,  max_depth=30, verbose=False, random_state=random)
+    elif method == 'RF3':
+        clf = RandomForestClassifier(n_estimators = 128,  max_depth=40, verbose=False, random_state=random)
+    elif method == 'SVC':
+        clf = make_pipeline(StandardScaler(),svm.LinearSVC(max_iter=1000, C=0.1, dual=False))
+    elif method == 'oSVC':
+        from sklearn.multiclass import OutputCodeClassifier
+        clf = make_pipeline(StandardScaler(),svm.LinearSVC(max_iter=1000, C=0.1, dual=False))
+        clf = OutputCodeClassifier(estimator=clf, random_state=random)
+    elif method == 'NB':
+        clf = make_pipeline(StandardScaler(),GaussianNB(priors=None))
+    elif method == 'LDA':
+        clf = LinearDiscriminantAnalysis(solver='eigen')
+    elif method == 'QDA':
+        clf = QuadraticDiscriminantAnalysis(reg_param=1e-6) # new version!
+    elif method == 'HGB1':
+        clf = HistGradientBoostingClassifier(max_leaf_nodes = 31,  verbose=True, random_state=random)
+    elif method == 'HGB2':
+        clf = HistGradientBoostingClassifier(max_leaf_nodes = 64, max_iter=400, verbose=True, random_state=random)
+    else:
+        raise  Error(f"Unsupported classifier: {method}")
+    
+    if n_jobs is not None and not isinstance(clf, HistGradientBoostingClassifier):
+        clf.n_jobs = n_jobs
+
+
+def infer(in_csv,modalities=None, n_cls=None, n_bins=None, 
+          resample=False,n_jobs=None,method=None,batch=1,
+          load_pfx=None,atlas_pfx=None,inverse_xfm=False,
+          output=None,prob=False,
+          progress=False):
+    
+    assert(method is not None)
+    assert(n_bins is not None)
+    assert(n_cls is not None)
+    assert(modalities is not None)
+    assert(load_pfx is not None)
+    # TODO: use output column if available!
+    #assert(output is not None)
+
+    infer = read_csv_dict(in_csv)
+    # recoginized headers:
+    # t1,t2,pd,flair,ir
+    # pCls<n>,labels,mask
+    # minimal set: one modality, p<n>, av_modality, labels, mask  for training 
+    # sanity check
+    if 'subject' not in infer:
+        raise Error('subject is missing')
+
+    if 'mask' not in infer: # TODO: train with whole image?
+        raise Error('mask is missing')
+
+    present_modalities = []
+    hist = {}
+
+    for m in modalities:
+        if m in infer:
+            if not resample and f'av_{m}' not in infer:
+                raise Error(f'missing av_{m}')
+            present_modalities.append(m)
+            hist[m] = joblib.load(load_pfx + os.sep + f'{m}_Label.pkl')
+
+    for i in range(n_cls):
+        if not resample and f'p{i+1}' not in infer:
+            raise Error(f'p{i+1} is missing')
+
+    # load classifier
+    clf = joblib.load(load_pfx + os.sep + f'{method}.pkl') # TODO: use appropriate name
+    if n_jobs is not None:
+        clf.n_jobs = n_jobs
+
+    nsamp=len(infer['subject'])
+    if progress:print(f"Processing {nsamp} volumes, batch size:{batch}...",flush=True)
+    for b in range(math.ceil(nsamp/batch)):
+        infer_sub = get_batch(infer, b, batch)
+        infer_vol = load_all_volumes(infer_sub, 
+                        n_cls, 
+                        modalities=modalities,
+                        resample=resample, 
+                        atlas_pfx=atlas_pfx, 
+                        inverse_xfm=inverse_xfm,
+                        n_jobs=n_jobs)
+        
+        for i,subj in enumerate( infer_vol['subject'] ):
+            X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
+            out  = clf.predict(X_)
+            outf = output + os.sep + subj +f'_{method}.mnc'
+            if progress: print("Saving:", outf, flush=True)
+            save_labels(outf, infer['mask'][i], out, mask=infer_vol['mask'][i])
+            if prob:
+                # saving probabilites
+                out_p = clf.predict_proba(X_)
+                for c in range(out_p.shape[1]):
+                    outf = output + os.sep + infer['subject'][i]+f'_p{c}_{method}.mnc'
+                    if progress: print("Saving:", outf, flush=True)
+                    save_cnt(outf, infer['mask'][i], out_p[:,c], mask=infer_vol['mask'][i])
+        if progress: print(f"{b}\t",flush=True,end='')
+    if progress:print("")
+    # done
+
+
+def train(sample_vol, random=None, method=None, output=None, clf=None, n_cls=None, n_bins=None, modalities=None):
+    # 1st stage : estimage intensity histograms
+    hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities)
+    for i,j in hist.items():
+        joblib.dump(j, output + os.sep + f'{i}_Label.pkl')
+        draw_histograms(j, output + os.sep + f'{i}_hist.png', modality=i)
+
+    print("Loading features")
+    # load image features
+    X,Y = load_XY(sample_vol, hist, n_cls, n_bins)
+
+    clf = clf.fit(X , Y)
+    
+    path_save_classifier = output + os.sep + f'{method}.pkl' # TODO: use appropriate name 
+    print("Saving results to ", path_save_classifier)
+    joblib.dump(clf, path_save_classifier)
+
+
+def run_cv(CV, sample_vol, random=None, method=None, output=None,clf=None, n_cls=None, n_bins=None, modalities=None):
+    assert(method is not None)
+    assert(n_bins is not None)
+    assert(n_cls is not None)
+    assert(modalities is not None)
+
+    folds = CV
+    # create subset
+    subject     = sample_vol['subject']
+    unique_subj = np.unique(subject)
+
+    _state = None
+    if random is not None:
+        _state = np.random.get_state()
+        np.random.seed(random)
+
+    np.random.shuffle( unique_subj )
+
+    if random is not None:
+        np.random.set_state(_state)
+
+    n_samples = len( unique_subj )
+    cv_res={'fold':[], 'cls':[], 'kappa':[], 'subject':[], 'method':[], 'gt_vol':[], 'sa_vol':[] }
+
+    for fold in range(folds):
+        print(f"Fold:{fold}")
+        training = set( unique_subj[0:(fold * n_samples // folds)]).union(set(unique_subj[((fold + 1) * n_samples // folds):n_samples] ))
+        testing  = set( unique_subj[(fold * n_samples // folds): ((fold + 1) * n_samples // folds)] )
+
+        train_subset = np.array([ i for i,s in enumerate(subject) if s in training ],dtype=int)
+        test_subset  = np.array([ i for i,s in enumerate(subject) if s in testing  ],dtype=int)
+        print("Estimating histogram")
+        hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities, subset=train_subset)
+
+        tr_X, tr_Y = load_XY(sample_vol, hist, n_cls, n_bins,subset=train_subset)
+        te_X, te_Y = load_XY(sample_vol, hist, n_cls, n_bins,subset=test_subset, noconcat=True)
+        te_s       = subject[test_subset]
+
+        print("Training classifier")
+        clf = clf.fit(tr_X , tr_Y)
+        
+        print("Classifying test set:",te_s)
+        for x,y,s in zip(te_X,te_Y,te_s):
+            te_out  = clf.predict(x)
+            for c in range(n_cls):
+                gt = (y      == (c+1))
+                sa = (te_out == (c+1))
+                kappa = 2.0 * (gt * sa).sum()/(gt.sum() + sa.sum())
+                gt_vol = float(gt.sum())
+                sa_vol = float(sa.sum())
+                #res[s][str(c)] = kappa
+                print(f"\t{s},{c+1},{kappa},{gt_vol},{sa_vol}")
+                cv_res['fold'].append(fold)
+                cv_res['cls'].append(c+1)
+                cv_res['kappa'].append(kappa)
+                cv_res['subject'].append(s)
+                cv_res['method'].append(method)
+                cv_res['gt_vol'].append(gt_vol)
+                cv_res['sa_vol'].append(sa_vol)
+
+    with open(output + os.sep + f'{method}_cv.json','w') as f:
+        json.dump(cv_res, f, indent=2)
+
+
 if __name__ == "__main__":
     options = parse_options()
     n_cls = options.n_cls
     n_bins = 256
     modalities = ('t1', 't2', 'pd', 'flair', 'ir','mp2t1', 'mp2uni')
+
+    clf = init_clasifierr(options.method, n_jobs=options.n_jobs, random=options.random)
 
     if options.train is not None and options.output is not None:
         train = read_csv_dict(options.train)
@@ -466,187 +669,21 @@ if __name__ == "__main__":
         np.random.set_state(_state)
         n_feat = n_cls # p_spatial 
 
-        # Random Forest
-        from sklearn.ensemble import RandomForestClassifier,HistGradientBoostingClassifier
-        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-        from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-        from sklearn import svm
-        from sklearn.preprocessing import StandardScaler
-        from sklearn.pipeline import make_pipeline
-        from sklearn.naive_bayes import GaussianNB
-
-        #TODO: make a proper name for method!!!
-
-        if   options.method == 'RF-':
-            clf = RandomForestClassifier(n_estimators = 64,  max_depth=10, verbose=False, random_state=options.random)
-        elif options.method == 'RF0':
-            clf = RandomForestClassifier(n_estimators = 128,  max_depth=10, verbose=False, random_state=options.random)
-        elif options.method == 'RF1':
-            clf = RandomForestClassifier(n_estimators = 128,  max_depth=20, verbose=True, random_state=options.random)
-        elif options.method == 'RF2':
-            clf = RandomForestClassifier(n_estimators = 128,  max_depth=30, verbose=False, random_state=options.random)
-        elif options.method == 'RF3':
-            clf = RandomForestClassifier(n_estimators = 128,  max_depth=40, verbose=False, random_state=options.random)
-        elif options.method == 'SVC':
-            clf = make_pipeline(StandardScaler(),svm.LinearSVC(max_iter=1000, C=0.1, dual=False))
-        elif options.method == 'oSVC':
-            from sklearn.multiclass import OutputCodeClassifier
-            clf = make_pipeline(StandardScaler(),svm.LinearSVC(max_iter=1000, C=0.1, dual=False))
-            clf = OutputCodeClassifier(estimator=clf, random_state=options.random)
-        elif options.method == 'NB':
-            clf = make_pipeline(StandardScaler(),GaussianNB(priors=None))
-        elif options.method == 'LDA':
-            clf = LinearDiscriminantAnalysis(solver='eigen')
-        elif options.method == 'QDA':
-            clf = QuadraticDiscriminantAnalysis(reg_param=1e-6) # new version!
-        elif options.method == 'HGB1':
-            clf = HistGradientBoostingClassifier(max_leaf_nodes = 31,  verbose=True, random_state=options.random)
-        elif options.method == 'HGB2':
-            clf = HistGradientBoostingClassifier(max_leaf_nodes = 64, max_iter=400, verbose=True, random_state=options.random)
-        else:
-            raise  Error(f"Unsupported classifier: {options.method}")
-        
-        if options.n_jobs is not None and not isinstance(clf, HistGradientBoostingClassifier):
-            clf.n_jobs = options.n_jobs
-
         print("Classifier:", clf)
 
         if options.CV is not None:
-            folds = options.CV
-            # create subset
-            subject     = sample_vol['subject']
-            unique_subj = np.unique(subject)
-
-            _state = None
-            if options.random is not None:
-                _state = np.random.get_state()
-                np.random.seed(options.random)
-
-            np.random.shuffle( unique_subj )
-
-            if options.random is not None:
-                np.random.set_state(_state)
-
-            n_samples = len( unique_subj )
-            cv_res={'fold':[], 'cls':[], 'kappa':[], 'subject':[], 'method':[], 'gt_vol':[], 'sa_vol':[] }
-
-            for fold in range(folds):
-                print(f"Fold:{fold}")
-                training = set( unique_subj[0:(fold * n_samples // folds)]).union(set(unique_subj[((fold + 1) * n_samples // folds):n_samples] ))
-                testing  = set( unique_subj[(fold * n_samples // folds): ((fold + 1) * n_samples // folds)] )
-
-                train_subset = np.array([ i for i,s in enumerate(subject) if s in training ],dtype=int)
-                test_subset  = np.array([ i for i,s in enumerate(subject) if s in testing  ],dtype=int)
-                print("Estimating histogram")
-                hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities, subset=train_subset)
-
-                tr_X,tr_Y = load_XY(sample_vol, hist, n_cls, n_bins,subset=train_subset)
-                te_X,te_Y = load_XY(sample_vol, hist, n_cls, n_bins,subset=test_subset, noconcat=True)
-                te_s      = subject[test_subset]
-
-                print("Training classifier")
-                clf = clf.fit(tr_X , tr_Y)
-                
-                print("Classifying test set:",te_s)
-                for x,y,s in zip(te_X,te_Y,te_s):
-                    te_out  = clf.predict(x)
-                    for c in range(n_cls):
-                        gt = (y      == (c+1))
-                        sa = (te_out == (c+1))
-                        kappa = 2.0 * (gt * sa).sum()/(gt.sum() + sa.sum())
-                        gt_vol = float(gt.sum())
-                        sa_vol = float(sa.sum())
-                        #res[s][str(c)] = kappa
-                        print(f"\t{s},{c+1},{kappa},{gt_vol},{sa_vol}")
-                        cv_res['fold'].append(fold)
-                        cv_res['cls'].append(c+1)
-                        cv_res['kappa'].append(kappa)
-                        cv_res['subject'].append(s)
-                        cv_res['method'].append(options.method)
-                        cv_res['gt_vol'].append(gt_vol)
-                        cv_res['sa_vol'].append(sa_vol)
-
-            with open(options.output + os.sep + f'{options.method}_cv.json','w') as f:
-                json.dump(cv_res, f, indent=2)
+            run_cv(options.CV, sample_vol, random=options.random, method=options.method,output=options.output,clf=clf, n_cls=n_cls, n_bins=n_bins, modalities=modalities)
         else:
-            # 1st stage : estimage intensity histograms
-            hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities)
-            for i,j in hist.items():
-                joblib.dump(j, options.output + os.sep + f'{i}_Label.pkl')
-                draw_histograms(j,options.output + os.sep + f'{i}_hist.png', modality=i)
-
-            print("Loading features")
-            # load image features
-            X,Y = load_XY(sample_vol, hist, n_cls, n_bins)
-
-            # X = np.concatenate(X_, axis=0)
-            # Y = np.concatenate(Y_, axis=0)
-
-            clf = clf.fit(X , Y)
-            
-            path_save_classifier = options.output + os.sep + f'{options.method}.pkl' # TODO: use appropriate name 
-            print("Saving results to ", path_save_classifier)
-            joblib.dump(clf, path_save_classifier)
+            train(sample_vol, random=options.random, method=options.method,output=options.output,clf=clf, n_cls=n_cls, n_bins=n_bins, modalities=modalities)
 
     elif options.infer is not None and options.output is not None and options.load is not None:
-        infer = read_csv_dict(options.infer)
-        # recoginized headers:
-        # t1,t2,pd,flair,ir
-        # pCls<n>,labels,mask
-        # minimal set: one modality, p<n>, av_modality, labels, mask  for training 
-        # sanity check
-        if 'subject' not in infer:
-            raise Error('subject is missing')
-        
-        if 'mask' not in infer: # TODO: train with whole image?
-            raise Error('mask is missing')
-        
-        present_modalities = []
-        hist = {}
-        for m in modalities:
-            if m in infer:
-                if not options.resample and f'av_{m}' not in infer:
-                    raise Error(f'missing av_{m}')
-                present_modalities.append(m)
-                hist[m] = joblib.load(options.load + os.sep + f'{m}_Label.pkl')
-        
-        # load classifier
-        clf = joblib.load(options.load + os.sep + f'{options.method}.pkl') # TODO: use appropriate name
-        if options.n_jobs is not None:
-            clf.n_jobs = options.n_jobs
-
-        for i in range(n_cls):
-            if not options.resample and f'p{i+1}' not in infer:
-                raise Error(f'p{i+1} is missing')
-        
-        nsamp=len(infer['subject'])
-        print(f"Processing {nsamp} volumes, batch size:{options.batch}...",flush=True)
-        for b in range(math.ceil(nsamp/options.batch)):
-            infer_sub = get_batch(infer, b, options.batch)
-            infer_vol = load_all_volumes(infer_sub, n_cls, modalities=modalities,
-                            resample=options.resample, 
-                            atlas_pfx=options.atlas_pfx, 
-                            inverse_xfm=options.inverse_xfm,
-                            n_jobs=options.n_jobs)
-            
-            for i,subj in enumerate( infer_vol['subject'] ):
-                X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
-                out  = clf.predict(X_)
-                outf = options.output + os.sep + subj +f'_{options.method}.mnc'
-                print("Saving:", outf, flush=True)
-                save_labels(outf, infer['mask'][i], out, mask=infer_vol['mask'][i])
-                if options.prob:
-                    # saving probabilites
-                    out_p = clf.predict_proba(X_)
-                    for c in range(out_p.shape[1]):
-                        outf = options.output + os.sep + infer['subject'][i]+f'_p{c}_{options.method}.mnc'
-                        print("Saving:", outf, flush=True)
-                        save_cnt(outf, infer['mask'][i], out_p[:,c], mask=infer_vol['mask'][i])
-            print(f"{b}\t",flush=True,end='')
-        print("")
+        infer(options.infer, modalities=modalities, n_cls=n_cls, n_bins=n_bins, 
+          resample=options.resample, n_jobs=options.n_jobs, method=options.method, batch=options.batch,
+          load_pfx=options.load, atlas_pfx=options.atlas_pfx, inverse_xfm=options.inverse_xfm,
+          output=options.output, prob=options.prob,
+          progress=True)
     else:
-        print("Error in arguments")
+        print("Error in arguments, run with --help")
         exit(1)
-
 
 # kate: indent-width 4; replace-tabs on; remove-trailing-space on; hl python; show-tabs on
