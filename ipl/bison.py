@@ -22,7 +22,7 @@ except ModuleNotFoundError:
 import numpy as np
 
 # using joblib to parallelize jobs (?)
-from multiprocessing import Pool
+#from multiprocessing import Pool
 
 bison_modalities=('t1', 't2', 'pd', 'flair', 'ir','mp2t1', 'mp2uni')
 
@@ -168,7 +168,7 @@ def load_all_volumes(train, n_cls,
             raise Error("Need to provide XFM files in xfm column")
 
         with mincTools() as minc:
-            with Pool(processes=n_jobs) as pool: 
+            #with Pool(processes=n_jobs) as pool: 
                 jobs={}
                 for m in modalities:
                     if m in train:
@@ -176,28 +176,30 @@ def load_all_volumes(train, n_cls,
 
                         for i,xfm in enumerate(train["xfm"]):
                             jobs[f'av_{m}'].append(
-                                pool.apply_async(
-                                    resample_job, (f"{atlas_pfx}{m}.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
+                                #pool.apply_async(
+                                    resample_job(f"{atlas_pfx}{m}.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
                                          train["mask"][i],xfm,inverse_xfm)
-                                    )
+                                #    )
                             )
                 
                 for c in range(n_cls):
                     jobs[f'p{c+1}']=[]
                     for i,xfm in enumerate(train["xfm"]):
                         jobs[f'p{c+1}'].append(
-                                pool.apply_async(
-                                    resample_job, (f"{atlas_pfx}{c+1}.mnc",minc.tmp(f"{i}_p{c+1}.mnc"),
+                                #pool.apply_async(
+                                    resample_job(f"{atlas_pfx}{c+1}.mnc",minc.tmp(f"{i}_p{c+1}.mnc"),
                                          train["mask"][i], xfm, inverse_xfm)
-                                    )
+                                #    )
                             )
                 # collect results of all jobs
                 for m in modalities:
                     if m in train:
-                        r=[i.get() for i in jobs[f'av_{m}']]
+                        #r=[i.get() for i in jobs[f'av_{m}']]
+                        r=jobs[f'av_{m}']
                         sample_vol[f'av_{m}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
                 for c in range(n_cls):
-                    r=[i.get() for i in jobs[f'p{c+1}']]
+                    #r=[i.get() for i in jobs[f'p{c+1}']]
+                    r=jobs[f'p{c+1}']
                     sample_vol[f'p{c+1}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
         # here all temp files should be removed    
     else:
@@ -426,7 +428,9 @@ def infer(input,
             raise Error(f'p{i+1} is missing')
 
     # load classifier
-    clf = joblib.load(load_pfx + os.sep + f'{method}.pkl') # TODO: use appropriate name
+    model_f=load_pfx + os.sep + f'{method}.pkl'
+    print(f"{model_f=}")
+    clf = joblib.load(model_f) # TODO: use appropriate name
     if n_jobs is not None:
         clf.n_jobs = n_jobs
 

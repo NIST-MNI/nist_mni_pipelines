@@ -37,11 +37,11 @@ import ray
 #     _have_segmentation_ov=False
 
 
-try:
-    from ipl.apply_multi_model_onnx import segment_with_onnx
-    _have_segmentation_onnx=True
-except:
-    _have_segmentation_onnx=False
+#try:
+from ipl.apply_multi_model_onnx import segment_with_onnx
+_have_segmentation_onnx=True
+#except:
+#    _have_segmentation_onnx=False
 
 
 
@@ -55,7 +55,7 @@ def pipeline_t1preprocessing(patient, tp):
 
     if os.path.exists(patient[tp].qc_jpg['stx_t1']) \
         and os.path.exists(patient[tp].clp['t1']) \
-        and (os.path.exists(patient[tp].clp['mask']) or patient.synthstrip_ov is None) \
+        and (os.path.exists(patient[tp].clp['mask']) or patient.synthstrip_onnx is None) \
         and os.path.exists(patient[tp].stx_xfm['t1']) \
         and os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
@@ -166,7 +166,7 @@ def run_redskull_cpu(in_t1w, out_redskull,
                 clamp=True
                 )
 
-@ray.remote(num_cpus=8, memory=20000 * 1024 * 1024) # 
+@ray.remote(num_cpus=4, memory=10000 * 1024 * 1024) # 
 def run_redskull_onnx(in_t1w, out_redskull, 
         unscale_xfm, out_ns_skull, out_ns_redskull, 
         out_qc=None,qc_title=None,reference=None,
@@ -219,7 +219,7 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
         out_qc=None, qc_title=None, normalize_1x1x1=False,
         synthstrip_model=None ):
     
-    assert _have_segmentation_onnx, "Failed to import segment_with_openvino"
+    assert _have_segmentation_onnx, "Failed to import segment_with_onnx"
 
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
@@ -229,14 +229,14 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
                 segment_with_onnx([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=4 
+                                    threads=4,dist=True,largest=True,
                                     ) # 
                 minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
             else:
                 segment_with_onnx([in_t1w], out_synthstrip,
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=4 
+                                    threads=4 ,dist=True,largest=True,
                                     ) # 
 
         
@@ -310,7 +310,7 @@ def t1preprocessing_v10(patient, tp):
                 or not os.path.exists( patient[tp].nuc['t1']):
 
                 if patient.n4:
-                    if patient.synthstrip_ov is not None: # using synthstrip for N4 mask
+                    if patient.synthstrip_onnx is not None: # using synthstrip for N4 mask
                         dist=200
                         if patient.mri3T: dist=50 # ??
                         
@@ -369,7 +369,7 @@ def t1preprocessing_v10(patient, tp):
                         )
                 elif patient.mask_n3:
                     # 2. Reformat mask
-                    if patient.synthstrip_ov is None:
+                    if patient.synthstrip_onnx is None:
                         ipl.registration.linear_register( tmpt1, modelt1, tmpxfm,
                                 init_xfm=init_xfm, 
                                 objective='-nmi', 
@@ -396,7 +396,7 @@ def t1preprocessing_v10(patient, tp):
                         )
                 else:
                     minc.nu_correct( tmpnlm,
-                                     mask=(tmpmask if patient.synthstrip_ov is not None else None),
+                                     mask=(tmpmask if patient.synthstrip_onnx is not None else None),
                                      output_image=tmpn3,
                                      mri3t=patient.mri3T,
                                      output_field=patient[tp].nuc['t1'],
@@ -416,7 +416,7 @@ def t1preprocessing_v10(patient, tp):
 
         # TODO: implement skull-based scaling here?
         if not os.path.exists( patient[tp].stx_xfm['t1']):
-            if patient.synthstrip_ov is not None:
+            if patient.synthstrip_onnx is not None:
                 # HACK: using masks for initial registration
                 ipl.registration.linear_register( tmpmask, modelmask,
                                     minc.tmp('mask_init.xfm'),

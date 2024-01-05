@@ -15,9 +15,19 @@ from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
 from ipl  import bison
+from threadpoolctl import threadpool_limits
+import ray
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
+
+@ray.remote(num_cpus=4, memory=10000 * 1024 * 1024) # uses about 10GB of RAM
+def run_bison(*args,**kwargs):
+    #bison.infer(*args)
+    with threadpool_limits(limits=4):
+        bison.infer(*args,**kwargs)
+
+
 
 def pipeline_classification(patient, tp):
     if os.path.exists(patient[tp].stx2_mnc['classification']) \
@@ -40,11 +50,11 @@ def classification_v10(patient, tp):
         #
         # generate input list in bison format
         wmh_bison_input={
-            'subject': [patient.id+'_'+tp],
-            't1': [patient[tp].stx2_mnc['t1']],
-            'xfm':[patient[tp].nl_xfm],
-            'mask':[patient[tp].stx2_mnc['masknoles']],
-            'output': patient[tp].stx2_mnc['wmh'],
+            'subject':[patient.id+'_'+tp],
+            't1':     [patient[tp].stx2_mnc['t1']],
+            'xfm':    [patient[tp].nl_xfm],
+            'mask':   [patient[tp].stx2_mnc['masknoles']],
+            'output': [patient[tp].stx2_mnc['wmh']],
         }
 
         # FOR now, use only T1, even though it is bad
@@ -52,21 +62,22 @@ def classification_v10(patient, tp):
         #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
         # if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
         #     wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
-        bison.infer(wmh_bison_input, n_cls=1, n_jobs=1, batch=1,
-                    load_pfx=patient.wmh_bison_pfx,
-                    atlas_pfx=patient.wmh_bison_atlas_pfx,
-                    method=patient.wmh_bison_method,
-                    resample=True, inverse_xfm=True)
+        ray.get(run_bison.remote(wmh_bison_input, n_cls=1, n_jobs=4, batch=1,
+                        load_pfx=patient.wmh_bison_pfx,
+                        atlas_pfx=patient.wmh_bison_atlas_pfx,
+                        method=patient.wmh_bison_method,
+                        resample=True, inverse_xfm=True,
+                        progress=True))
 
     if patient.bison_atlas_pfx is not None:
         # TODO: exclude WMH from the mask ?
         # generate input list in bison format
         bison_input={
             'subject': [patient.id+'_'+tp],
-            't1': [patient[tp].stx2_mnc['t1']],
-            'xfm':[patient[tp].nl_xfm],
-            'mask':[patient[tp].stx2_mnc['masknoles']],
-            'output': patient[tp].stx2_mnc['classification'],
+            't1':      [patient[tp].stx2_mnc['t1']],
+            'xfm':     [patient[tp].nl_xfm],
+            'mask':    [patient[tp].stx2_mnc['masknoles']],
+            'output':  [patient[tp].stx2_mnc['classification']],
         }
 
         # FOR now, use only T1, even though it is bad
@@ -74,11 +85,12 @@ def classification_v10(patient, tp):
         #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
         # if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
         #     wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
-        bison.infer(bison_input, n_cls=1, n_jobs=1, batch=1,
-                    load_pfx=patient.bison_pfx,
-                    atlas_pfx=patient.bison_atlas_pfx,
-                    method=patient.bison_method,
-                    resample=True, inverse_xfm=True)
+        ray.get(run_bison.remote(bison_input, n_cls=3, n_jobs=4, batch=1,
+                        load_pfx=patient.bison_pfx,
+                        atlas_pfx=patient.bison_atlas_pfx,
+                        method=patient.bison_method,
+                        resample=True, inverse_xfm=True,
+                        progress=True))
 
     else: # fall back to the old method
 

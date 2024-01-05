@@ -14,8 +14,8 @@ import math
 import numpy as np
 
 from minc2_simple import minc2_file
-from minc.io import *
-from minc.geo import *
+from .minc.io  import *
+from .minc.geo import *
 
 import onnxruntime
 from onnx import numpy_helper
