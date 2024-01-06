@@ -25,6 +25,7 @@ import ray
 def run_bison_wmh(wmh_bison_input,bison_input,wmh_out,cls_out,
                   wmh_bison_pfx=None,
                   wmh_bison_atlas_pfx=None,
+                  wmh_bison_atlases=None,
                   wmh_bison_method=None,
                   bison_atlases=None,
                   bison_pfx=None,
@@ -43,6 +44,7 @@ def run_bison_wmh(wmh_bison_input,bison_input,wmh_out,cls_out,
                 bison.infer(wmh_bison_input, n_cls=1, batch=1,
                             load_pfx=wmh_bison_pfx,
                             atlas_pfx=wmh_bison_atlas_pfx,
+                            atlases=wmh_bison_atlases,
                             method=wmh_bison_method,
                             resample=True, inverse_xfm=True,
                             n_jobs=n_jobs)
@@ -95,12 +97,13 @@ def classification_v10(patient, tp):
             't1':     [patient[tp].stx2_mnc['t1']],
             'xfm':    [patient[tp].nl_xfm],
             'mask':   [patient[tp].stx2_mnc['masknoles']],
-            #'output': [patient[tp].stx2_mnc['wmh']],
         }
         # if patient.wmh_bison_atlas_pfx is None:
         #     # need to populate atlases
-        #     wmh_bison_atlases={'t1':f"{patient.modeldir}/{patient.modelname}.mnc"}
-        #     wmh_bison_atlases={'p1':f"{patient.modeldir}/{patient.modelname}.mnc"}
+        wmh_bison_atlases={'av_t1':f"{patient.modeldir}/{patient.modelname}.mnc", # standard T1w model
+                            # 'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
+                            # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
+                           'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
         # FOR now, use only T1, even though it is bad
         # if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
         #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
@@ -122,8 +125,8 @@ def classification_v10(patient, tp):
         if patient.bison_atlas_pfx is None:
             # need to populate atlases
             bison_atlases={ 'av_t1':f"{patient.modeldir}/{patient.modelname}.mnc",
-         #                   'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
-         #                   'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
+                            # 'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
+                            # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
                             'p1':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_csf_')}.mnc",
                             'p2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_gm_')}.mnc",
                             'p3':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_wm_')}.mnc"
@@ -131,17 +134,13 @@ def classification_v10(patient, tp):
         else:
             bison_atlases=None
 
-        # FOR now, use only T1, even though it is bad
-        #if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
-        #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
-        #if 'pd' in patient[tp].stx2_mnc and not patient.onlyt1:
-        #     wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
+        # Standard bison trained only on T1w scans
         run_bison_wmh_c=run_bison_wmh.options(num_cpus=patient.threads)
         ray.get(run_bison_wmh_c.remote(bison_input, bison_input,
                         patient[tp].stx2_mnc['wmh'],
                         patient[tp].stx2_mnc['classification'],
                         wmh_bison_pfx=patient.wmh_bison_pfx,
-                        wmh_bison_atlas_pfx=patient.wmh_bison_atlas_pfx,
+                        wmh_bison_atlases=wmh_bison_atlases,
                         wmh_bison_method=patient.wmh_bison_method,
                         bison_atlases=bison_atlases,
                         bison_pfx=patient.bison_pfx,
