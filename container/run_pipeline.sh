@@ -11,7 +11,7 @@ fi
 PRL=4
 THREADS=4
 
-python nist_mni_pipelines/iplLongitudinalPipeline.py \
+python /opt/pipeline/iplLongitudinalPipeline.py \
     -3 \
     --denoise \
     -l $in_lst \

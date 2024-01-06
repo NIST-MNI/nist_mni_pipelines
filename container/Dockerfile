@@ -30,6 +30,7 @@ RUN chown $MAMBA_USER:$MAMBA_USER -R /opt/models /opt/pipeline
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0 /opt/models/ipl_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0 /opt/models/wmh_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip /opt/models/synthstrip
+COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 
 # make a clean image without temporary files
 FROM mambaorg/micromamba:1.5.6 
@@ -59,5 +60,5 @@ COPY --from=builder /opt/models   /opt/models
 # USER $MAMBA_USER
 
 # SHELL ["/usr/local/bin/_dockerfile_shell.sh"]
-# ENTRYPOINT ["/usr/local/bin/_entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "/opt/pipeline/run_pipeline.sh"]
 ENV PYTHONPATH=/opt/pipeline
