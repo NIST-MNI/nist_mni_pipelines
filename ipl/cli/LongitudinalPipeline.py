@@ -1073,6 +1073,14 @@ def parse_options():
         action='store_true',
         default=False,
         )
+    
+    group.add_argument(
+        '-q',
+        '--quiet',
+        help='Suppress some logging messages',
+        action='store_true',
+        default=False,
+        )
 
     group.add_argument('-f', '--fast', dest='fast',
                      help='Fast mode : quick & dirty mostly for testing pipeline'
@@ -1111,14 +1119,13 @@ def main():
     opts.temporalregu = False
 
     if opts.ray_start is not None: # HACK?
-        #ray._private.services.address_to_ip = lambda x: '127.0.0.1'
-        ray.init(num_cpus=opts.ray_start)
+        ray.init(num_cpus=opts.ray_start,log_to_driver=not opts.quiet)
     elif opts.ray_local:
-        ray.init(local_mode=True)
+        ray.init(local_mode=True,log_to_driver=not opts.quiet)
     elif opts.ray_host is not None:
-        ray.init(address=opts.ray_host+':6379')
+        ray.init(address=opts.ray_host+':6379',log_to_driver=not opts.quiet)
     else:
-        ray.init(address='auto')
+        ray.init(address='auto',log_to_driver=not opts.quiet)
 
     if opts.list is not None :
         if opts.output is None:
