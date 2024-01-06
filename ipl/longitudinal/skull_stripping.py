@@ -68,7 +68,7 @@ def pipeline_stx_skullstripping(patient, tp):
         and os.path.exists(params.qc_stx_mask):
         pass
     else:
-        runSkullstripping(params)
+        runSkullstripping(params, synthstrip_onnx=patient.synthstrip_onnx)
 
     return True
 
