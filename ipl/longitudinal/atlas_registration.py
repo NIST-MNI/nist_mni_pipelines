@@ -17,6 +17,19 @@ import ipl.elastix_registration
 
 from .general import *
 
+import ray
+
+@ray.remote(num_cpus=1, memory=1000 * 1024 * 1024) # uses about 10GB of RAM
+def run_ants_registration(*args,**kwargs):
+    n_threads=int(ray.runtime_context.get_runtime_context().get_assigned_resources()["CPU"])
+    OLD_ITK_THREADS=os.environ.get('ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS',None)
+    os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=str(n_threads)
+
+    r=ipl.ants_registration.non_linear_register_ants2(*args,**kwargs)
+
+    if OLD_ITK_THREADS is not None:
+        os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=OLD_ITK_THREADS
+    return r
 
 
 # Run preprocessing using patient info
@@ -71,8 +84,9 @@ def atlasregistration_v10(patient):
                 par['cost_function_par']='1,32,Regular,1.0'
             else:
                 pass
-            print(repr(par))
-            ipl.ants_registration.non_linear_register_ants2(
+            
+            run_ants_registration_c=run_ants_registration.options(num_cpus=patient.threads)
+            ray.get(run_ants_registration_c.remote(
                     patient.template['nl_template'], model_t1,
                     patient.nl_xfm,
                     source_mask=patient.template['nl_template_mask'],
@@ -80,7 +94,7 @@ def atlasregistration_v10(patient):
                     level=nl_level,
                     start=32,
                     parameters=par,
-                    )
+            ))
         else:
             ipl.elastix_registration.register_elastix(
                     patient.template['nl_template'], model_t1,

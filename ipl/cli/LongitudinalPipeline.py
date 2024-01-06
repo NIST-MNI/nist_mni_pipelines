@@ -181,6 +181,9 @@ def launchPipeline(options):
         if 'ray_batch' in _opts:
             options.ray_batch = _opts['ray_batch']
 
+        if 'threads' in _opts:
+            options.ray_batch = _opts['threads']
+
         # TODO: add more options
     # patients dictionary
     patients = {}
@@ -308,7 +311,7 @@ def launchPipeline(options):
                 patients[id].wmh_bison_pfx = options.wmh_bison_pfx
                 patients[id].wmh_bison_atlas_pfx = options.wmh_bison_atlas_pfx
                 patients[id].wmh_bison_method = options.wmh_bison_method
-
+                patients[id].threads  = options.threads
 
 
                 patients[id].large_atrophy = options.large_atrophy
@@ -1093,6 +1096,8 @@ def parse_options():
                         help='ray host address')
     group.add_argument('--ray_batch',default=0,type=int,
                         help='Submit ray jobs in batches')
+    group.add_argument('--threads',default=1,type=int,
+                        help='Number of threads to use inside some ray jobs')
     options = parser.parse_args()
 
     return options

@@ -7,7 +7,6 @@ import csv
 import json
 import math
 
-
 # MINC stuff
 from minc2_simple import minc2_file,minc2_error
 
@@ -146,8 +145,17 @@ def resample_job(in_mnc, out_mnc, ref, xfm, invert_xfm):
 
 def load_all_volumes(train, n_cls, 
     modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
-    resample=False, atlas_pfx=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
+    resample=False, atlas_pfx=None, atlases=None, n_jobs=1, inverse_xfm=False,ran_subset=1.0):
     sample_vol={}
+
+    if resample and atlases is None:
+        # populate atlases
+        atlases={}
+        for m in modalities:
+            if m in train:
+                atlases[f'av_{m}'] = f"{atlas_pfx}{m}.mnc"
+        for c in range(n_cls):
+            atlases[f'p{c+1}'] = f"{atlas_pfx}{c+1}.mnc"
 
     sample_vol["subject"] = np.array(train["subject"])
     sample_vol["mask"]    = load_bin_volumes(train["mask"])
@@ -167,40 +175,29 @@ def load_all_volumes(train, n_cls,
         if "xfm" not in train:
             raise Error("Need to provide XFM files in xfm column")
 
+        # TODO: make this parallel using joblib ? 
+        # the threadpool doesn't work well with ray 
         with mincTools() as minc:
-            #with Pool(processes=n_jobs) as pool: 
-                jobs={}
+                priors={}
                 for m in modalities:
                     if m in train:
-                        jobs[f'av_{m}']=[]
-
+                        priors[f'av_{m}']=[]
                         for i,xfm in enumerate(train["xfm"]):
-                            jobs[f'av_{m}'].append(
-                                #pool.apply_async(
-                                    resample_job(f"{atlas_pfx}{m}.mnc", minc.tmp(f"{i}_avg_{m}.mnc"),
-                                         train["mask"][i],xfm,inverse_xfm)
-                                #    )
-                            )
-                
+                            priors[f'av_{m}'].append(
+                                    resample_job(atlases[f'av_{m}'], minc.tmp(f"{i}_avg_{m}.mnc"),
+                                         train["mask"][i],xfm,inverse_xfm))
                 for c in range(n_cls):
-                    jobs[f'p{c+1}']=[]
+                    priors[f'p{c+1}']=[]
                     for i,xfm in enumerate(train["xfm"]):
-                        jobs[f'p{c+1}'].append(
-                                #pool.apply_async(
-                                    resample_job(f"{atlas_pfx}{c+1}.mnc",minc.tmp(f"{i}_p{c+1}.mnc"),
-                                         train["mask"][i], xfm, inverse_xfm)
-                                #    )
-                            )
+                        priors[f'p{c+1}'].append(
+                                    resample_job(atlases[f'p{c+1}'],minc.tmp(f"{i}_p{c+1}.mnc"),
+                                         train["mask"][i], xfm, inverse_xfm))
                 # collect results of all jobs
                 for m in modalities:
                     if m in train:
-                        #r=[i.get() for i in jobs[f'av_{m}']]
-                        r=jobs[f'av_{m}']
-                        sample_vol[f'av_{m}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
+                        sample_vol[f'av_{m}'] = load_cnt_volumes(priors[f'av_{m}'], mask=sample_vol['mask'])
                 for c in range(n_cls):
-                    #r=[i.get() for i in jobs[f'p{c+1}']]
-                    r=jobs[f'p{c+1}']
-                    sample_vol[f'p{c+1}'] = load_cnt_volumes(r, mask=sample_vol['mask'])
+                    sample_vol[f'p{c+1}'] = load_cnt_volumes(priors[f'p{c+1}'], mask=sample_vol['mask'])
         # here all temp files should be removed    
     else:
         for m in modalities:
@@ -388,25 +385,24 @@ def init_clasifierr(method,n_jobs=None,random=None):
 
 def infer(input,
           modalities=bison_modalities, n_cls=None, n_bins = 256, 
-          resample=False,n_jobs=None,method=None,batch=1,
-          load_pfx=None,atlas_pfx=None,inverse_xfm=False,
+          resample=False,n_jobs=None, method=None,batch=1,
+          load_pfx=None,
+          atlas_pfx=None, 
+          atlases=None,
+          inverse_xfm=False,
           output=None,prob=False,
           progress=False):
-    
-    assert(method is not None)
-    assert(n_bins is not None)
-    assert(n_cls is not None)
-    assert(modalities is not None)
-    assert(load_pfx is not None)
-    # TODO: use output column if available!
-    #assert(output is not None)
-
-    #infer = read_csv_dict(in_csv)
     # recoginized headers:
     # t1,t2,pd,flair,ir
     # pCls<n>,labels,mask
     # minimal set: one modality, p<n>, av_modality, labels, mask  for training 
+    
     # sanity check
+    assert method is not None, "Need to specify method"
+    assert n_cls is not None, "Need to specify number of classes"
+    assert load_pfx is not None, "Need to specify load_pfx"
+    assert not resample or atlas_pfx is not None or atlases is not None, "Need to specify atlas_pfx or atlases if using resample"
+    
     if 'subject' not in input:
         raise Error('subject is missing')
 
@@ -429,7 +425,6 @@ def infer(input,
 
     # load classifier
     model_f=load_pfx + os.sep + f'{method}.pkl'
-    print(f"{model_f=}")
     clf = joblib.load(model_f) # TODO: use appropriate name
     if n_jobs is not None:
         clf.n_jobs = n_jobs
@@ -441,8 +436,9 @@ def infer(input,
         infer_vol = load_all_volumes(infer_sub, 
                         n_cls, 
                         modalities=modalities,
-                        resample=resample, 
-                        atlas_pfx=atlas_pfx, 
+                        resample=resample,
+                        atlas_pfx=atlas_pfx,
+                        atlases=atlases,
                         inverse_xfm=inverse_xfm,
                         n_jobs=n_jobs)
         

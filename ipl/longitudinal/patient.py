@@ -77,6 +77,7 @@ class LngPatient(dict):
         self.dodbm = False  #  default - do not create dbm files
         self.dovbm = False  #  default - do not create vbm files
         self.vbm_options = {} # VBM options
+        self.threads = 1 # number of threads to use per patient
 
         # Tissue classification BISON (GM,WM,CSF)
         self.bison_pfx = None # BISON model prefix

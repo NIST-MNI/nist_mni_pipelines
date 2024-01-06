@@ -29,6 +29,8 @@ from .patient import *
 import shutil
 
 import ray
+from threadpoolctl import threadpool_limits
+import traceback
 
 # try:
 #     from ipl.apply_multi_model_ov import segment_with_openvino
@@ -37,11 +39,13 @@ import ray
 #     _have_segmentation_ov=False
 
 
-#try:
-from ipl.apply_multi_model_onnx import segment_with_onnx
-_have_segmentation_onnx=True
-#except:
-#    _have_segmentation_onnx=False
+try:
+    from ipl.apply_multi_model_onnx import segment_with_onnx
+    _have_segmentation_onnx=True
+except:
+    _have_segmentation_onnx=False
+    traceback.print_exc(file=sys.stdout)
+    print("Missing onnxruntime, will not be able to run onnx models")
 
 
 
@@ -50,9 +54,7 @@ _have_segmentation_onnx=True
 # - pipeline_version is employed to select the correct version of the pipeline
 
 def pipeline_t1preprocessing(patient, tp):
-
-  # checking if processing was performed
-
+    # checking if processing was performed
     if os.path.exists(patient[tp].qc_jpg['stx_t1']) \
         and os.path.exists(patient[tp].clp['t1']) \
         and (os.path.exists(patient[tp].clp['mask']) or patient.synthstrip_onnx is None) \
@@ -98,73 +100,6 @@ def pipeline_t1preprocessing(patient, tp):
     return True
 
 
-### OBSOLETE 
-# to share GPUs properly
-@ray.remote(num_gpus=1, num_cpus=1)
-def run_redskull_gpu(in_t1w, out_redskull, out_skull, out_qc=None,qc_title=None,
-    redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth"):
-    with mincTools() as minc:
-        # run redskull segmentation to create skull mask
-        minc.command(['python', 'py_deep_seg/apply_multi_model.py', 
-                        redskull_model,
-                        '--stride', '32', '--patch', '144', 
-                        '--crop', '8', '--padvol', '16', # '--cpu',
-                        in_t1w,out_redskull],
-                    inputs=[in_t1w], outputs=[out_redskull])
-        
-        minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
-            out_skull, labels=True)
-        
-        if out_qc is not None:
-            minc.qc(
-                in_t1w,
-                out_qc,
-                title=qc_title,
-                image_range=[0, 120],
-                mask=out_skull,
-                big=True,
-                clamp=True
-                )
-
-### OBSOLETE 
-# to share GPUs properly
-@ray.remote(num_cpus=4)
-def run_redskull_cpu(in_t1w, out_redskull, 
-        unscale_xfm, out_ns_skull,out_ns_head, 
-        out_qc=None,qc_title=None,reference=None,
-        redskull_model="redskull2_vae2_resnet_dgx_aug_vae_t1_full_0_out/redskull.pth",
-        py_deep_seg="py_deep_seg" ):
-    with mincTools() as minc:
-        # run redskull segmentation to create skull mask
-        if not os.path.exists(out_redskull):
-            # HACK : TODO: figure out why it is so slow!
-            os.environ['OMP_NUM_THREADS']='4'
-            # 
-            subprocess.run(['python', os.path.join(py_deep_seg,'apply_multi_model_ov.py'), 
-                            redskull_model,
-                            '--stride', '32', '--patch', '96', 
-                            '--crop', '8', '--padvol', '16', '--cpu',
-                            in_t1w, out_redskull ])
-        
-        # generate unscaling transform
-        minc.calc([out_redskull],'abs(A[0]-6)<0.5||abs(A[0]-8)<0.5?1:0', 
-            minc.tmp("skull.mnc"), labels=True)
-        #minc.calc([out_redskull],'A[0]>0&&A[0]<10?1:0', 
-        #    minc.tmp("head.mnc"), labels=True)
-        
-        minc.resample_labels(minc.tmp("skull.mnc"),out_ns_skull,transform=unscale_xfm,like=reference)
-        #minc.resample_labels(minc.tmp("head.mnc"), out_ns_head, transform=unscale_xfm,like=reference)
-        
-        if out_qc is not None:
-            minc.qc(
-                in_t1w,
-                out_qc,
-                title=qc_title,
-                image_range=[0, 120],
-                mask=minc.tmp("skull.mnc"),
-                big=True,
-                clamp=True
-                )
 
 @ray.remote(num_cpus=4, memory=10000 * 1024 * 1024) # 
 def run_redskull_onnx(in_t1w, out_redskull, 
@@ -173,6 +108,7 @@ def run_redskull_onnx(in_t1w, out_redskull,
         redskull_model=None,
         redskull_var='seg' ):
     assert _have_segmentation_onnx, "Failed to import segment_with_onnx"
+    n_threads=int(ray.runtime_context.get_runtime_context().get_assigned_resources()["CPU"])
 
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
@@ -185,15 +121,15 @@ def run_redskull_onnx(in_t1w, out_redskull,
                                     dist=False, largest=False,
                                     patch_sz=[192, 192, 192],
                                     stride=96,
-                                    threads=8 # HACK ! Openvino uses half of requested for some reason
+                                    threads=n_threads 
                                     ) # 
-            elif redskull_var=='synth':
+            elif redskull_var=='synth': # experimental
                 segment_with_onnx([in_t1w], out_redskull,
                                     model=redskull_model,
                                     whole=True, freesurfer=True, 
                                     normalize=True, 
                                     dist=True, largest=True,
-                                    threads=8 # HACK ! Openvino uses half of requested for some reason
+                                    threads=n_threads 
                                     ) # 
         
         # generate unscaling transform
@@ -221,6 +157,8 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
     
     assert _have_segmentation_onnx, "Failed to import segment_with_onnx"
 
+    n_threads=int(ray.runtime_context.get_runtime_context().get_assigned_resources()["CPU"])
+
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
         if not os.path.exists(out_synthstrip):
@@ -229,14 +167,14 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
                 segment_with_onnx([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=4,dist=True,largest=True,
+                                    threads=n_threads, dist=True,largest=True,
                                     ) # 
                 minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
             else:
                 segment_with_onnx([in_t1w], out_synthstrip,
                                     model=synthstrip_model,
                                     whole=True,freesurfer=True,normalize=True,
-                                    threads=4 ,dist=True,largest=True,
+                                    threads=n_threads, dist=True,largest=True,
                                     ) # 
 
         
@@ -283,7 +221,8 @@ def t1preprocessing_v10(patient, tp):
             if not os.path.exists(patient[tp].clp['mask']):
                 # apply synthstrip in the native space to ease everything else
                 # need to resample to 1x1x1mm^2
-                ray.get(run_synthstrip_onnx.remote(
+                run_synthstrip_onnx_c = run_synthstrip_onnx.options(num_cpus=patient.threads)
+                ray.get(run_synthstrip_onnx_c.remote(
                             patient[tp].native['t1'], patient[tp].clp['mask'], 
                             out_qc=patient[tp].qc_jpg['synthstrip'],
                             normalize_1x1x1=True,
@@ -302,7 +241,8 @@ def t1preprocessing_v10(patient, tp):
 
             # 3. denoise
             if patient.denoise:
-                minc.nlm( tmpt1, tmpnlm, beta=0.7 ) # TODO: maybe USE anlm sometimes?
+                with threadpool_limits(limits=1): # HACK: limit number of threads to 1
+                    minc.nlm( tmpt1, tmpnlm, beta=0.7 ) # TODO: maybe USE anlm sometimes?
             else:
                 tmpnlm = tmpt1
 
@@ -454,7 +394,9 @@ def t1preprocessing_v10(patient, tp):
                              transform=patient[tp].stx_ns_xfm['t1'])
 
         if patient.redskull_onnx is not None:
-            ray.get(run_redskull_onnx.remote(
+            run_redskull_onnx_c = run_redskull_onnx.options(num_cpus=patient.threads)
+
+            ray.get(run_redskull_onnx_c.remote(
                 patient[tp].stx_mnc['t1'], 
                 patient[tp].stx_mnc['redskull'],
                 patient[tp].stx_ns_xfm['unscale_t1'],
