@@ -1,19 +1,26 @@
-FROM mambaorg/micromamba:1.5.6 as builder
-
-COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml
-RUN --mount=type=cache,target=/opt/conda/pkgs micromamba install -y -n base -f /tmp/env.yaml
+FROM ghcr.io/mamba-org/micromamba:1.5.6-focal as builder
 
 # add some packages 
+#USER root
+#RUN --mount=type=cache,target=/var/cache/apt \
+#    apt-get update && apt-get install -y \
+#    curl \
+#    unzip \
+#    && rm -rf /var/lib/apt/lists/*
 USER root
-RUN apt-get update && apt-get install -y \
-    curl \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+RUN mkdir /opt/models /opt/pipeline  && \
+    chown $MAMBA_USER:$MAMBA_USER -R /opt/models /opt/pipeline 
 
-#USER $MAMBA_USER
+USER $MAMBA_USER
+COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml
+RUN --mount=type=cache,target=/opt/conda/pkgs \
+    micromamba install -y -n base -f /tmp/env.yaml
+
+
 # Download and install nist_mni_pipelines
+USER root
 RUN curl -q -L https://github.com/NIST-MNI/nist_mni_pipelines/archive/refs/heads/ray_skull.tar.gz --output /tmp/nist_mni_pipelines.tar.gz && \
-    mkdir -p /opt/pipeline && \
+    mkdir  -p /opt/pipeline && \
     tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1  
 
 # TODO: Download models
@@ -23,7 +30,6 @@ RUN --mount=type=cache,target=/opt/archive \
     mkdir -p /opt/models/icbm152_model_09c && \
     unzip /opt/archive/mni_icbm152_nlin_sym_09c_minc2.zip -d /opt/models/icbm152_model_09c
 
-RUN chown $MAMBA_USER:$MAMBA_USER -R /opt/models /opt/pipeline 
 
 #install local models
 #USER $MAMBA_USER
@@ -33,7 +39,7 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip /opt/models/synthstrip
 COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 
 # make a clean image without temporary files
-FROM mambaorg/micromamba:1.5.6 
+FROM ghcr.io/mamba-org/micromamba:1.5.6-focal
 COPY --from=builder /opt/conda    /opt/conda
 COPY --from=builder /opt/pipeline /opt/pipeline
 COPY --from=builder /opt/models   /opt/models

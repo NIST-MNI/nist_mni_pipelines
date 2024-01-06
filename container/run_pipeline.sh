@@ -12,6 +12,7 @@ PRL=4
 THREADS=4
 
 python /opt/pipeline/iplLongitudinalPipeline.py \
+    --quiet \
     -3 \
     --denoise \
     -l $in_lst \
