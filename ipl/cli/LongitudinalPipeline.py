@@ -405,41 +405,38 @@ def launchPipeline(options):
             # store patients in the pickle
 
     # use ray to run all subjects in parallel
-    if options.pe is None: 
-        pickles = []
+    pickles = []
 
-        for (id, i) in patients.items():
-            # writing the pickle file
-            if not os.path.exists(i.pickle):
-                i.write(i.pickle)
-            pickles.append(i.pickle)
-        
-        if options.ray_batch==0:
-            options.ray_batch=len(pickles)
-
-        n_fail=0
-        jobs_done = []
-        while len(pickles)>0:
-
-            jobs=[runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch]
-            pickles=pickles[len(jobs):]
-            print(f"waiting for {len(jobs)} jobs")
-
-            while jobs:
-                try:
-                    ready_jobs, jobs = ray.wait(jobs, num_returns=1)
-                    jobs_done += ray.get(ready_jobs)
-                except ray.exceptions.RayTaskError as e:
-                    n_fail+=1
-                    print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
-                except KeyboardInterrupt:
-                    print("Aborting")
-                    exit(1)
+    for (id, i) in patients.items():
+        # writing the pickle file
+        if not os.path.exists(i.pickle):
+            i.write(i.pickle)
+        pickles.append(i.pickle)
     
-        print(f'Work finished {len(jobs_done)}, failed:{n_fail} ')
+    if options.ray_batch==0:
+        options.ray_batch=len(pickles)
 
-    else: 
-        pass
+    n_fail=0
+    jobs_done = []
+    while len(pickles)>0:
+
+        jobs=[runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch]
+        pickles=pickles[len(jobs):]
+        print(f"waiting for {len(jobs)} jobs")
+
+        while jobs:
+            try:
+                ready_jobs, jobs = ray.wait(jobs, num_returns=1)
+                jobs_done += ray.get(ready_jobs)
+            except ray.exceptions.RayTaskError as e:
+                n_fail+=1
+                print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
+            except KeyboardInterrupt:
+                print("Aborting")
+                exit(1)
+
+    print(f'Work finished {len(jobs_done)}, failed:{n_fail} ')
+
 
 @ray.remote
 def runTimePoint_FirstStage(tp, patient):
