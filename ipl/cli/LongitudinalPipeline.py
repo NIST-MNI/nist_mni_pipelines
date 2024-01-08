@@ -438,36 +438,8 @@ def launchPipeline(options):
     
         print(f'Work finished {len(jobs_done)}, failed:{n_fail} ')
 
-    else: # USE SGE to submit one job per subject, using required peslots
-        pickles = []
-
-        for (id, i) in patients.items():
-            # writing the pickle file
-            slots=options.peslots
-            # don't submit jobs with too many requested slots, when only limited number of
-            # timepoints is available
-
-            if len(i)<slots:
-                slots=len(i)
-            if slots<1:
-                slots=1
-
-            if not os.path.exists(i.pickle):
-                i.write(i.pickle)
-
-            # tell python to use ray to run program
-            #comm=['unset PE_HOSTFILE'] # HACK SCOOP not to rely on PE setting to prevent it from SSHing
-            comm=[]
-            comm.extend(['export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={}'.format(slots)])
-            comm.extend(['export OMP_NUM_THREADS={}'.format(slots)])
-            comm.extend(['export OMP_DYNAMIC=TRUE'])
-            comm.extend(['python {} --ray_start {} -p {}'.format(os.path.abspath(sys.argv[0]),str(slots),i.pickle)])
-
-            qsub_pe(comm,options.pe,
-                    options.peslots,
-                    name='LNG_{}'.format(str(id)),
-                    logfile=i.patientdir+os.sep+str(id)+".sge.log",
-                    queue=options.queue)
+    else: 
+        pass
 
 @ray.remote
 def runTimePoint_FirstStage(tp, patient):
@@ -1086,16 +1058,6 @@ def parse_options():
                      help='Fast mode : quick & dirty mostly for testing pipeline'
                      , action='store_true')
 
-    group.add_argument('--pe', dest='pe',
-                     help='Submit jobs using parallel environment'
-                     )
-
-    group.add_argument('--peslots', dest='peslots',
-                     help='PE slots ', default=4, type=int)
-
-    group.add_argument('-q','--queue', dest='queue',
-                     help='Specify SGE queue for submission'
-                     )
     group.add_argument('--ray_start',type=int,
                         help='start local ray instance')
     group.add_argument('--ray_local',action='store_true',
