@@ -7,42 +7,51 @@ FROM ghcr.io/mamba-org/micromamba:1.5.6-focal as builder
 #    curl \
 #    unzip \
 #    && rm -rf /var/lib/apt/lists/*
-USER root
-RUN mkdir /opt/models /opt/pipeline  && \
-    chown $MAMBA_USER:$MAMBA_USER -R /opt/models /opt/pipeline 
+# USER root
+# RUN mkdir /opt/models /opt/pipeline  && \
+#     chown $MAMBA_USER:$MAMBA_USER -R /opt/models /opt/pipeline 
 
 USER $MAMBA_USER
 COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml
 RUN --mount=type=cache,target=/opt/conda/pkgs \
     micromamba install -y -n base -f /tmp/env.yaml
 
-
 # Download and install nist_mni_pipelines
-USER root
-RUN curl -q -L https://github.com/NIST-MNI/nist_mni_pipelines/archive/refs/heads/ray_skull.tar.gz --output /tmp/nist_mni_pipelines.tar.gz && \
-    mkdir  -p /opt/pipeline && \
-    tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1  
+# USER root
+# RUN curl -q -L https://github.com/NIST-MNI/nist_mni_pipelines/archive/refs/heads/ray_skull.tar.gz --output /tmp/nist_mni_pipelines.tar.gz && \
+#     mkdir  -p /opt/pipeline && \
+#     tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1  
 
 # TODO: Download models
-RUN --mount=type=cache,target=/opt/archive \
-    curl -q -L https://packages.bic.mni.mcgill.ca/mni-models/icbm152/mni_icbm152_nlin_sym_09c_minc2.zip \
-          --output /opt/archive/mni_icbm152_nlin_sym_09c_minc2.zip && \
-    mkdir -p /opt/models/icbm152_model_09c && \
-    unzip /opt/archive/mni_icbm152_nlin_sym_09c_minc2.zip -d /opt/models/icbm152_model_09c
+# RUN --mount=type=cache,target=/opt/archive \
+#     curl -q -L https://packages.bic.mni.mcgill.ca/mni-models/icbm152/mni_icbm152_nlin_sym_09c_minc2.zip \
+#           --output /opt/archive/mni_icbm152_nlin_sym_09c_minc2.zip && \
+#     mkdir -p /opt/models/icbm152_model_09c && \
+#     unzip /opt/archive/mni_icbm152_nlin_sym_09c_minc2.zip -d /opt/models/icbm152_model_09c
+USER root
+RUN mkdir /opt/pipeline  && \
+    chown $MAMBA_USER:$MAMBA_USER -R /opt/pipeline
+
+COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines.tar.gz /tmp/nist_mni_pipelines.tar.gz 
+USER $MAMBA_USER
+RUN tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1  
+COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 
 
 #install local models
 #USER $MAMBA_USER
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0 /opt/models/ipl_bison_1.3.0
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0 /opt/models/wmh_bison_1.3.0
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip /opt/models/synthstrip
-COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 
 # make a clean image without temporary files
 FROM ghcr.io/mamba-org/micromamba:1.5.6-focal
 COPY --from=builder /opt/conda    /opt/conda
 COPY --from=builder /opt/pipeline /opt/pipeline
-COPY --from=builder /opt/models   /opt/models
+#COPY --from=builder /opt/models   /opt/models
+
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/icbm152_model_09c /opt/models/icbm152_model_09c
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0 /opt/models/ipl_bison_1.3.0
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0 /opt/models/wmh_bison_1.3.0
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip /opt/models/synthstrip
+
 
 # Distroless for execution
 # FROM gcr.io/distroless/base-debian12
