@@ -47,10 +47,10 @@ COPY --from=builder /opt/conda    /opt/conda
 COPY --from=builder /opt/pipeline /opt/pipeline
 #COPY --from=builder /opt/models   /opt/models
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/icbm152_model_09c /opt/models/icbm152_model_09c
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0 /opt/models/ipl_bison_1.3.0
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0 /opt/models/wmh_bison_1.3.0
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip /opt/models/synthstrip
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/icbm152_model_09c   /opt/models/icbm152_model_09c
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0     /opt/models/ipl_bison_1.3.0
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0     /opt/models/wmh_bison_1.3.0
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip          /opt/models/synthstrip
 
 
 # Distroless for execution
@@ -72,7 +72,7 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip /opt/models/synthstrip
 # RUN /usr/local/bin/_dockerfile_initialize_user_accounts.sh && \
 #     /usr/local/bin/_dockerfile_setup_root_prefix.sh
 
-# USER $MAMBA_USER
+USER $MAMBA_USER
 
 # SHELL ["/usr/local/bin/_dockerfile_shell.sh"]
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "/opt/pipeline/run_pipeline.sh"]
