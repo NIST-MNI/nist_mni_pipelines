@@ -431,6 +431,9 @@ def launchPipeline(options):
             except ray.exceptions.RayTaskError as e:
                 n_fail+=1
                 print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
+                print(e.traceback_str,flush=True)
+                ee=e.as_instanceof_cause()
+                print(ee,flush=True)
             except KeyboardInterrupt:
                 print("Aborting")
                 exit(1)
@@ -672,11 +675,11 @@ def runPipeline(pickle, workdir=None):
 
         return patient.id
     except mincError as e:
-        print("Exception in runPipeline:{}".format(repr(e)) )
+        print("Exception in runPipeline:{}".format(repr(e)),flush=True )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
+        print("Exception in runPipeline:{}".format(sys.exc_info()[0]),flush=True )
         traceback.print_exc(file=sys.stdout)
         raise
 

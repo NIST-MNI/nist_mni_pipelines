@@ -11,15 +11,16 @@ fi
 PRL=4
 THREADS=4
 
+#    --quiet \
+#    --large_atrophy \
+
 python /opt/pipeline/iplLongitudinalPipeline.py \
-    --quiet \
     -3 \
     --denoise \
     -l $in_lst \
     -o $out_pfx \
     --model-dir=/opt/models/icbm152_model_09c \
     --model-name=mni_icbm152_t1_tal_nlin_sym_09c  \
-    --large_atrophy \
     --ray_start $PRL \
     --threads $THREADS \
     --nl_ants \
