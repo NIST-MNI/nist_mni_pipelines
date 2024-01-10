@@ -138,8 +138,8 @@ def launchPipeline(options):
         if 'lngcls' in _opts:
             options.lngcls=_opts['lngcls']
 
-        if 'donl' in _opts:
-            options.donl=_opts['donl']
+        # if 'donl' in _opts:
+        #     options.donl=_opts['donl']
 
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
@@ -281,7 +281,7 @@ def launchPipeline(options):
 
                 patients[id].mask_n3  = options.mask_n3
                 patients[id].n4       = options.n4
-                patients[id].donl     = options.donl
+                # patients[id].donl     = options.donl
                 patients[id].dolngcls = options.dolngcls
                 patients[id].dodbm    = options.dodbm
                 patients[id].dovbm    = options.dovbm
@@ -1013,10 +1013,6 @@ def parse_options():
         default=False,
         )
 
-    parser.add_option_group(group)
-    
-    
-    parser.add_option_group(group)
     group = parser.add_argument_group('Parallel execution options ')
 
     group.add_argument('--ray_start',type=int,
@@ -1030,7 +1026,6 @@ def parse_options():
     group.add_argument('--threads',default=1,type=int,
                         help='Number of threads to use inside some ray jobs')
 
-    parser.add_option_group(group)
     group = parser.add_argument_group('General Options ')
 
     group.add_argument(
@@ -1052,7 +1047,6 @@ def parse_options():
     group.add_argument('-f', '--fast', dest='fast',
                      help='Fast mode : quick & dirty mostly for testing pipeline', 
                      action='store_true')
-    parser.add_option_group(group)
 
 
     options = parser.parse_args()
