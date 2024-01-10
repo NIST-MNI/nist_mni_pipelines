@@ -54,16 +54,6 @@ import ray
 
 version = '1.0'
 
-# a hack to use environment stored in a file
-# usefull when scoop spans across multiple nodes
-# and default environment is not the same
-# if os.path.exists('lng_environment.json'):
-#     env={}
-#     with open('lng_environment.json','r') as f:
-#         env=json.load(f)
-#     for i in env.iterkeys():
-#         os.environ[i]=env[i]
-
 
 def launchPipeline(options):
     '''
@@ -770,22 +760,22 @@ def parse_options():
         default=False,
         )
 
-    group.add_argument(
-        "-I",
-        "--inpaint",
-        dest="inpaint",
-        help="Inpaint T1W images based on the lesion mask",
-        action="store_true",
-        default=False)
+    # group.add_argument(
+    #     "-I",
+    #     "--inpaint",
+    #     dest="inpaint",
+    #     help="Inpaint T1W images based on the lesion mask",
+    #     action="store_true",
+    #     default=False)
 
-    group.add_argument(
-        '-N',
-        '--no-nonlinear',
-        dest='donl',
-        help="Don't do non linear registration (NOT YET)",
-        action='store_false',
-        default=True,
-        )
+    # group.add_argument(
+    #     '-N',
+    #     '--no-nonlinear',
+    #     dest='donl',
+    #     help="Don't do non linear registration (NOT YET)",
+    #     action='store_false',
+    #     default=True,
+    #     )
 
     group.add_argument('-3', '--3T', dest='mri3T',
                      help='Parameters for 3T scans', action='store_true',
@@ -897,13 +887,6 @@ def parse_options():
                      help='Directory with the beast library ',
                      default='/ipl/quarantine/models/beast')
 
-    #group.add_argument( '--sym', dest='sym',
-                     #help='Use symmetric minctracc (NOT YET)')
-
-    # group.add_argument('-4', '--4Dregu', dest='temporalregu',
-    #                  help="Use 4D regularization for the individual template creation with a linear regressor ('linear' or 'taylor' serie decomposition)",
-    #                  default=False)
-
     group.add_argument(
         '--skullreg',
         dest='skullreg',
@@ -922,7 +905,6 @@ def parse_options():
                      help='Redskull variant',
                      default='seg'
                      )
-
 
     group.add_argument('--synthstrip_onnx', 
                      dest='synthstrip_onnx',
@@ -999,7 +981,6 @@ def parse_options():
         default=2.0
         )
 
-
     group.add_argument(
         '--add',
         action='append',
@@ -1007,7 +988,6 @@ def parse_options():
         help='Add custom step with description in .json file',
         default=[],
         )
-
 
     group = parser.add_argument_group('Execution options ',
                          ' Once the picke files are created')
@@ -1033,30 +1013,11 @@ def parse_options():
         default=False,
         )
 
-    # parser.add_option_group(group)
-
-    group = parser.add_argument_group('General Options ')
-
-    group.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbose',
-        help='Verbose mode',
-        action='store_true',
-        default=False,
-        )
+    parser.add_option_group(group)
     
-    group.add_argument(
-        '-q',
-        '--quiet',
-        help='Suppress some logging messages',
-        action='store_true',
-        default=False,
-        )
-
-    group.add_argument('-f', '--fast', dest='fast',
-                     help='Fast mode : quick & dirty mostly for testing pipeline'
-                     , action='store_true')
+    
+    parser.add_option_group(group)
+    group = parser.add_argument_group('Parallel execution options ')
 
     group.add_argument('--ray_start',type=int,
                         help='start local ray instance')
@@ -1068,7 +1029,34 @@ def parse_options():
                         help='Submit ray jobs in batches')
     group.add_argument('--threads',default=1,type=int,
                         help='Number of threads to use inside some ray jobs')
+
+    parser.add_option_group(group)
+    group = parser.add_argument_group('General Options ')
+
+    group.add_argument(
+        '-v',
+        '--verbose',
+        dest='verbose',
+        help='Verbose mode',
+        action='store_true',
+        default=False,
+        )
+    group.add_argument(
+        '-q',
+        '--quiet',
+        help='Suppress some logging messages',
+        action='store_true',
+        default=False,
+        )
+
+    group.add_argument('-f', '--fast', dest='fast',
+                     help='Fast mode : quick & dirty mostly for testing pipeline', 
+                     action='store_true')
+    parser.add_option_group(group)
+
+
     options = parser.parse_args()
+
 
     return options
 

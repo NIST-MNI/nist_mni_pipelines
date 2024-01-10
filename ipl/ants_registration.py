@@ -386,7 +386,7 @@ def non_linear_register_ants2(
         else:
             outputs=[output_xfm ] # TODO: add inverse xfm ?
         
-        print(">>>\n{}\n>>>>".format(' '.join(cmd)))
+        #print(">>>\n{}\n>>>>".format(' '.join(cmd)))
         
         minc.command(cmd, inputs=inputs, outputs=outputs)
 

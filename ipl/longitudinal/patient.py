@@ -58,7 +58,7 @@ class LngPatient(dict):
         self.inpaint = False  # Do inpainting
         self.dobiascorr = False  # Do longitudinal bias correction
         self.dolngcls = True  # Do longitudinal classification
-        self.donl = True  # Do non linear registration
+        #self.donl = True  # Do non linear registration
         self.mask_n3 = False  # Use brain mask for N3
         self.n4 = True  # Use N4 for non-uniformity correction
         self.nl_method = 'nlfit_s'  # Do non-linear registration
@@ -185,7 +185,7 @@ class LngPatient(dict):
         print('        - denoise      = ' + str(self.denoise))
         print('        - mask N3      = ' + str(self.mask_n3))
         print('        - advanced N4  = ' + str(self.n4))
-        print('        - donl         = ' + str(self.donl))
+        #print('        - donl         = ' + str(self.donl))
         print("        - dolngcls     = " + str(self.dolngcls))
         print("        - onlyt1       = " + str(self.onlyt1))
         print('        - dodbm        = ' + str(self.dodbm))

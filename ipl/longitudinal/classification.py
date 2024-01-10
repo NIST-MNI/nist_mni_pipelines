@@ -75,7 +75,7 @@ def pipeline_classification(patient, tp):
     minc_qc.qc( patient[tp].stx2_mnc['t1'],
                 patient[tp].qc_jpg['classification'],
                 title=patient[tp].qc_title, 
-                mask_range=[0,3],
+                mask_range=[0.5,3.5],
                 image_range=[0,120],
                 mask=patient[tp].stx2_mnc['classification'],dpi=200,
                 samples=20, 
