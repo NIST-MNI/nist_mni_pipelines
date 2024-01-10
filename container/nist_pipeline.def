@@ -5,18 +5,16 @@ From: ghcr.io/mamba-org/micromamba:1.5.6-focal
 %files
     env.yaml
     nist_mni_pipelines.tar.gz
-    run_pipeline.sh /opt/pipeline/
-    models/icbm152_model_09c   /opt/models/icbm152_model_09c/
-    models/ipl_bison_1.3.0     /opt/models/ipl_bison_1.3.0
-    models/wmh_bison_1.3.0     /opt/models/wmh_bison_1.3.0
-    models/synthstrip          /opt/models/synthstrip
+    run_pipeline.sh            /opt/pipeline/
+    models/icbm152_model_09c   /opt/models/
+    models/ipl_bison_1.3.0     /opt/models/
+    models/wmh_bison_1.3.0     /opt/models/
+    models/synthstrip          /opt/models/
 
 %post
-    micromamba install -y -n base -f /env.yaml
+    micromamba install -q -y -n base -f /env.yaml
     micromamba clean --all --yes
     rm -f  /env.yaml
-
-    mkdir /opt/pipeline 
     tar -xzvf /nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1 
 
 %environment
