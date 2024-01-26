@@ -13,6 +13,7 @@ version = '1.0'
 # - vol pol
 
 from .general import *
+from .t1_preprocessing import run_nlm
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
@@ -21,6 +22,8 @@ import ipl.ants_registration
 import ipl.elastix_registration
 
 import shutil
+
+import ray
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -104,18 +107,21 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_t2_stx_xfm = minc.tmp('t2_stx_0.xfm')
             tmpstats = minc.tmp('volpol_t2.stats')
 
-            minc.convert(patient[tp].native['t2'], tmpt2)
+            # minc.convert(patient[tp].native['t2'], tmpt2)
 
-            for s in ['xspace', 'yspace', 'zspace']:
-                spacing = minc.query_attribute(tmpt2, s + ':spacing')
+            # for s in ['xspace', 'yspace', 'zspace']:
+            #     spacing = minc.query_attribute(tmpt2, s + ':spacing')
 
-                if spacing.count( 'irregular' ):
-                    minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
+            #     if spacing.count( 'irregular' ):
+            #         minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
             
             # 1. Do nlm
             if patient.denoise:
-                minc.nlm(tmpt2, tmpnlm, beta=0.7)
+                run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+                ray.get(run_nlm_c.remote(patient[tp].native['t2'],  patient[tp].den['t2']))
+                tmpnlm = patient[tp].den['t2']
             else:
+                minc.convert_and_fix(patient[tp].native['t2'], tmpt2)
                 tmpnlm = tmpt2
 
             # # manual initialization
@@ -278,20 +284,14 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_pd_t1_xfm = minc.tmp('pd_t1_0.xfm')
             tmp_pd_stx_xfm = minc.tmp('pd_stx_0.xfm')
 
-            minc.convert(patient[tp].native['pd'], tmppd)
-
-            for s in ['xspace', 'yspace', 'zspace']:
-                spacing = minc.query_attribute(tmppd, s + ':spacing')
-                
-                if spacing.count( 'irregular' ):
-                    minc.set_attribute( tmppd, s + ':spacing', 'regular__' )
-                        
-            # 1. Do nlm
-          
+            # 1. Do nlm      
             if patient.denoise:
-                minc.nlm(tmppd, tmpnlm, beta=0.7)
+                run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+                ray.get(run_nlm_c.remote(patient[tp].native['pd'],  patient[tp].den['pd']))
+                tmpnlm = patient[tp].den['pd']
             else:
-                tmpnlm=tmppd
+                minc.convert_and_fix(patient[tp].native['pd'], tmppd)
+                tmpnlm = tmppd
 
 
             # 2. Best lin reg T2 to T1

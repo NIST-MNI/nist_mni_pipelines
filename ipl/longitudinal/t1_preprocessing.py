@@ -3,7 +3,7 @@
 #
 # @author Daniel, Vladimir S. FONOV
 # @date 10/07/2011
-
+3
 version = '1.0'
 
 #
@@ -46,7 +46,6 @@ except:
     _have_segmentation_onnx=False
     traceback.print_exc(file=sys.stdout)
     print("Missing onnxruntime, will not be able to run onnx models")
-
 
 
 # Run preprocessing using patient info
@@ -149,6 +148,15 @@ def run_redskull_onnx(in_t1w, out_redskull,
                 samples=20,bg_color="black",fg_color="white"
                 )
 
+@ray.remote(num_cpus=4) 
+def run_nlm(in_t1w, out_den):
+    n_threads=int(ray.runtime_context.get_runtime_context().get_assigned_resources()["CPU"])
+    with threadpool_limits(limits=1): # HACK: limit number of threads to 1
+        with mincTools() as minc:
+            minc.convert_and_fix(in_t1w, minc.tmp('fixed_t1.mnc'))
+            minc.nlm( minc.tmp('fixed_t1.mnc'), out_den, beta=0.7 )
+
+
 
 @ray.remote(num_cpus=4, memory=10000 * 1024 * 1024) # uses about 10GB of RAM
 def run_synthstrip_onnx(in_t1w, out_synthstrip, 
@@ -230,20 +238,13 @@ def t1preprocessing_v10(patient, tp):
                 
 
         if not os.path.exists( patient[tp].clp['t1'] ):
-
-            minc.convert( patient[tp].native['t1'], tmpt1 )
-            
-            for s in ['xspace', 'yspace', 'zspace']:
-                spacing = minc.query_attribute( tmpt1, s + ':spacing' )
-
-                if spacing.count( 'irregular' ):
-                    minc.set_attribute( tmpt1, s + ':spacing', 'regular__' )
-
             # 3. denoise
             if patient.denoise:
-                with threadpool_limits(limits=1): # HACK: limit number of threads to 1
-                    minc.nlm( tmpt1, tmpnlm, beta=0.7 ) # TODO: maybe USE anlm sometimes?
+                run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+                ray.get(run_nlm_c.remote(patient[tp].native['t1'],  patient[tp].den['t1']))
+                tmpnlm = patient[tp].den['t1']
             else:
+                minc.convert_and_fix(patient[tp].native['t1'], tmpt1)
                 tmpnlm = tmpt1
 
             if     not os.path.exists( patient[tp].clp['t1'] ) \

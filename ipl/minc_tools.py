@@ -1730,6 +1730,22 @@ class mincTools(temp_files):
         if out_v2: cmd+=['-2']
         self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
 
+    def convert_and_fix(
+        self,
+        input,
+        output,
+        out_v2=True,
+        compress=0
+        ):
+
+        ## Convert minc file and optionaly fix spacing issues
+        self.convert( input, output, out_v2=out_v2, compress=compress)
+
+        for s in ['xspace', 'yspace', 'zspace']:
+            spacing = self.query_attribute( output, s + ':spacing' )
+            if spacing.count( 'irregular' ):
+                self.set_attribute( output, s + ':spacing', 'regular__' )
+        return output
 
     def reshape(
         self,
