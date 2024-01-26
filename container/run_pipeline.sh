@@ -1,5 +1,26 @@
 #! /bin/bash
 
+#########################################################
+# 
+# Execute the pipeline using apptainer or docker
+# 
+# Command line arguments:
+# 1. input.lst - list of subjects to process
+# 2. output directory prefix
+# 
+# All paths should be relative to the current directory
+#
+# Environment variables:
+#
+# PRL - number of parallel processes (default 4)
+# THREADS - number of threads per process (default 4)
+# FIELD - 1.5 or 3 (default 3) scanner field strength
+# CLEANUP - YES or NO (default NO) remove intermediate files to save disk space
+#
+#####
+
+
+
 in_lst=$1
 out_pfx=$2
 
@@ -11,6 +32,16 @@ fi
 PRL=${PRL:-4}
 THREADS=${THREADS:-4}
 FIELD=${FIELD:-3}
+CLEANUP=${CLEANUP:-NO}
+
+
+########
+
+if [[ $CLEANUP == YES ]];then
+    CLEANUP=--cleanup
+else
+    CLEANUP=
+fi
 
 if [[ $FIELD == 3 ]];then
     echo "Running 3T pipeline"
@@ -32,7 +63,8 @@ if [[ $FIELD == 3 ]];then
         --wmh_bison_pfx /opt/models/wmh_bison_1.3.0/t1_3T \
         --wmh_bison_atlas_pfx /opt/models/wmh_bison_1.3.0/3T_2009c_ \
         --wmh_bison_method HGB1 \
-        --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx
+        --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx \
+        $CLEANUP
 else
     echo "Running 1.5T pipeline"
 
@@ -52,7 +84,8 @@ else
         --wmh_bison_pfx /opt/models/wmh_bison_1.3.0/t1_15T \
         --wmh_bison_atlas_pfx /opt/models/wmh_bison_1.3.0/15T_2009c_ \
         --wmh_bison_method HGB1 \
-        --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx
+        --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx \
+        $CLEANUP
 fi
 
 #    --quiet \

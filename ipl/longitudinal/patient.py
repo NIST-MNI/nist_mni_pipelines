@@ -10,6 +10,8 @@
 import pickle  # to store the class
 import os
 import copy
+import shutil
+
 from  .general import *  # functions to call binaries and general functions
 from   ipl.minc_tools import mincError
 
@@ -78,6 +80,7 @@ class LngPatient(dict):
         self.dovbm = False  #  default - do not create vbm files
         self.vbm_options = {} # VBM options
         self.threads = 1 # number of threads to use per patient
+        self.cleanup = False # remove intermediate files
 
         # Tissue classification BISON (GM,WM,CSF)
         self.bison_pfx = None # BISON model prefix
@@ -125,6 +128,7 @@ class LngPatient(dict):
         self.linreg    = None
 
     def clean(self):
+        ##### remove non existing images
         cleanImages(self.template)
         cleanImages(self.stx_mnc)
         cleanImages(self.stx2_mnc)
@@ -143,6 +147,36 @@ class LngPatient(dict):
         if len(self) > 0:
             for (i, j) in self.items():
                 j.clean()
+
+    @staticmethod # remove file(s) if it exists
+    def _remove_file(fn):
+        if isinstance(fn,list):
+            for f in fn:
+                LngPatient._remove_file(f)
+        else: 
+            if os.path.exists(fn):
+                os.unlink(fn)
+
+    def cleanup(self):
+        # remove intermediate files to save disk space
+        # remove temporary dir
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir)
+        # remove template sd files
+        LngPatient._remove_file(self.template['linear_template_sd'])
+        LngPatient._remove_file(self.template['nl_template_sd'])
+
+        for tp in self.keys(): # iterate over all timepoints
+            # native space
+            LngPatient._remove_file(self[tp].clp)
+            LngPatient._remove_file(self[tp].den)
+            LngPatient._remove_file(self[tp].nuc)
+            # stx space
+            LngPatient._remove_file(self[tp].stx_mnc)
+            LngPatient._remove_file(self[tp].stx_ns_mnc)
+        
+        # TODO: reshape _grid files to use short datatype instead of float ?
+
 
     @staticmethod  # static function to load pickle
     def read(filename):

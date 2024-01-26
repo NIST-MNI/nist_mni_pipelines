@@ -174,6 +174,9 @@ def launchPipeline(options):
         if 'threads' in _opts:
             options.ray_batch = _opts['threads']
 
+        if 'cleanup' in _opts:
+            options.cleanup = _opts['cleanup']
+
         # TODO: add more options
     # patients dictionary
     patients = {}
@@ -310,7 +313,6 @@ def launchPipeline(options):
                 patients[id].rigid    = options.rigid
                 patients[id].add      = options.add
 
-
                 patients[id].vbm_options = { 'vbm_fwhm':      options.vbm_blur,
                                              'vbm_resolution':options.vbm_res,
                                              'vbm_nl_level':  options.vbm_nl,
@@ -323,6 +325,7 @@ def launchPipeline(options):
                     patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
                 patients[id].nl_cost_fun = options.nl_cost_fun
+                patients[id].cleanup = options.cleanup
                 # end of creating a patient
 
             # ## Add timepoint to the patient
@@ -593,7 +596,7 @@ def runPipeline(pickle, workdir=None):
         if not os.path.exists(pickle):
             raise IplError(' -- Pickle does not exists ' + pickle)
         # # Read patient
-
+        # TODO: replace this with just patient object to avoid reading and writing pickles?
         patient = LngPatient.read(pickle)
         if not version == patient.pipeline_version:
             raise IplError('       - Change the pipeline version or restart all processing' )
@@ -661,7 +664,11 @@ def runPipeline(pickle, workdir=None):
             
             ray.get(jobs)
 
-        patient.write(patient.pickle)  # copy new images in the pickle
+        if patient.cleanup:
+            patient.cleanup()
+        else:
+            # no need to write it, if we will cleanup
+            patient.write(patient.pickle)  # copy new images in the pickle
 
         return patient.id
     except mincError as e:
@@ -689,8 +696,6 @@ def cleanPickle(pickle):
     patient = LngPatient.read(pickle)
     patient.clean()
     patient.write(pickle)
-
-
 
 
 def parse_options():
@@ -1047,6 +1052,11 @@ def parse_options():
     group.add_argument('-f', '--fast', dest='fast',
                      help='Fast mode : quick & dirty mostly for testing pipeline', 
                      action='store_true')
+    
+    group.add_argument('--cleanup', 
+                     help='Remove intermediate files to save disk space', 
+                     action='store_true',
+                     default=False)
 
 
     options = parser.parse_args()

@@ -71,7 +71,7 @@ def atlasregistration_v10(patient):
                                 'cost_function':'CC',
                                 'cost_function_par':'1,3,Regular,1.0',
                                 'transformation': 'SyN[0.1,3,0.0]',
-                                'convert_grid_type':'short'
+                                'convert_grid_type': 'short'
                 }
             if patient.nl_cost_fun == 'CC':
                 par['cost_function']='CC'
@@ -93,7 +93,7 @@ def atlasregistration_v10(patient):
                     target_mask=model_mask,
                     level=nl_level,
                     start=32,
-                    parameters=par,
+                    parameters=par
             ))
         else:
             ipl.elastix_registration.register_elastix(
