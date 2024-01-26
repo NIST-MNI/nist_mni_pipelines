@@ -15,6 +15,7 @@ import six
 
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 
 # internal funcions
 import ipl.segment 
@@ -32,8 +33,10 @@ version = '1.0'
 def pipeline_run_add(patient):
     for i,j in enumerate( patient.add ):
         # apply to the template if 'apply_on_template' is on
-        output_name=j.get('name','seg_{}'.format(i))
-        output_prefix=patient.template['nl_template_prefix']+'_'+output_name
+        output_name = j.get('name','seg_{}'.format(i))
+        output_prefix = patient.template['nl_template_prefix']  + '_' + output_name
+        output_qc_prefix = patient.qc_jpg['nl_template_prefix'] + '_' + output_name
+
         print("ADD:{}".format(output_name))
         if j.get('apply_on_template',False):
             if j.get('ANIMAL',False):
@@ -56,7 +59,15 @@ def pipeline_run_add(patient):
                         '-template', patient.modeldir + os.sep + patient.modelname + '.mnc',
                         ]
                     minc.command(comm, [patient.nl_xfm, output_prefix+'_cls.mnc'], [output_prefix+'_seg.mnc'])
-                pass
+                #
+                minc_qc.qc(patient.template['nl_template'], output_qc_prefix+'_seg.jpg',
+                        title=patient.id+' '+output_name, 
+                        image_range=[0,120],
+                        mask=output_prefix+'_seg.mnc',
+                        dpi=200,use_max=True,
+                        samples=20, bg_color="black",fg_color="white",
+                        mask_cmap='spectral')
+                
             elif 'segment_options' in j and j.get('WARP',False):
                 # use just nonlinear warping
                 # TODO:
@@ -73,9 +84,7 @@ def pipeline_run_add(patient):
 
                 library=ipl.segment.SegLibrary( library )
                 print(repr(library))
-                if os.path.exists(output_prefix+'_seg.mnc'):
-                    print('ADD:{} already done!'.format(output_name))
-                else:
+                if not os.path.exists(output_prefix+'_seg.mnc'):
                     ipl.segment.fusion_segment(patient.template['nl_template'],
                                 library,
                                 output_prefix,
@@ -85,7 +94,15 @@ def pipeline_run_add(patient):
                                 fuse_variant='seg',
                                 regularize_variant='',
                                 cleanup=True)
-    # END
+                    minc_qc.qc(patient.template['nl_template'], 
+                        output_qc_prefix+'_seg.jpg',
+                        title=patient.id+' '+output_name, 
+                        image_range=[0,120],
+                        mask=output_prefix+'_seg.mnc',
+                        dpi=200,use_max=True,
+                        samples=20, 
+                        bg_color="black",fg_color="white",
+                        mask_cmap='spectral')
 
 # this part runs timepoint-specific part
 def pipeline_run_add_tp(patient, tp, single_tp=False):
@@ -95,7 +112,7 @@ def pipeline_run_add_tp(patient, tp, single_tp=False):
 
         library=None
         if 'segment_library' in j:
-            library=ipl.segment.SegLibrary( library )
+            library=ipl.segment.SegLibrary(j['segment_library'])
             
         options=j.get('segment_options',{})
         
@@ -160,9 +177,8 @@ def pipeline_run_add_tp(patient, tp, single_tp=False):
                             [11,  'globus_pallidus_right'],
                             [29,  'fornix_left'],
                             [254, 'fornix_right'],
-                            [28,  'skull'] ]
-                
-            with mincTools() as minc: 
+                            [28,  'skull'] ]                
+            with mincTools() as minc:
                 if j.get('warp',False):
                     if single_tp:
                         # just copy from old place to tp-specific

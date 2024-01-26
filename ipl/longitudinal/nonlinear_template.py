@@ -13,7 +13,7 @@ import shutil
 from .general import *
 from ipl.model.generate_nonlinear             import generate_nonlinear_model
 from ipl.minc_tools import mincTools,mincError
-
+from ipl import minc_qc
 
 version = '1.1'
 
@@ -37,12 +37,9 @@ def pipeline_lngtemplate(patient):
     allDone = True
     for i in outputImages:
         if not os.path.exists(i):
-            print(' - Does not exists : ' + i)
             allDone = False
             break
-    if allDone:
-        print(' -- pipeline_linearlngtemplate is done')
-    else:
+    if not allDone:
         lngtemplate_v11(patient)  # VF: using 1.1 version
 
     return True
@@ -54,8 +51,14 @@ def lngtemplate_v11(patient):
     with mincTools() as minc: 
         biascorr = False
         atlas = patient.modeldir + os.sep + patient.modelname + '.mnc'
-        atlas_mask = patient.modeldir + os.sep + patient.modelname \
-            + '_mask.mnc'
+        atlas_mask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
+
+        atlas_outline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
+        outline_range=[0,2]
+
+        if not os.path.exists(atlas_outline):
+            atlas_outline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+            outline_range=[0,1]
 
         options={'symmetric':False,
                  'protocol':[{'iter':1,'level':16},
@@ -87,13 +90,15 @@ def lngtemplate_v11(patient):
         #options.output_regu_0 = patient.template['regu_0']
         #options.output_regu_1 = patient.template['regu_1']
 
-        minc.qc(
+        minc_qc.qc(
             patient.template['nl_template'],
             patient.qc_jpg['nl_template'],
             title=patient.id,
             image_range=[0, 120],
-            big=True,
-            clamp=True,
+            samples=20,dpi=200,use_max=True,
+            bg_color='black',fg_color='white',
+            mask=atlas_outline,
+            mask_range=outline_range
             )
 
         # copy each timepoint images too

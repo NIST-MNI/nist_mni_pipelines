@@ -61,26 +61,28 @@ def alpha_blend(si, so, ialpha, oalpha):
 
 
 def max_blend(si,so):
-    """Perform max-blending
+    """
+    Perform max-blending, just take the maximum intensity of the two images
     """
     return np.maximum(si,so)
 
 def over_blend(si,so, ialpha, oalpha):
-    """Perform over-blending
+    """
+    Perform over-blending, non-transparanet overaly takes over the image
     """
     si_rgb =   si[..., :3]
-    si_alpha = si[..., 3]*ialpha
+    si_alpha = si[..., 3]
     
     so_rgb =   so[..., :3]
-    so_alpha = so[..., 3]*oalpha
+    so_alpha = so[..., 3]
     
-    out_alpha = np.maximum(si_alpha ,  so_alpha )
+    #out_alpha = np.maximum(si_alpha,  so_alpha )
     
-    out_rgb = si_rgb * (si_alpha[..., None] - so_alpha[..., None]) + so_rgb * so_alpha[..., None] 
+    out_rgb = si_rgb * (so_alpha[..., None]<0.5) + so_rgb * (so_alpha[..., None]>=0.5)
     
     out = np.zeros_like(si)
     out[..., :3] = out_rgb 
-    out[..., 3]  = out_alpha
+    out[..., 3]  = si_alpha
     
     return out
 
@@ -198,11 +200,14 @@ def qc(
     cmo= copy.copy(plt.get_cmap(mask_cmap))
 
     cm.set_bad('k', alpha = 1.0)
+
+    # make transparent background
     cmo.set_bad('k',alpha = 0.0)
+    cmo.set_under('k',alpha = 0.0)
 
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
     #print("Image range:",vmin,vmax)
-    oNorm  = colors.Normalize(vmin=omin, vmax=omax)
+    oNorm  = colors.Normalize(vmin=omin, vmax=omax, clip=False)
     
     scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
     oscalarMap = cmx.ScalarMappable(norm=oNorm, cmap=cmo)
@@ -300,7 +305,6 @@ def qc(
         ax=None
         imgplot=None
         
-        print(f"rows:{rows} columns:{columns}")
         for i,j in enumerate(slices):
             ax =  fig.add_subplot(grid[ i//columns, i%columns])
             imgplot = ax.imshow(j, origin='lower',  cmap=cm, aspect=aspects[i])
@@ -327,7 +331,13 @@ def qc(
             cbar = fig.colorbar(oscalarMap)
         
         if title is not None:
-            plt.suptitle(title,fontsize=10)
+            plt.suptitle(title,fontsize=7, y=0.99, x=0.05, 
+                         ha='left',
+                         va='top',
+                         color='black' if fg_color is None else fg_color,
+                         backgroundcolor='none',#'white' if bg_color is None else bg_color,
+                         alpha=0.8)
+            #plt.text(x=0.0,y=0.97,ha='left',va='top',s=title,color='black',backgroundcolor='white')
             #plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
             plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
         else:

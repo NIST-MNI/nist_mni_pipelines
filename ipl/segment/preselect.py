@@ -54,7 +54,7 @@ def preselect(sample,
 
     return [i[1] for i in val_sorted[ 0:number] ]
 
-
+@ray.remote
 def calculate_similarity(sample1, sample2,
                          mask=None, method='MI',
                          flip=False, step=None):

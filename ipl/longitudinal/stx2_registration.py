@@ -17,6 +17,7 @@ import ipl.registration
 import ipl.ants_registration
 import ipl.elastix_registration
 
+from .linear_template import register_using_skull
 
 version = '1.0'
 
@@ -38,10 +39,15 @@ def pipeline_linearatlasregistration(patient, tp):
 
 def linearatlasregistration_v10(patient, tp):
 
+
+    # atlas
+    template = patient.modeldir + os.sep + patient.modelname + '.mnc'
+    template_mask = patient.modeldir + os.sep + patient.modelname \
+        + '_mask.mnc'
+    template_brain_skull = patient.modeldir + os.sep + patient.modelname \
+        + '_brain_skull.mnc'
     # crossectional versions
     # just copy the original image as the patient linear template
-
-    
     with mincTools() as minc:
 
         # assigning the templates, to the original image.
@@ -51,17 +57,23 @@ def linearatlasregistration_v10(patient, tp):
         patient.template['linear_template_mask'] = \
             patient[tp].stx_ns_mnc['masknoles']
 
-        # atlas
-
-        template = patient.modeldir + os.sep + patient.modelname + '.mnc'
-        template_mask = patient.modeldir + os.sep + patient.modelname \
-            + '_mask.mnc'
-
-        # register ns_stx into the atlas
-        ipl.registration.linear_register(patient[tp].stx_ns_mnc['t1'], template,
-                             patient.template['stx2_xfm'],
-                             source_mask=patient[tp].stx_ns_mnc['masknoles'],
-                             target_mask=template_mask)
+        if patient.skullreg:
+            patient.template['linear_template_redskull'] = \
+                patient[tp].stx_ns_mnc['redskull']
+            
+            register_using_skull(patient.template['linear_template'],
+                                 patient.template['linear_template_redskull'],
+                                 patient.template['linear_template_mask'],
+                                 template,
+                                 template_brain_skull,
+                                 template_mask,
+                                 patient.template['stx2_xfm'])
+        else:
+            # register ns_stx into the atlas
+            ipl.registration.linear_register(patient[tp].stx_ns_mnc['t1'], template,
+                                patient.template['stx2_xfm'],
+                                source_mask=patient[tp].stx_ns_mnc['masknoles'],
+                                target_mask=template_mask)
 
         # 1. concatenate all transforms
         minc.xfmconcat([patient[tp].stx_ns_xfm['t1'],

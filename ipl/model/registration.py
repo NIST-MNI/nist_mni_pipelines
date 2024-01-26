@@ -62,7 +62,6 @@ def xfmavg(inputs, output, verbose=False):
     if all_linear:
         acc=np.asmatrix(np.zeros([4,4],dtype=complex))
         for i in input_xfms:
-            print(i)
             acc+=scipy.linalg.logm(i)
             
         acc/=len(input_xfms)
@@ -76,7 +75,7 @@ def xfmavg(inputs, output, verbose=False):
         
         output_grid=output.rsplit('.xfm',1)[0]+'_grid_0.mnc'
         
-        with mincTools(verbose=2) as m:
+        with mincTools() as m:
             m.average(input_grids,output_grid)
         
         x=minc2_xfm()
@@ -99,7 +98,12 @@ def linear_register_step(
     work_dir=None,
     bias=None,
     downsample=None,
-    avg_symmetric=True
+    avg_symmetric=True,
+    noshear=False,
+    noscale=False,
+    noshift=False,
+    norot=False,
+    close=False
     ):
     """perform linear registration to the model, and calculate inverse"""
 
@@ -144,6 +148,11 @@ def linear_register_step(
                     parameters=reg_type,
                     conf=linreg,
                     downsample=downsample,
+                    noshear=noshear,
+                    noscale=noscale,
+                    noshift=noshift,
+                    norot=norot,
+                    close=close
                     #work_dir=work_dir
                     )
                 ipl.registration.linear_register(
@@ -157,6 +166,11 @@ def linear_register_step(
                     parameters=reg_type,
                     conf=linreg,
                     downsample=downsample,
+                    noshear=noshear,
+                    noscale=noscale,
+                    noshift=noshift,
+                    norot=norot,
+                    close=close
                     #work_dir=work_dir
                     )
                     
@@ -178,7 +192,12 @@ def linear_register_step(
                     objective=objective,
                     parameters=reg_type,
                     conf=linreg,
-                    downsample=downsample
+                    downsample=downsample,
+                    noshear=noshear,
+                    noscale=noscale,
+                    noshift=noshift,
+                    norot=norot,
+                    close=close
                     #work_dir=work_dir
                     )
             if output_invert is not None:

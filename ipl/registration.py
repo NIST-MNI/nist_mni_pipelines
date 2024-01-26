@@ -218,7 +218,7 @@ linear_registration_config={
             'tolerance'   : 0.0005,
             'simplex'     : 4 }
         ],
-        
+
     'bestlinreg_20180117': [      # re-imelementation from Claude's bestlinreg ~ 2016-12-01
         {   'blur'        : "blur",       # -lsq7 scaling only
             'parameters'  : "-lsq6",
@@ -250,6 +250,24 @@ linear_registration_config={
             'tolerance'   : 0.0000001,
             'simplex'     : 4,
             'reverse'     : True # replace source and target 
+          }
+        ],
+    'bestlinreg_20180117_scaling': [      # scaling only, assuming centers are alrey aligned with lsq6
+          { 'blur'        : "blur",
+            'trans'       : None,
+            'blur_fwhm'   : 2,
+            'steps'       : [2, 2, 2],
+            'tolerance'   : 0.0000001,
+            'simplex'     : 1,
+            'reverse'     : False # replace source and target 
+          },
+          { 'blur'        : "blur",
+            'trans'       : None,
+            'blur_fwhm'   : 1,
+            'steps'       : [2, 2, 2],
+            'tolerance'   : 0.0000001,
+            'simplex'     : 1,
+            'reverse'     : False # replace source and target 
           }
         ]
     }
@@ -331,7 +349,7 @@ def linear_register(
             targets.append(target)
     
       if len(sources)!=len(targets):
-            raise minc_tools.mincError(' ** Error: Different number of inputs ')
+            raise ipl.minc_tools.mincError(' ** Error: Different number of inputs ')
 
 
       # python version
@@ -494,16 +512,17 @@ def linear_register(
                   
 
                 if noshear:
-                    args.extend( ['-w_shear',0,0,0] )
+                    args.extend( ['-w_shear',0.0,0.0,0.0] )
                 if noscale:
-                    args.extend( ['-w_scales',0,0,0] )
+                    args.extend( ['-w_scales',0.0,0.0,0.0] )
                 if noshift:
-                    args.extend( ['-w_translations',0,0,0] )
+                    args.extend( ['-w_translations',0.0,0.0,0.0] )
                 if norot:
-                    args.extend( ['-w_rotations',0,0,0] )
+                    args.extend( ['-w_rotations',0.0,0.0,0.0] )
 
                 # add files and run registration
                 args.append(tmp_xfm)
+
                 minc.command([str(ii) for ii in args],inputs=[tmp_source,tmp_target],outputs=[tmp_xfm])
                 
                 if _reverse:

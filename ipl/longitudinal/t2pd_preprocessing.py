@@ -14,6 +14,8 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
+
 import ipl.registration
 import ipl.ants_registration
 import ipl.elastix_registration
@@ -34,7 +36,6 @@ def pipeline_t2pdpreprocessing(patient, tp):
         if os.path.exists(patient[tp].clp[s]) \
             and os.path.exists(patient[tp].stx_xfm[s]) \
             and os.path.exists(patient[tp].stx_mnc[s]):
-            print(' -- T2/PD Processing was already performed')
             isDone = True
         else:
             isDone = False
@@ -48,9 +49,7 @@ def pipeline_t2pdpreprocessing(patient, tp):
         else:
             isDone = False
 
-    if isDone:
-        print(' -- pipeline_t2pdpreprocessing was already performed or not required')
-    else:
+    if not isDone:
         t2pdpreprocessing_v10(patient, tp)
 
     if not 't2' in patient[tp].native:
@@ -62,16 +61,15 @@ def pipeline_t2pdpreprocessing(patient, tp):
         and os.path.exists(patient[tp].stx_mnc['t2']):
 
         with mincTools( ) as minc:
-            minc.qc(
+            minc_qc.qc(
                 patient[tp].stx_mnc['t1'],
                 patient[tp].qc_jpg['t1t2'],
                 title=patient[tp].qc_title,
                 image_range=[0, 100],
                 mask=patient[tp].stx_mnc['t2'],
-                big=True,
-                clamp=True,
-                red=True,
-                green_mask=True
+                samples=20,dpi=200,use_max=True,
+                image_cmap='red',
+                mask_cmap='green',
                 )
     return True
 
@@ -95,7 +93,7 @@ def t2pdpreprocessing_v10(patient, tp):
         elif os.path.exists(patient[tp].clp['t2']) \
             and os.path.exists(patient[tp].stx_xfm['t2']) \
             and os.path.exists(patient[tp].stx_mnc['t2']):
-            print(' -- T2 preprocessing exists!')
+            pass
         else:
 
             tmpt2 =   minc.tmp('float_t2.mnc')
@@ -469,11 +467,11 @@ def t2pdpreprocessing_v10(patient, tp):
         # #####################
 
         if not 't2les' in patient[tp].native:
-            print(' -- No T2les image!')
+            pass
         elif os.path.exists(patient[tp].stx_mnc['t2les']) \
             and os.path.exists(patient[tp].stx_mnc['masknoles']) \
             and os.path.exists(patient[tp].stx_ns_mnc['masknoles']):
-            print(' -- T2Lesions preprocessing exists!')
+            pass
         else:
 
             tmpdilated = minc.tmp('dilated.mnc')

@@ -16,7 +16,10 @@ from optparse import OptionParser  # to change when python updates in the machin
 from optparse import OptionGroup  # to change when python updates in the machines for argparse
 
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 
+from .t1_preprocessing import run_synthstrip_onnx
+import ray
 
 
 # Run preprocessing using patient info
@@ -51,6 +54,7 @@ def pipeline_stx_skullstripping(patient, tp):
     params.xfmt1 = patient[tp].stx_xfm['t1']
     params.ns_stxt1 = patient[tp].stx_ns_mnc['t1']
     params.ns_xfmt1 = patient[tp].stx_ns_xfm['t1']
+    params.ns_unscale_xfm = patient[tp].stx_ns_xfm['unscale_t1']
 
     # setting outputs
 
@@ -62,10 +66,9 @@ def pipeline_stx_skullstripping(patient, tp):
     if os.path.exists(params.stx_mask) \
         and os.path.exists(params.ns_stx_mask) \
         and os.path.exists(params.qc_stx_mask):
-        print(' -- pipeline_stx_skullstripping is done')
+        pass
     else:
-
-        runSkullstripping(params)
+        runSkullstripping(params, synthstrip_onnx=patient.synthstrip_onnx)
 
     return True
 
@@ -92,15 +95,12 @@ def pipeline_stx2_skullstripping(patient, tp):
     params.novolpol = True
     params.final = patient.beastresolution
 
-  # timepoint files
-  # params.t2=patient[tp].clp["t2"]
-  # params.pd=patient[tp].clp["pd"]
-
     params.clpt1 = patient[tp].clp['t1']
     params.stxt1 = patient[tp].stx2_mnc['t1']
     params.xfmt1 = patient[tp].stx2_xfm['t1']
-    params.ns_stxt1 = None  # patient[tp].stx_ns_mnc["t1"]
-    params.ns_xfmt1 = None  # patient[tp].stx_ns_xfm["t1"]
+    params.ns_stxt1 = None #patient[tp].stx_ns_mnc['t1']
+    params.ns_xfmt1 = None #patient[tp].stx_ns_xfm["t1"]
+    params.ns_unscale_xfm = None
     params.beastdir = patient.beastdir
 
   # output files
@@ -118,9 +118,7 @@ def pipeline_stx2_skullstripping(patient, tp):
 
     if not os.path.exists(params.stx_mask) \
         or not os.path.exists(params.qc_stx_mask):
-        runSkullstripping(params)
-    else:
-        print(' -- pipeline_stx2_skullstripping is done')
+        runSkullstripping(params, synthstrip_onnx=patient.synthstrip_onnx)
 
 
     if 't2les' in patient[tp].native:
@@ -136,9 +134,9 @@ def pipeline_stx2_skullstripping(patient, tp):
 
 # Last preprocessing (or more common one)
 
-def runSkullstripping(params):
+def runSkullstripping(params, synthstrip_onnx=None):
     if params.pipeline_version == '1.0':
-        skullstripping_v10(params)  # beast by simon fristed
+        skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx)  # beast by simon fristed
     else:
         print(' -- Chosen version not found!')
 
@@ -146,57 +144,65 @@ def runSkullstripping(params):
 # function using beast
 # needs image in standard space
 
-def skullstripping_v10(params):
+def skullstripping_v10(params,
+                       synthstrip_onnx=None):
 
     with mincTools()  as minc:
+        if synthstrip_onnx is not None:
+            # apply synthstrip in the native space to ease everything else
+            # need to resample to 1x1x1mm^2
+            ray.get(run_synthstrip_onnx.remote(params.stxt1, 
+                    params.stx_mask, 
+                    synthstrip_model=synthstrip_onnx))
+        else:
+            # temporary images in the dimensions of beast database
+            tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
+            tmpmask = minc.tmp('beast_stx_mask.mnc')
 
-    # temporary images in the dimensions of beast database
+            beast_v10_template = params.beastdir + os.sep \
+                + 'intersection_mask.mnc'
+            beast_v10_margin = params.beastdir + os.sep + 'margin_mask.mnc'
 
-        tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
-        tmpmask = minc.tmp('beast_stx_mask.mnc')
+            beast_v10_conffile = {'1': params.beastdir + os.sep \
+                                + 'default.1mm.conf',
+                                '2': params.beastdir + os.sep \
+                                + 'default.2mm.conf'}
+            beast_v10_intersect = params.beastdir + os.sep \
+                + 'intersection_mask.mnc'
 
-        beast_v10_template = params.beastdir + os.sep \
-            + 'intersection_mask.mnc'
-        beast_v10_margin = params.beastdir + os.sep + 'margin_mask.mnc'
+            if not os.path.exists(params.stx_mask):
 
-        beast_v10_conffile = {'1': params.beastdir + os.sep \
-                              + 'default.1mm.conf',
-                              '2': params.beastdir + os.sep \
-                              + 'default.2mm.conf'}
-        beast_v10_intersect = params.beastdir + os.sep \
-            + 'intersection_mask.mnc'
+                # changing the size of stx if necessary to fit with the beast images dimensions
+                minc.resample_smooth(params.stxt1, tmpstxt1,
+                                    like=beast_v10_template)
 
-        if not os.path.exists(params.stx_mask):
+                # perform segmentation
 
-      # changing the size of stx if necessary to fit with the beast images dimensions
+                comm = [
+                    'mincbeast',
+                    params.beastdir,
+                    tmpstxt1,
+                    tmpmask,
+                    '-median',
+                    '-fill',
+                    '-conf',
+                    beast_v10_conffile[params.final],
+                    '-same_resolution',
+                    ]
+                minc.command(comm, [tmpstxt1], [tmpmask])
 
-            minc.resample_smooth(params.stxt1, tmpstxt1,
-                                 like=beast_v10_template)
+                # reformat into the orginial stx size
+                minc.resample_labels(tmpmask, params.stx_mask,
+                                    like=params.stxt1)
 
-      # perform segmentation
+        # reformat mask into native space if needed
+        if params.clp_mask is not None and \
+            synthstrip_onnx is None and \
+            os.path.exists(params.xfmt1) and \
+            os.path.exists(params.clpt1):
 
-            comm = [
-                'mincbeast',
-                params.beastdir,
-                tmpstxt1,
-                tmpmask,
-                '-median',
-                '-fill',
-                '-conf',
-                beast_v10_conffile[params.final],
-                '-same_resolution',
-                ]
-            minc.command(comm, [tmpstxt1], [tmpmask])
-
-            # reformat into the orginial stx size
-            minc.resample_labels(tmpmask, params.stx_mask,
-                                 like=params.stxt1)
-
-        # reformat mask into native space
-
-        if params.clp_mask is not None and os.path.exists(params.xfmt1) \
-            and os.path.exists(params.clpt1):
-            minc.resample_labels(params.stx_mask, params.clp_mask,
+            minc.resample_labels(params.stx_mask, 
+                                 params.clp_mask,
                                  like=params.clpt1,
                                  invert_transform=True,
                                  transform=params.xfmt1)
@@ -205,19 +211,20 @@ def skullstripping_v10(params):
         if params.ns_stx_mask is not None \
             and os.path.exists(params.ns_xfmt1) \
             and os.path.exists(params.ns_stxt1):
-            minc.resample_labels(params.clp_mask, params.ns_stx_mask,
+
+            minc.resample_labels(params.stx_mask, 
+                                 params.ns_stx_mask,
                                  like=params.ns_stxt1,
-                                 transform=params.ns_xfmt1)
+                                 transform=params.ns_unscale_xfm)
 
         if params.qc_stx_mask is not None:
-            minc.qc(
+            minc_qc.qc(
                 params.stxt1,
                 params.qc_stx_mask,
                 title=params.qc_title,
                 image_range=[0, 120],
-                mask=params.stx_mask,
-                big=True,
-                clamp=True,
+                mask=params.stx_mask,dpi=200,use_max=True,
+                samples=20,bg_color="black",fg_color="white"
                 )
 
 if __name__ == '__main__':

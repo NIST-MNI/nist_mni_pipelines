@@ -12,6 +12,7 @@ version = '1.0'
 
 from .general import *
 from ipl.minc_tools import mincTools,mincError
+from ipl import minc_qc
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -19,9 +20,7 @@ from ipl.minc_tools import mincTools,mincError
 
 def pipeline_concat(patient, tp):
 
-    if os.path.exists(patient[tp].nl_xfm):
-        print(' -- pipeline_concat already done!')
-    else:
+    if not os.path.exists(patient[tp].nl_xfm):
         concat_v10(patient, tp)  # beast by simon fristed
 
     with mincTools()  as minc:
@@ -30,14 +29,13 @@ def pipeline_concat(patient, tp):
 
         if not os.path.exists(patient[tp].qc_jpg['nl_t1']):
             minc.resample_smooth(patient[tp].stx2_mnc['t1'],minc.tmp('nl_stx_t1.mnc'),transform=patient[tp].nl_xfm)
-            minc.qc(
+            minc_qc.qc(
                 minc.tmp('nl_stx_t1.mnc'),
                 patient[tp].qc_jpg['nl_t1'],
                 title=patient[tp].qc_title,
                 image_range=[0, 120],
-                mask=atlas_outline,
-                big=True,
-                clamp=True,
+                mask=atlas_outline,dpi=200,use_max=True,
+                samples=20,bg_color="black",fg_color="white"
             )
     return True
     

@@ -240,12 +240,12 @@ def main():
             add=[]
             
             for l,ll in enumerate(modalities):
-                if len(options.scans)>(l+1):
+                if len(options.scans)>(l+1) and options.scans[(l+1)]!='':
                     add.append(MriScan(name=data_name, 
                                     scan=options.scans[(l+1)], 
                                     modality=ll, 
                                     mask=None))
-            
+        
             if len(add)==0: add=None
             
             info={  'subject':options.subject, 

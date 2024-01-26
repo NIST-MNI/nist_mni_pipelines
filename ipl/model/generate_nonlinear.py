@@ -200,9 +200,9 @@ def generate_nonlinear_average(
             if cleanup and it>1 :
                 # remove information from previous iteration
                 for s in corr_samples:
-                    s.cleanup(verbose=True)
+                    s.cleanup()
                 for x in corr_transforms:
-                    x.cleanup(verbose=True)
+                    x.cleanup()
 
             # here all the transforms should exist
             avg_inv_transform=MriTransform(name='avg_inv', prefix=it_prefix, iter=it)
