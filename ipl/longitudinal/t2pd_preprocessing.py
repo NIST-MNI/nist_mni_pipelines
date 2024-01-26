@@ -76,6 +76,20 @@ def pipeline_t2pdpreprocessing(patient, tp):
                 )
     return True
 
+
+def pipeline_t2pdpreprocessing_s0(patient, tp):
+    if 't2' in patient[tp].native:
+        if patient.denoise:
+            run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+            ray.get(run_nlm_c.remote(patient[tp].native['t2'],  patient[tp].den['t2']))
+
+    if 'pd' in patient[tp].native:
+        if patient.denoise:
+            run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+            ray.get(run_nlm_c.remote(patient[tp].native['pd'],  patient[tp].den['pd']))
+    #
+    return True
+
 def t2pdpreprocessing_v10(patient, tp):
 
     with  mincTools() as minc:
@@ -117,8 +131,6 @@ def t2pdpreprocessing_v10(patient, tp):
             
             # 1. Do nlm
             if patient.denoise:
-                run_nlm_c = run_nlm.options(num_cpus=patient.threads)
-                ray.get(run_nlm_c.remote(patient[tp].native['t2'],  patient[tp].den['t2']))
                 tmpnlm = patient[tp].den['t2']
             else:
                 minc.convert_and_fix(patient[tp].native['t2'], tmpt2)
@@ -284,15 +296,12 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_pd_t1_xfm = minc.tmp('pd_t1_0.xfm')
             tmp_pd_stx_xfm = minc.tmp('pd_stx_0.xfm')
 
-            # 1. Do nlm      
+            # 1. Do nlm 
             if patient.denoise:
-                run_nlm_c = run_nlm.options(num_cpus=patient.threads)
-                ray.get(run_nlm_c.remote(patient[tp].native['pd'],  patient[tp].den['pd']))
                 tmpnlm = patient[tp].den['pd']
             else:
                 minc.convert_and_fix(patient[tp].native['pd'], tmppd)
                 tmpnlm = tmppd
-
 
             # 2. Best lin reg T2 to T1
             # if there is no T2, we register the data

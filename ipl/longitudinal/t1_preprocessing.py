@@ -48,6 +48,29 @@ except:
     print("Missing onnxruntime, will not be able to run onnx models")
 
 
+def pipeline_t1preprocessing_s0(patient, tp):
+    if patient.synthstrip_onnx is not None:
+        tmpmask = patient[tp].clp['mask']
+        if not os.path.exists(patient[tp].clp['mask']):
+            # apply synthstrip in the native space to ease everything else
+            # need to resample to 1x1x1mm^2
+            run_synthstrip_onnx_c = run_synthstrip_onnx.options(num_cpus=patient.threads)
+            ray.get(run_synthstrip_onnx_c.remote(
+                        patient[tp].native['t1'], patient[tp].clp['mask'], 
+                        out_qc=patient[tp].qc_jpg['synthstrip'],
+                        normalize_1x1x1=True,
+                        synthstrip_model=patient.synthstrip_onnx))
+            
+
+    # 3. denoise
+    if patient.denoise:
+        if not os.path.exists( patient[tp].den['t1'] ):
+            run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+            ray.get(run_nlm_c.remote(patient[tp].native['t1'],  patient[tp].den['t1']))
+
+    return True
+
+
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
 # - pipeline_version is employed to select the correct version of the pipeline
@@ -236,22 +259,10 @@ def t1preprocessing_v10(patient, tp):
 
         if patient.synthstrip_onnx is not None:
             tmpmask = patient[tp].clp['mask']
-            if not os.path.exists(patient[tp].clp['mask']):
-                # apply synthstrip in the native space to ease everything else
-                # need to resample to 1x1x1mm^2
-                run_synthstrip_onnx_c = run_synthstrip_onnx.options(num_cpus=patient.threads)
-                ray.get(run_synthstrip_onnx_c.remote(
-                            patient[tp].native['t1'], patient[tp].clp['mask'], 
-                            out_qc=patient[tp].qc_jpg['synthstrip'],
-                            normalize_1x1x1=True,
-                            synthstrip_model=patient.synthstrip_onnx))
-                
 
         if not os.path.exists( patient[tp].clp['t1'] ):
             # 3. denoise
             if patient.denoise:
-                run_nlm_c = run_nlm.options(num_cpus=patient.threads)
-                ray.get(run_nlm_c.remote(patient[tp].native['t1'],  patient[tp].den['t1']))
                 tmpnlm = patient[tp].den['t1']
             else:
                 minc.convert_and_fix(patient[tp].native['t1'], tmpt1)

@@ -24,8 +24,8 @@ from ipl.longitudinal.patient            import *  # class to store all the data
 from ipl.minc_tools import mincTools,mincError
 
 # files storing all processing
-from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing
-from ipl.longitudinal.t2pd_preprocessing import pipeline_t2pdpreprocessing
+from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing,pipeline_t1preprocessing_s0
+from ipl.longitudinal.t2pd_preprocessing import pipeline_t2pdpreprocessing,pipeline_t2pdpreprocessing_s0
 from ipl.longitudinal.skull_stripping    import pipeline_stx_skullstripping
 from ipl.longitudinal.skull_stripping    import pipeline_stx2_skullstripping
 from ipl.longitudinal.linear_template    import pipeline_linearlngtemplate
@@ -435,7 +435,35 @@ def launchPipeline(options):
 
 
 @ray.remote
-def runTimePoint_FirstStage(tp, patient):
+def runTimePoint_FirstStageA(tp, patient):
+    '''
+    Process one timepoint for cross-sectional analysis
+    First Stage : preprocessing and initial stereotaxic registration
+    '''
+
+    try:
+        # preprocessing
+        # ##############
+
+        if not pipeline_t1preprocessing_s0(patient, tp):
+            raise IplError(' XX Error in the preprocessing of '
+                        + patient.id + ' ' + tp)
+
+        pipeline_t2pdpreprocessing_s0(patient, tp)
+
+        return True
+    except mincError as e:
+        print("Exception in runTimePoint_FirstStageA:{}".format(repr(e)))
+        traceback.print_exc(file=sys.stdout)
+        raise
+    except :
+        print("Exception in runTimePoint_FirstStageA:{}".format(sys.exc_info()[0]))
+        traceback.print_exc(file=sys.stdout)
+        raise
+
+
+@ray.remote
+def runTimePoint_FirstStageB(tp, patient):
     '''
     Process one timepoint for cross-sectional analysis
     First Stage : preprocessing and initial stereotaxic registration
@@ -464,11 +492,11 @@ def runTimePoint_FirstStage(tp, patient):
 
         return True
     except mincError as e:
-        print("Exception in runTimePoint_FirstStage:{}".format(repr(e)))
+        print("Exception in runTimePoint_FirstStageB:{}".format(repr(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in runTimePoint_FirstStage:{}".format(sys.exc_info()[0]))
+        print("Exception in runTimePoint_FirstStageB:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -607,12 +635,12 @@ def runPipeline(pickle, workdir=None):
             patient.workdir=workdir
         # prepare qc folder
 
-        tps = sorted(patient.keys())
-        jobs = []
-        for tp in tps:
-            jobs.append( runTimePoint_FirstStage.remote(tp, patient) )
+        # first stage A, multithreading steps
+        ray.get([runTimePoint_FirstStageA.remote(tp, patient) for tp in patient.keys()])
+        patient.write(patient.pickle)  # copy new images in the pickle
 
-        ray.get(jobs)
+        # first stage B, single threading steps
+        ray.get([runTimePoint_FirstStageB.remote(tp, patient) for tp in patient.keys()])
         patient.write(patient.pickle)  # copy new images in the pickle
 
         jobs=[]
