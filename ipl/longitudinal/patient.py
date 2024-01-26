@@ -174,6 +174,8 @@ class LngPatient(dict):
             # stx space
             LngPatient._remove_file(self[tp].stx_mnc)
             LngPatient._remove_file(self[tp].stx_ns_mnc)
+            # lng space
+            LngPatient._remove_file(self[tp].lng_mnc)
         
         # TODO: reshape _grid files to use short datatype instead of float ?
 
@@ -622,6 +624,8 @@ def setFilenames(patient):
 
         patient[tp].lng_xfm['t1'] = lngdir + 'lng_' + patient.id + '_' \
             + tp + '_t1.xfm'
+        patient[tp].lng_grid['t1'] = lngdir + 'lng_' + patient.id \
+            + '_' + tp + '_t1_grid_0.mnc'
         patient[tp].lng_ixfm['t1'] = lngdir + 'lng_' + patient.id + '_' \
             + tp + '_t1_inv.xfm'
         patient[tp].lng_igrid['t1'] = lngdir + 'lng_' + patient.id \
