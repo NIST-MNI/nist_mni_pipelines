@@ -50,7 +50,6 @@ except:
 
 def pipeline_t1preprocessing_s0(patient, tp):
     if patient.synthstrip_onnx is not None:
-        tmpmask = patient[tp].clp['mask']
         if not os.path.exists(patient[tp].clp['mask']):
             # apply synthstrip in the native space to ease everything else
             # need to resample to 1x1x1mm^2
@@ -61,7 +60,6 @@ def pipeline_t1preprocessing_s0(patient, tp):
                         normalize_1x1x1=True,
                         synthstrip_model=patient.synthstrip_onnx))
             
-
     # 3. denoise
     if patient.denoise:
         if not os.path.exists( patient[tp].den['t1'] ):
@@ -182,7 +180,7 @@ def run_nlm(in_t1w, out_den):
         os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=str(n_threads)
         os.environ['OMP_NUM_THREADS']=str(n_threads)
         minc.convert_and_fix(in_t1w, minc.tmp('fixed.mnc'))
-        minc.nlm( minc.tmp('fixed_t1.mnc'), out_den, beta=0.7 )
+        minc.nlm( minc.tmp('fixed.mnc'), out_den, beta=0.7 )
 
     if _omp_num_threads is not None:
         os.environ['OMP_NUM_THREADS']=_omp_num_threads
