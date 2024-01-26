@@ -151,10 +151,20 @@ def run_redskull_onnx(in_t1w, out_redskull,
 @ray.remote(num_cpus=4) 
 def run_nlm(in_t1w, out_den):
     n_threads=int(ray.runtime_context.get_runtime_context().get_assigned_resources()["CPU"])
-    with threadpool_limits(limits=n_threads): # HACK: limit number of threads to 1
-        with mincTools() as minc:
-            minc.convert_and_fix(in_t1w, minc.tmp('fixed_t1.mnc'))
-            minc.nlm( minc.tmp('fixed_t1.mnc'), out_den, beta=0.7 )
+    #os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=os.environ['OMP_NUM_THREADS']
+    _omp_num_threads=os.environ.get('OMP_NUM_THREADS',None)
+    _itk_num_threads=os.environ.get('ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS',None)
+
+    with mincTools() as minc:
+        os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=str(n_threads)
+        os.environ['OMP_NUM_THREADS']=str(n_threads)
+        minc.convert_and_fix(in_t1w, minc.tmp('fixed_t1.mnc'))
+        minc.nlm( minc.tmp('fixed_t1.mnc'), out_den, beta=0.7 )
+
+    if _omp_num_threads is not None:
+        os.environ['OMP_NUM_THREADS']=_omp_num_threads
+    if _itk_num_threads is not None:
+        os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=_itk_num_threads
 
 
 
