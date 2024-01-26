@@ -315,9 +315,10 @@ class TP:
         # non linear images
 
         self.lng_xfm = {}  # registration towards the lng template
+        self.lng_grid = {}  # registration towards the lng template
         self.lng_ixfm = {}  # registration from lng templat to scan
         self.lng_igrid = {}  # registration from lng templat to scan
-        self.lng_det = {}  # registration from lng templat to scan  determinant
+        self.lng_det = {}  # registration from lng templat to scan determinant
         self.nl_xfm = ''  # registration towards the atlas
 
         # qc images
