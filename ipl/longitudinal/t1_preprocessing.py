@@ -181,7 +181,7 @@ def run_nlm(in_t1w, out_den):
     with mincTools() as minc:
         os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=str(n_threads)
         os.environ['OMP_NUM_THREADS']=str(n_threads)
-        minc.convert_and_fix(in_t1w, minc.tmp('fixed_t1.mnc'))
+        minc.convert_and_fix(in_t1w, minc.tmp('fixed.mnc'))
         minc.nlm( minc.tmp('fixed_t1.mnc'), out_den, beta=0.7 )
 
     if _omp_num_threads is not None:

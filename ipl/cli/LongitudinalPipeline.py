@@ -634,13 +634,13 @@ def runPipeline(pickle, workdir=None):
         if workdir is not None:
             patient.workdir=workdir
         # prepare qc folder
-
+        tps=sorted(list(patient.keys()))
         # first stage A, multithreading steps
-        ray.get([runTimePoint_FirstStageA.remote(tp, patient) for tp in patient.keys()])
+        ray.get([runTimePoint_FirstStageA.remote(tp, patient) for tp in tps])
         patient.write(patient.pickle)  # copy new images in the pickle
 
         # first stage B, single threading steps
-        ray.get([runTimePoint_FirstStageB.remote(tp, patient) for tp in patient.keys()])
+        ray.get([runTimePoint_FirstStageB.remote(tp, patient) for tp in tps])
         patient.write(patient.pickle)  # copy new images in the pickle
 
         jobs=[]
@@ -656,10 +656,8 @@ def runPipeline(pickle, workdir=None):
             # all images are aligned using this new template and the bias correction used in the template creation
             pipeline_linearlngtemplate(patient)
 
-            for tp in tps:
-                jobs.append(runSkullStripping.remote(tp , patient))
             # wait for all jobs to finish
-            ray.get(jobs)
+            ray.get([runSkullStripping.remote(tp , patient) for tp in tps])
 
             # using the stx2 space, we do the non-linear template
             # ################################################
@@ -674,23 +672,14 @@ def runPipeline(pickle, workdir=None):
 
             # Concatenate xfm files for each timepoint.
             # run per tp tissue classification
-            jobs=[]
-            for tp in tps:
-                jobs.append(
-                    runTimePoint_ThirdStage.remote( tp, patient
-                    ))
-            ray.get(jobs)
+            ray.get([runTimePoint_ThirdStage.remote( tp, patient) for tp in tps])
 
             # longitudinal classification
             # ############################
             if patient.dolngcls:
                 pipeline_lng_classification(patient)
 
-            jobs=[]
-            for tp in tps:
-                jobs.append(runTimePoint_FourthStage.remote( tp, patient, patient.vbm_options))
-            
-            ray.get(jobs)
+            ray.get([runTimePoint_FourthStage.remote( tp, patient, patient.vbm_options) for tp in tps])
 
         if patient.cleanup:
             patient.cleanup()
