@@ -325,7 +325,7 @@ def launchPipeline(options):
                     patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
                 patients[id].nl_cost_fun = options.nl_cost_fun
-                patients[id].cleanup = options.cleanup
+                patients[id].do_cleanup = options.cleanup
                 # end of creating a patient
 
             # ## Add timepoint to the patient
@@ -681,7 +681,7 @@ def runPipeline(pickle, workdir=None):
 
             ray.get([runTimePoint_FourthStage.remote( tp, patient, patient.vbm_options) for tp in tps])
 
-        if patient.cleanup:
+        if patient.do_cleanup:
             patient.cleanup()
         else:
             # no need to write it, if we will cleanup
