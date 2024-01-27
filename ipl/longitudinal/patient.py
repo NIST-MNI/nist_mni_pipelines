@@ -153,6 +153,9 @@ class LngPatient(dict):
         if isinstance(fn,list):
             for f in fn:
                 LngPatient._remove_file(f)
+        elif isinstance(fn,dict):
+            for (k,f) in fn.items():
+                LngPatient._remove_file(f)
         else: 
             if os.path.exists(fn):
                 os.unlink(fn)
