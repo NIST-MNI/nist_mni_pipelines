@@ -147,16 +147,21 @@ if __name__ == "__main__":
         print("Classifier:", clf)
 
         if options.CV is not None:
-            run_cv(options.CV, sample_vol, random=options.random, method=options.method,output=options.output,clf=clf, n_cls=n_cls, n_bins=n_bins)
+            run_cv(options.CV, sample_vol, random=options.random, 
+                   method=options.method,output=options.output,
+                   clf=clf, n_cls=n_cls )
         else:
-            train(sample_vol, random=options.random, method=options.method,output=options.output,clf=clf, n_cls=n_cls, n_bins=n_bins )
+            train(sample_vol, random=options.random, method=options.method,
+                  output=options.output, clf=clf, n_cls=n_cls )
 
     elif options.infer is not None and options.output is not None and options.load is not None:
         input = read_csv_dict(options.infer)
 
-        infer(input,  n_cls=n_cls, n_bins=n_bins, 
-          resample=options.resample, n_jobs=options.n_jobs,   method=options.method, batch=options.batch,
-          load_pfx=options.load, atlas_pfx=options.atlas_pfx, inverse_xfm=options.inverse_xfm,
+        infer(input,  n_cls=n_cls,  
+          resample=options.resample, n_jobs=options.n_jobs,   
+          method=options.method, batch=options.batch,
+          load_pfx=options.load, atlas_pfx=options.atlas_pfx, 
+          inverse_xfm=options.inverse_xfm,
           output=options.output, prob=options.prob,
           progress=True)
     else:
