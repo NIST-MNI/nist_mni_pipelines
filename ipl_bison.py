@@ -103,29 +103,30 @@ if __name__ == "__main__":
     
     #modalities = ('t1', 't2', 'pd', 'flair', 'ir','mp2t1', 'mp2uni')
 
-    clf = init_clasifierr(options.method, n_jobs=options.n_jobs, random=options.random)
+    clf = init_clasifierr(options.method, n_jobs=options.n_jobs, 
+                          random=options.random)
 
     if options.train is not None and options.output is not None:
-        train = read_csv_dict(options.train)
+        train_data = read_csv_dict(options.train)
         # recognized headers:
         # t1,t2,pd,flair,ir,mp2t1,mp2uni
         # pCls<n>,labels,mask
         # minimal set: one modality, p<n>, av_modality, labels, mask  for training 
 
-        if 'labels' not in train:
+        if 'labels' not in train_data:
             print("labels are missing")
             exit(1)
-        elif 'mask' not in train: # TODO: train with whole image?
+        elif 'mask' not in train_data: # TODO: train with whole image?
             print('mask is missing')
             exit(1)
 
         if options.resample:
-            if 'xfm' not in train:
+            if 'xfm' not in train_data:
                 print("Need xfm column")
                 exit(1)
         else:
             for i in range(n_cls):
-                if f'p{i+1}' not in train:
+                if f'p{i+1}' not in train_data:
                     print(f'p{i+1} is missing')
                     exit(1)
 
@@ -135,7 +136,7 @@ if __name__ == "__main__":
         _state = np.random.get_state()
         np.random.seed(options.subset_seed)
 
-        sample_vol=load_all_volumes(train, n_cls, 
+        sample_vol=load_all_volumes(train_data, n_cls, 
             resample=options.resample,
             atlas_pfx=options.atlas_pfx,
             inverse_xfm=options.inverse_xfm,
@@ -151,10 +152,15 @@ if __name__ == "__main__":
                    method=options.method,output=options.output,
                    clf=clf, n_cls=n_cls )
         else:
-            train(sample_vol, random=options.random, method=options.method,
-                  output=options.output, clf=clf, n_cls=n_cls )
+            train(sample_vol, random=options.random, 
+                  method=options.method,
+                  output=options.output, 
+                  clf=clf, n_cls=n_cls )
 
-    elif options.infer is not None and options.output is not None and options.load is not None:
+    elif options.infer is not None and \
+         options.output is not None and \
+         options.load is not None:
+        
         input = read_csv_dict(options.infer)
 
         infer(input,  n_cls=n_cls,  

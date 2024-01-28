@@ -313,7 +313,7 @@ def load_XY(sample_vol, hist, n_cls, n_bins,
             modalities=('t1','t2','pd','flair','ir','mp2t1', 'mp2uni'),
             subset=None, noconcat=False):
     X_=[]
-    if 'labels' in train:
+    if 'labels' in sample_vol:
         Y_=[]
     else:
         Y_=None
@@ -324,7 +324,7 @@ def load_XY(sample_vol, hist, n_cls, n_bins,
     for i in subset:
         (X__,Y__) = load_XY_item(i, sample_vol, hist, n_cls, n_bins, modalities)
         X_.append(X__)
-        if 'labels' in train:
+        if 'labels' in sample_vol:
             Y_.append(Y__)
     if noconcat:
         return (X_,Y_)
@@ -381,6 +381,8 @@ def init_clasifierr(method,n_jobs=None,random=None):
     
     if n_jobs is not None and not isinstance(clf, HistGradientBoostingClassifier):
         clf.n_jobs = n_jobs
+
+    return clf
 
 
 def infer(input,
@@ -468,7 +470,10 @@ def infer(input,
 
 
 def train(sample_vol, 
-          random=None, method=None, output=None, clf=None, n_cls=None, n_bins=256, modalities=bison_modalities):
+          random=None, method=None, 
+          output=None, 
+          clf=None, n_cls=None, 
+          n_bins=256, modalities=bison_modalities):
     # 1st stage : estimage intensity histograms
     hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities)
     for i,j in hist.items():
