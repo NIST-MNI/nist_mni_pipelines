@@ -179,8 +179,8 @@ def lobe_segmentation_v10(patient, tp):
                    patient[tp].stx2_xfm['t1']],
                    [patient[tp].vol['lobes']])
         
-        lobes_to_json(patient,patient[tp].vol['lobes'],
-                      tp,
+        lobes_to_json(patient, tp,
+                      patient[tp].vol['lobes'],
                       lobes_json=patient[tp].vol['lobes_json'],
                       lobes_csv=patient[tp].vol['lobes_csv'])
          
