@@ -3,11 +3,11 @@ set -e -x
 
 
 FIELD=1.5
-PRL=4
+PRL=8
 THREADS=4
 out=output
 CLEANUP=YES
-## number of threads should be less or equal to PRL (parallel processes)
+## number of threads should be less then PRL (parallel processes)
 
 
 cat - <<END

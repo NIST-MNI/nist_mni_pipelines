@@ -9,6 +9,8 @@
 from .general import *
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
+import json
+import csv
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -32,6 +34,91 @@ def pipeline_lobe_segmentation(patient, tp):
 
     return True
 
+
+def  lobes_to_json(patient, tp, lobes_txt, lobes_json=None, lobes_csv=None):
+    # populate dictionary with expected values
+    out={
+        "SubjectID":"",
+        "VisitID":"",
+        "ScaleFactor":0.0,
+        "Age":0.0,
+        "Gender":"",
+        "T1_SNR":0.0,
+        "T2_SNR":0.0,
+        "PD_SNR":0.0,
+        "ICC_vol":0.0,
+        "CSF_vol":0.0,
+        "GM_vol":0.0,
+        "WM_vol":0.0,
+        "scale":0.0,
+        "parietal_right_gm":0.0,
+        "lateral_ventricle_left":0.0,
+        "occipital_right_gm":0.0,
+        "parietal_left_gm":0.0,
+        "occipital_left_gm":0.0,
+        "lateral_ventricle_right":0.0,
+        "globus_pallidus_right":0.0,
+        "globus_pallidus_left":0.0,
+        "putamen_left":0.0,
+        "putamen_right":0.0,
+        "frontal_right_wm":0.0,
+        "brainstem":0.0,
+        "subthalamic_nucleus_right":0.0,
+        "fornix_left":0.0,
+        "frontal_left_wm":0.0,
+        "subthalamic_nucleus_left":0.0,
+        "caudate_left":0.0,
+        "occipital_right_wm":0.0,
+        "caudate_right":0.0,
+        "parietal_left_wm":0.0,
+        "temporal_right_wm":0.0,
+        "cerebellum_left":0.0,
+        "occipital_left_wm":0.0,
+        "cerebellum_right":0.0,
+        "temporal_left_wm":0.0,
+        "thalamus_left":0.0,
+        "parietal_right_wm":0.0,
+        "thalamus_right":0.0,
+        "frontal_left_gm":0.0,
+        "frontal_right_gm":0.0,
+        "temporal_left_gm":0.0,
+        "temporal_right_gm":0.0,
+        "3rd_ventricle":0.0,
+        "4th_ventricle":0.0,
+        "fornix_right":0.0,
+        "extracerebral_CSF":0.0
+    }
+    with open(lobes_txt,'r') as f:
+        for l in f:
+            l=l.strip()
+            if len(l)==0:
+                continue
+            l=l.split(' ' )
+            if len(l)!=2:
+                raise mincError('Invalid line in lobes file:'+str(l))
+            k,v=l
+            if k in out:
+                if k!='Gender':
+                    out[k]=float(v)
+                else:
+                    out[k]=v
+            else:
+                raise mincError('Invalid key in lobes file:'+str(k))
+    out["SubjectID"]=patient.id
+    out["VisitID"]=tp
+
+    if lobes_json is not None:
+        with open(lobes_json,'w') as f:
+            json.dump(out,f,indent=2,sort_keys=True)
+
+    if lobes_csv is not None:
+        with open(lobes_csv,'w') as f:
+            fieldnames = sorted(out.keys())
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerow(out)
+    
+    return out
 
 def lobe_segmentation_v10(patient, tp):
 
@@ -65,8 +152,7 @@ def lobe_segmentation_v10(patient, tp):
                      [patient[tp].stx2_mnc['lobes']])
 
         # Compute volumes
-        # Classify brain into 3 classes
-        # TODO: replace with direct call to lobes_to_volumes.pl
+        # TODO: reimplement in python
         comm = [    
             'pipeline_volumes_nl.pl',
             patient[tp].stx2_mnc['masknoles'],
@@ -91,6 +177,12 @@ def lobe_segmentation_v10(patient, tp):
                    patient[tp].stx2_mnc['lobes'],
                    patient[tp].stx2_xfm['t1']],
                    [patient[tp].vol['lobes']])
+        
+        lobes_to_json(patient,patient[tp].vol['lobes'],
+                      tp,
+                      json=patient[tp].vol['lobes_json'],
+                      csv=patient[tp].vol['lobes_csv'])
+         
     return 0
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

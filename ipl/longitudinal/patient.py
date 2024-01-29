@@ -179,7 +179,10 @@ class LngPatient(dict):
             LngPatient._remove_file(self[tp].stx_ns_mnc)
             # lng space
             LngPatient._remove_file(self[tp].lng_mnc)
-        
+
+            # remove extraneous QC files ?
+            # for s in self[tp].native.keys():
+            #     LngPatient._remove_file(self[tp].qc_jpg['stx_' + s])
         # TODO: reshape _grid files to use short datatype instead of float ?
 
 
@@ -653,8 +656,15 @@ def setFilenames(patient):
 
         patient[tp].stx2_mnc['lobes'] = clsdir + 'lob_' + patient.id \
             + '_' + tp + '.mnc'
+        
         patient[tp].vol['lobes'] = voldir + 'vol_' + patient.id + '_' \
             + tp + '.txt'
+        
+        patient[tp].vol['lobes_json'] = voldir + 'vol_' + patient.id + '_' \
+            + tp + '.json'
+        
+        patient[tp].vol['lobes_csv'] = voldir + 'vol_' + patient.id + '_' \
+            + tp + '.csv'
 
         patient[tp].stx2_mnc["add_prefix"] = adddir + 'add_' + patient.id + '_' + tp 
         
