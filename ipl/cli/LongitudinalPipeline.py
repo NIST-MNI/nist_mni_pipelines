@@ -722,11 +722,11 @@ def parse_options():
    or: %(prog)s -h
 
    The list have this structure:
-      id,visit,t1w(,t2w,pdw,sex,age,geot1,geot2,lesions)
+      id,visit,t1w(,t2w,pdw,age,sex,geot1,geot2,lesions)
 
       - id,visit,t1w are mandatory.
       - if the data do not exist, no space should be left
-          id,visit,t1w,,,sex,age -> to include sex and age in the pipeline
+          id,visit,t1w,,,age,sex -> to include sex and age in the pipeline
 
    -- alternative folder:
       It is a folder with the same structure as the processing <alt_folder>/<id>/<timepoint>

@@ -35,7 +35,8 @@ def pipeline_lobe_segmentation(patient, tp):
     return True
 
 
-def  lobes_to_json(patient, tp, lobes_txt, lobes_json=None, lobes_csv=None):
+def  lobes_to_json(patient, tp, lobes_txt, 
+                   lobes_json=None, lobes_csv=None):
     # populate dictionary with expected values
     out={
         "SubjectID":"",
@@ -180,8 +181,8 @@ def lobe_segmentation_v10(patient, tp):
         
         lobes_to_json(patient,patient[tp].vol['lobes'],
                       tp,
-                      json=patient[tp].vol['lobes_json'],
-                      csv=patient[tp].vol['lobes_csv'])
+                      lobes_json=patient[tp].vol['lobes_json'],
+                      lobes_csv=patient[tp].vol['lobes_csv'])
          
     return 0
 
