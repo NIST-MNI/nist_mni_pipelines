@@ -51,6 +51,7 @@ def  lobes_to_json(patient, tp, lobes_txt,
         "CSF_vol":0.0,
         "GM_vol":0.0,
         "WM_vol":0.0,
+        "WMH_vol":0.0,
         "scale":0.0,
         "parietal_right_gm":0.0,
         "lateral_ventricle_left":0.0,
@@ -178,6 +179,12 @@ def lobe_segmentation_v10(patient, tp):
                    patient[tp].stx2_mnc['lobes'],
                    patient[tp].stx2_xfm['t1']],
                    [patient[tp].vol['lobes']])
+        
+        ## HACK to calculate WMH volumes
+        if os.path.exists(patient[tp].stx2_mnc['wmh']):
+            wmh_volume=float(minc.execute_w_output(['mincstats' ,'-vol', '-binvalue' ,'1' ,'-q', patient[tp].stx2_mnc['wmh']]).strip())
+            with open(patient[tp].vol['lobes'],"w+") as f:
+                f.write(f"WMH_vol {wmh_volume}")
         
         lobes_to_json(patient, tp,
                       patient[tp].vol['lobes'],
