@@ -184,7 +184,8 @@ class LngPatient(dict):
             # for s in self[tp].native.keys():
             #     LngPatient._remove_file(self[tp].qc_jpg['stx_' + s])
         # TODO: reshape _grid files to use short datatype instead of float ?
-
+        # finally remove the pickle
+        LngPatient._remove_file(self.pickle) 
 
     @staticmethod  # static function to load pickle
     def read(filename):

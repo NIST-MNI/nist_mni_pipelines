@@ -3,7 +3,7 @@ set -e -x
 
 
 FIELD=1.5
-PRL=8
+PRL=4
 THREADS=4
 out=output
 CLEANUP=YES
