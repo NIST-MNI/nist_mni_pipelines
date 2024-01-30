@@ -27,6 +27,6 @@ apptainer run \
     -B $(pwd):/data --pwd /data \
     --compat -e --net --network none \
     --env FIELD=$FIELD,PRL=$PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
-    nist_pipeline.sif subject43.csv ${out}
+    nist_pipeline_0.1.00.sif subject43.csv ${out}
 
 
