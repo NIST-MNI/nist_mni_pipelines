@@ -14,6 +14,10 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError,temp_files
 
+# distributed
+import ray
+
+
 # local stuff
 from .structures   import *
 from .preprocess   import *
@@ -88,6 +92,7 @@ default_pipeline_options = {
                 'ibis_output': False # export files for IBIS
             }
 
+@ray.remote
 def standard_pipeline(info,
                       output_dir,
                       options =None,
@@ -102,6 +107,8 @@ def standard_pipeline(info,
     Kyword arguments:
             work_dir string pointing to work directory , default None - use output_dir
     """
+    subject_id=None
+    timepoint_id=None
     try:
         with temp_files() as tmp:
             if options is None:
@@ -140,11 +147,17 @@ def standard_pipeline(info,
                 model_dir =options['model_dir']
                 model_name=options['model']
 
-            model_t1w=MriScan(scan=model_dir+os.sep+options['model']+'.mnc',
+            model_t1w = MriScan(scan=model_dir+os.sep+options['model']+'.mnc',
                               mask=model_dir+os.sep+options['model']+'_mask.mnc')
 
-            model_outline=MriScan(scan=model_dir+os.sep+options['model']+'_outline.mnc',
-                                mask=None)
+            model_outline = MriScan(scan=model_dir+os.sep+options['model']+'_outline.mnc',
+                                  mask=None)
+            
+            if 'model_reg_dir' in info and 'model_reg_name' in info:
+                model_reg_t1w = MriScan(scan=info['model_reg_dir']+os.sep+info['model_reg_name']+'.mnc',
+                                        mask=info['model_reg_dir']+os.sep+info['model_reg_name']+'_mask.mnc')
+            else:
+                model_reg_t1w = model_t1w
 
             lobe_atlas_dir =options.get('lobe_atlas_dir',None)
             lobe_atlas_defs=options.get('lobe_atlas_defs',None)
@@ -306,8 +319,6 @@ def standard_pipeline(info,
 
             if nuc_parameters is not None:
                 # non-uniformity correction
-                print("Running N4")
-
                 estimate_nu(t1w_den, t1w_field,
                             parameters=nuc_parameters,
                             model=model_t1w)
@@ -452,19 +463,20 @@ def standard_pipeline(info,
 
             if not stx_disable:
                 # register to STX space
-                lin_registration(t1w_clp, model_t1w, t1w_tal_xfm,
+                lin_registration(t1w_clp, model_reg_t1w, t1w_tal_xfm,
                                 parameters=stx_parameters,
                                 corr_xfm=corr_t1w,
                                 par=t1w_tal_par,
                                 log=t1w_tal_log,
-                                init_xfm=init_t1w_lin_xfm)
+                                init_xfm=init_t1w_lin_xfm,
+                                ref_model=model_t1w )
 
                 stx_nuc = stx_parameters.get('nuc',None)
                 stx_clp = stx_parameters.get('clp',None)
 
                 if stx_nuc is not None:
-                    tmp_t1w=MriScan(prefix=tmp.tempdir,    name='tal_'+dataset_id, modality='t1w')
-                    tmp_t1w_n4=MriScan(prefix=tmp.tempdir, name='tal_n4_'+dataset_id, modality='t1w')
+                    tmp_t1w   = MriScan(prefix=tmp.tempdir,    name='tal_'+dataset_id, modality='t1w')
+                    tmp_t1w_n4= MriScan(prefix=tmp.tempdir, name='tal_n4_'+dataset_id, modality='t1w')
 
                     warp_scan(t1w_clp ,model_t1w, tmp_t1w,
                             transform=t1w_tal_xfm,
@@ -708,12 +720,12 @@ def standard_pipeline(info,
             return iter_summary
 
     except mincError as e:
-        print("Exception in iter_step:{}".format(str(e)))
+        print("Exception while processing {}/{}/{} in iter_step:{}".format(output_dir, subject_id, timepoint_id, str(e)))
         traceback.print_exc( file=sys.stdout )
-        raise
+        return None
     except :
-        print("Exception in iter_step:{}".format(sys.exc_info()[0]))
+        print("Exception while processing {}/{}/{} in iter_step:{}".format(output_dir, subject_id, timepoint_id, sys.exc_info()[0]))
         traceback.print_exc( file=sys.stdout)
-        raise
+        return None
 
 #kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

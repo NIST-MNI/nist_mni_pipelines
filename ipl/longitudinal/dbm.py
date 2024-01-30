@@ -52,8 +52,6 @@ def pipeline_lngDBM_v10(patient, tp):
             
             minc.calc([tmp_det_res], '(log(1+(A[0])))',
                     patient[tp].lng_det['t1'])
-        else:
-            print(' -- pipeline_lngDBM is done!')
 
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

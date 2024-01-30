@@ -26,16 +26,28 @@ def parse_options():
                     default=False,
                     help="Make contour plot" )
     
-    parser.add_argument("--bar",
+    parser.add_argument("--image-bar",
                     action="store_true",
-                    dest="bar",
+                    dest="image_bar",
                     default=False,
-                    help="Show colour-bar" )
+                    help="Show Image colour-bar" )
+
+    parser.add_argument("--mask-bar",
+                    action="store_true",
+                    dest="mask_bar",
+                    default=False,
+                    help="Show mask colour-bar" )
     
     parser.add_argument("--cmap",
                     dest="cmap",
                     default="gray",
                     help="Colour map" )
+
+    parser.add_argument("--range",type=float,
+                    dest="range",
+                    nargs=2,
+                    default=None,
+                    help="Main image range" )
 
     parser.add_argument("--mask_cmap",
                     dest="mask_cmap",
@@ -52,6 +64,12 @@ def parse_options():
                     nargs=2,
                     default=None,
                     help="Mask range" )
+
+    parser.add_argument("--crop",type=int,
+                    dest="crop",
+                    nargs=6,
+                    default=None,
+                    help="Crop volumes x1,x2,y1,y2,z1,z2" )
     
     parser.add_argument("--over",
                     dest="use_over",
@@ -80,6 +98,11 @@ def parse_options():
                     default=None,
                     help="Foreground color" )
 
+    parser.add_argument("--style",
+                    dest="style",
+                    default=None,
+                    help="Matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py" )
+
     parser.add_argument("--title",
                     dest="title",
                     default=None,
@@ -92,6 +115,10 @@ def parse_options():
     parser.add_argument("--ialpha",type=float,
                     default=0.7,
                     help="Image Alpha (for alpha blending)" )
+
+    parser.add_argument("--mask-bg",type=float,
+                    default=0.5,dest="mask_bg",
+                    help="Mask background level" )
 
     parser.add_argument("--oalpha",type=float,
                     default=0.3,
@@ -117,24 +144,30 @@ def main():
             ipl.minc_qc.qc_field_contour(options.input,
                 options.output, show_image_bar=options.bar,
                 image_cmap=options.cmap, dpi=options.dpi,
-                bg_color=options.bg,fg_color=options.fg)
+                bg_color=options.bg,fg_color=options.fg,
+                style=options.style)
         else:
             ipl.minc_qc.qc(options.input,
                 options.output,
                 mask=options.mask,
                 use_max=options.use_max,
                 use_over=options.use_over,
-                mask_bg=0.5,
+                mask_bg=options.mask_bg,
                 image_cmap=options.cmap,
                 mask_cmap=options.mask_cmap,
                 bg_color=options.bg,
                 fg_color=options.fg,
                 samples=20 if options.big else 6,
                 dpi=options.dpi,
+                image_range=options.range,
                 mask_range=options.mask_range,
                 ialpha=options.ialpha,
                 oalpha=options.oalpha,
-                title=options.title
+                title=options.title,
+                show_image_bar=options.image_bar,
+                show_overlay_bar=options.mask_bar,
+                style=options.style,
+                crop=options.crop
                 )
     else:
         print("Refusing to run without input data, run --help")

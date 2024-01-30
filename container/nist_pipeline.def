@@ -1,0 +1,24 @@
+Bootstrap: docker
+From: ghcr.io/mamba-org/micromamba:1.5.6-focal 
+
+
+%files
+    env.yaml
+    nist_mni_pipelines.tar.gz
+    run_pipeline.sh            /opt/pipeline/
+    models/icbm152_model_09c   /opt/models/
+    models/ipl_bison_1.3.0     /opt/models/
+    models/wmh_bison_1.3.0     /opt/models/
+    models/synthstrip          /opt/models/
+
+%post
+    micromamba install -q -y -n base -f /env.yaml
+    micromamba clean --all --yes
+    rm -f  /env.yaml
+    tar -xzvf /nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1 
+
+%environment
+    #export PYTHONPATH=/opt/pipeline
+
+%runscript
+    /usr/local/bin/_entrypoint.sh /opt/pipeline/run_pipeline.sh $@

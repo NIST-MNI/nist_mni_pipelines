@@ -35,3 +35,15 @@ test_data/ellipse_7.mnc,test_data/mask.mnc
 test_data/ellipse_8.mnc,test_data/mask.mnc
 test_data/ellipse_9.mnc,test_data/mask.mnc
 END
+
+cat - >subjects_nomask.lst <<END
+test_data/ellipse_1.mnc
+test_data/ellipse_2.mnc
+test_data/ellipse_3.mnc
+test_data/ellipse_4.mnc
+test_data/ellipse_5.mnc
+test_data/ellipse_6.mnc
+test_data/ellipse_7.mnc
+test_data/ellipse_8.mnc
+test_data/ellipse_9.mnc
+END

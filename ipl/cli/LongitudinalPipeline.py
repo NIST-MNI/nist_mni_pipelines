@@ -7,9 +7,11 @@
 from __future__ import print_function
 
 import os
+from threading import local
 import traceback
 import json
 import six
+import sys
 
 import argparse
 
@@ -19,11 +21,11 @@ from ipl.longitudinal.general            import *  # functions to call binaries 
 from ipl.longitudinal.patient            import *  # class to store all the data
 
 
-from   ipl.minc_tools import mincTools,mincError
+from ipl.minc_tools import mincTools,mincError
 
 # files storing all processing
-from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing
-from ipl.longitudinal.t2pd_preprocessing import pipeline_t2pdpreprocessing
+from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing,pipeline_t1preprocessing_s0
+from ipl.longitudinal.t2pd_preprocessing import pipeline_t2pdpreprocessing,pipeline_t2pdpreprocessing_s0
 from ipl.longitudinal.skull_stripping    import pipeline_stx_skullstripping
 from ipl.longitudinal.skull_stripping    import pipeline_stx2_skullstripping
 from ipl.longitudinal.linear_template    import pipeline_linearlngtemplate
@@ -48,20 +50,9 @@ from ipl.longitudinal.add                import pipeline_run_add_tp,pipeline_run
 from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 
 # parallel processing
-from scoop import futures, shared
-
+import ray
 
 version = '1.0'
-
-# a hack to use environment stored in a file
-# usefull when scoop spans across multiple nodes
-# and default environment is not the same
-if os.path.exists('lng_environment.json'):
-    env={}
-    with open('lng_environment.json','r') as f:
-        env=json.load(f)
-    for i in env.iterkeys():
-        os.environ[i]=env[i]
 
 
 def launchPipeline(options):
@@ -92,6 +83,33 @@ def launchPipeline(options):
 
         if 'skullreg' in _opts:
             options.skullreg=_opts['skullreg']
+            
+        if 'redskull_onnx' in _opts:
+            options.redskull_onnx=_opts['redskull_onnx']
+
+        if 'redskull_var' in _opts:
+            options.redskull_var=_opts['redskull_var']
+
+        if 'synthstrip_onnx' in _opts:
+            options.synthstrip_onnx=_opts['synthstrip_onnx']
+
+        if 'bison_pfx' in _opts:
+            options.bison_pfx=_opts['bison_pfx']
+        
+        if 'bison_atlas_pfx' in _opts:
+            options.bison_atlas_pfx=_opts['bison_atlas_pfx']
+            
+        if 'bison_method' in _opts:
+            options.bison_method=_opts['bison_method']
+
+        if 'wmh_bison_pfx' in _opts:
+            options.wmh_bison_pfx=_opts['wmh_bison_pfx']
+
+        if 'wmh_bison_atlas_pfx' in _opts:
+            options.wmh_bison_atlas_pfx=_opts['wmh_bison_atlas_pfx']
+        
+        if 'wmh_bison_method' in _opts:
+            options.wmh_bison_method=_opts['wmh_bison_method']
 
         if 'large_atrophy' in _opts:
             options.large_atrophy=_opts['large_atrophy']
@@ -120,8 +138,8 @@ def launchPipeline(options):
         if 'lngcls' in _opts:
             options.lngcls=_opts['lngcls']
 
-        if 'donl' in _opts:
-            options.donl=_opts['donl']
+        # if 'donl' in _opts:
+        #     options.donl=_opts['donl']
 
         if 'denoise' in _opts:
             options.denoise=_opts['denoise']
@@ -150,6 +168,15 @@ def launchPipeline(options):
         if 'nl_step' in _opts:
             options.nl_step = _opts['nl_step']
 
+        if 'ray_batch' in _opts:
+            options.ray_batch = _opts['ray_batch']
+
+        if 'threads' in _opts:
+            options.ray_batch = _opts['threads']
+
+        if 'cleanup' in _opts:
+            options.cleanup = _opts['cleanup']
+
         # TODO: add more options
     # patients dictionary
     patients = {}
@@ -175,7 +202,7 @@ def launchPipeline(options):
 
     options.add=_add
 
-    mkdir(options.output)
+    os.makedirs(options.output, exist_ok=True)
     options.output = os.path.abspath(options.output) + os.sep  # always use abs paths for sge
     if options.workdir is not None:
         options.workdir = os.path.abspath(options.workdir) + os.sep  # always use abs paths for sge
@@ -187,7 +214,6 @@ def launchPipeline(options):
         for line in p:
 
             # remove the last character of the line... the '\n'
-
             sp = line[:-1].split(',')
 
             size = len(sp)  # depending the number of items not all information was given
@@ -202,7 +228,6 @@ def launchPipeline(options):
             # ## Add patient id if not found
 
             if id not in patients:  # search key in the dictionary
-
                 patients[id] = LngPatient(id)  # create new LngPatient
 
                 if size > 6:
@@ -214,11 +239,11 @@ def launchPipeline(options):
                 # create patient's dir
 
                 patients[id].patientdir = options.output + os.sep + id + os.sep
-                mkdir(patients[id].patientdir)
+                os.makedirs(patients[id].patientdir,exist_ok=True)
 
                 if options.workdir is None:
                     patients[id].workdir = patients[id].patientdir + os.sep + 'tmp' + os.sep
-                    mkdir(patients[id].workdir)
+                    os.makedirs(patients[id].workdir,exist_ok=True)
                 else:
                     patients[id].workdir=options.workdir
 
@@ -259,7 +284,7 @@ def launchPipeline(options):
 
                 patients[id].mask_n3  = options.mask_n3
                 patients[id].n4       = options.n4
-                patients[id].donl     = options.donl
+                # patients[id].donl     = options.donl
                 patients[id].dolngcls = options.dolngcls
                 patients[id].dodbm    = options.dodbm
                 patients[id].dovbm    = options.dovbm
@@ -269,6 +294,19 @@ def launchPipeline(options):
                 patients[id].fast     = options.fast
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
+                patients[id].redskull_onnx = options.redskull_onnx
+                patients[id].redskull_var = options.redskull_var
+                patients[id].synthstrip_onnx = options.synthstrip_onnx
+
+                patients[id].bison_pfx = options.bison_pfx
+                patients[id].bison_atlas_pfx = options.bison_atlas_pfx
+                patients[id].bison_method = options.bison_method
+                patients[id].wmh_bison_pfx = options.wmh_bison_pfx
+                patients[id].wmh_bison_atlas_pfx = options.wmh_bison_atlas_pfx
+                patients[id].wmh_bison_method = options.wmh_bison_method
+                patients[id].threads  = options.threads
+
+
                 patients[id].large_atrophy = options.large_atrophy
                 patients[id].dobiascorr = options.dobiascorr
                 patients[id].linreg   = options.linreg
@@ -287,10 +325,10 @@ def launchPipeline(options):
                     patients[id].vbm_options['vbm_nl_method'] = 'ANTS'
 
                 patients[id].nl_cost_fun = options.nl_cost_fun
+                patients[id].do_cleanup = options.cleanup
                 # end of creating a patient
 
             # ## Add timepoint to the patient
-
             if visit in patients[id]:
                 raise IplError(' -- ERROR : Timepoint ' + visit
                             + ' repeated in patient ' + id)
@@ -359,57 +397,77 @@ def launchPipeline(options):
             print('{} - {}'.format(id,visit) )
             # store patients in the pickle
 
-    if options.pe is None: # use SCOOP to run all subjects in parallel
-        pickles = []
+    # use ray to run all subjects in parallel
+    pickles = []
 
-        for (id, i) in patients.items():
-            # writing the pickle file
-            if not os.path.exists(i.pickle):
-                i.write(i.pickle)
-            pickles.append(i.pickle)
+    for (id, i) in patients.items():
+        # writing the pickle file
+        if not os.path.exists(i.pickle):
+            i.write(i.pickle)
+        pickles.append(i.pickle)
+    
+    if options.ray_batch==0:
+        options.ray_batch=len(pickles)
 
-        jobs=[futures.submit(runPipeline,i) for i in pickles] # assume workdir is properly set in pickle...
-        futures.wait(jobs, return_when=futures.ALL_COMPLETED)
-        print('All subjects finished:%d' % len(jobs))
+    n_fail=0
+    jobs_done = []
+    while len(pickles)>0:
 
-    else: # USE SGE to submit one job per subject, using required peslots
-        pickles = []
+        jobs=[runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch]
+        pickles=pickles[len(jobs):]
+        print(f"waiting for {len(jobs)} jobs")
 
-        for (id, i) in patients.items():
-            # writing the pickle file
-            slots=options.peslots
-            # don't submit jobs with too many requested slots, when only limited number of
-            # timepoints is available
+        while jobs:
+            try:
+                ready_jobs, jobs = ray.wait(jobs, num_returns=1)
+                jobs_done += ray.get(ready_jobs)
+            except ray.exceptions.RayTaskError as e:
+                n_fail+=1
+                print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
+                print(e.traceback_str,flush=True)
+                ee=e.as_instanceof_cause()
+                print(ee,flush=True)
+            except KeyboardInterrupt:
+                print("Aborting")
+                exit(1)
 
-            if len(i)<slots:
-                slots=len(i)
-            if slots<1:
-                slots=1
-
-            if not os.path.exists(i.pickle):
-                i.write(i.pickle)
+    print(f'Work finished {len(jobs_done)}, failed:{n_fail} ')
 
 
-            # tell python to use SCOOP module to run program
-            comm=['unset PE_HOSTFILE'] # HACK SCOOP not to rely on PE setting to prevent it from SSHing
-            comm.extend(['export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={}'.format(slots)])
-            comm.extend(['export OMP_NUM_THREADS={}'.format(slots)])
-            comm.extend(['export OMP_DYNAMIC=TRUE'])
-            comm.extend(['python -m scoop -n {} {} -p {}'.format(str(slots),os.path.abspath(sys.argv[0]),i.pickle)])
-
-            qsub_pe(comm,options.pe,
-                    options.peslots,
-                    name='LNG_{}'.format(str(id)),
-                    logfile=i.patientdir+os.sep+str(id)+".sge.log",
-                    queue=options.queue)
-
-def runTimePoint_FirstStage(tp, patient):
+@ray.remote
+def runTimePoint_FirstStageA(tp, patient):
     '''
     Process one timepoint for cross-sectional analysis
     First Stage : preprocessing and initial stereotaxic registration
     '''
 
-    print( 'runTimePoint_FirstStage %s %s' % (patient.id, tp))
+    try:
+        # preprocessing
+        # ##############
+
+        if not pipeline_t1preprocessing_s0(patient, tp):
+            raise IplError(' XX Error in the preprocessing of '
+                        + patient.id + ' ' + tp)
+
+        pipeline_t2pdpreprocessing_s0(patient, tp)
+
+        return True
+    except mincError as e:
+        print("Exception in runTimePoint_FirstStageA:{}".format(repr(e)))
+        traceback.print_exc(file=sys.stdout)
+        raise
+    except :
+        print("Exception in runTimePoint_FirstStageA:{}".format(sys.exc_info()[0]))
+        traceback.print_exc(file=sys.stdout)
+        raise
+
+
+@ray.remote
+def runTimePoint_FirstStageB(tp, patient):
+    '''
+    Process one timepoint for cross-sectional analysis
+    First Stage : preprocessing and initial stereotaxic registration
+    '''
 
     try:
         # preprocessing
@@ -430,33 +488,30 @@ def runTimePoint_FirstStage(tp, patient):
 
         # t2/pd preprocessing
         # ################
-
         pipeline_t2pdpreprocessing(patient, tp)
 
         return True
     except mincError as e:
-        print("Exception in runTimePoint_FirstStage:{}".format(repr(e)))
+        print("Exception in runTimePoint_FirstStageB:{}".format(repr(e)))
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in runTimePoint_FirstStage:{}".format(sys.exc_info()[0]))
+        print("Exception in runTimePoint_FirstStageB:{}".format(sys.exc_info()[0]))
         traceback.print_exc(file=sys.stdout)
         raise
 
-
+@ray.remote
 def runTimePoint_SecondStage(tp, patient, vbm_options):
     '''
     Process one timepoint for cross-sectional analysis
     Second Stage, run in case of a single time point
     '''
-
     try:
         pipeline_linearatlasregistration(patient, tp)
 
         pipeline_stx2_skullstripping(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
-        print("pipeline_atlasregistration")
         pipeline_atlasregistration(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
@@ -470,10 +525,11 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         pipeline_lobe_segmentation(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
-
+        # Additional steps because there is only one timepoint actually
+        # ######################
         if len(patient.add)>0:
             pipeline_run_add(patient)
-            pipeline_run_add_tp(patient,tp)
+            pipeline_run_add_tp(patient,tp,single_tp=True)
 
         # vbm images
         # ###########
@@ -489,6 +545,7 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         raise
 
 
+@ray.remote
 def runSkullStripping(tp, patient):
     try:
         pipeline_stx2_skullstripping(patient, tp)
@@ -502,6 +559,7 @@ def runSkullStripping(tp, patient):
         raise
 
 
+@ray.remote
 def runTimePoint_ThirdStage(tp, patient):
     # calculate full NL registration in multiple TP case
     try:
@@ -522,6 +580,7 @@ def runTimePoint_ThirdStage(tp, patient):
         raise
 
 
+@ray.remote
 def runTimePoint_FourthStage(tp, patient, vbm_options):
     # perform steps that requre full NL registration in multi tp case
     try:
@@ -540,7 +599,6 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         pipeline_vbm(patient, tp, vbm_options)
 
         if len(patient.add)>0:
-            print("Running add step:{}".format(patient.add))
             pipeline_run_add_tp(patient,tp)
 
 
@@ -553,6 +611,7 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         traceback.print_exc(file=sys.stdout)
         raise
 
+@ray.remote
 def runPipeline(pickle, workdir=None):
     '''
     RUN PIPELINE
@@ -565,56 +624,46 @@ def runPipeline(pickle, workdir=None):
         if not os.path.exists(pickle):
             raise IplError(' -- Pickle does not exists ' + pickle)
         # # Read patient
-
+        # TODO: replace this with just patient object to avoid reading and writing pickles?
         patient = LngPatient.read(pickle)
         if not version == patient.pipeline_version:
-            print(' #### NOT THE SAME PIPELINE VERSION!! ')
-            raise IplError('       - Change the pipeline version or restart all processing'
-                        )
+            raise IplError('       - Change the pipeline version or restart all processing' )
 
         setFilenames(patient)
-        print("Processing:")
-        patient.printself()
-
 
         if workdir is not None:
-          patient.workdir=workdir
+            patient.workdir=workdir
         # prepare qc folder
+        tps=sorted(list(patient.keys()))
+        # first stage A, multithreading steps
+        ray.get([runTimePoint_FirstStageA.remote(tp, patient) for tp in tps])
+        patient.write(patient.pickle)  # copy new images in the pickle
 
-        tps = sorted(patient.keys())
-        jobs=[]
-        for tp in tps:
-            jobs.append(futures.submit(runTimePoint_FirstStage,tp, patient))
-
-        futures.wait(jobs, return_when=futures.ALL_COMPLETED)
-
-        print('First stage finished!')
-
+        # first stage B, single threading steps
+        ray.get([runTimePoint_FirstStageB.remote(tp, patient) for tp in tps])
         patient.write(patient.pickle)  # copy new images in the pickle
 
         jobs=[]
 
         if len(tps) == 1:
             for tp in tps:
-                runTimePoint_SecondStage( tp, patient, patient.vbm_options  )
+                ray.get([runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  )])
         else:
+            
             # create longitudinal template
             # ############################
             # it creates a new stx space (stx2) registering the linear template to the atlas
             # all images are aligned using this new template and the bias correction used in the template creation
-
             pipeline_linearlngtemplate(patient)
 
-            for tp in tps:
-                jobs.append(futures.submit(runSkullStripping, tp , patient))
             # wait for all jobs to finish
-            futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+            ray.get([runSkullStripping.remote(tp , patient) for tp in tps])
 
             # using the stx2 space, we do the non-linear template
             # ################################################
             pipeline_lngtemplate(patient)
 
-            # non-linear registration of the template to the atlas
+             # non-linear registration of the template to the atlas
             # ##########################
             pipeline_atlasregistration(patient)
 
@@ -623,34 +672,28 @@ def runPipeline(pickle, workdir=None):
 
             # Concatenate xfm files for each timepoint.
             # run per tp tissue classification
-            jobs=[]
-            for tp in tps:
-                jobs.append(futures.submit(
-                    runTimePoint_ThirdStage, tp, patient
-                    ))
-            futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+            ray.get([runTimePoint_ThirdStage.remote( tp, patient) for tp in tps])
 
             # longitudinal classification
             # ############################
             if patient.dolngcls:
                 pipeline_lng_classification(patient)
-            else:
-                print(' -- Skipping Lng classification')
 
-            jobs=[]
-            for tp in tps:
-                jobs.append(futures.submit(runTimePoint_FourthStage, tp, patient, patient.vbm_options))
-            futures.wait(jobs, return_when=futures.ALL_COMPLETED)
+            ray.get([runTimePoint_FourthStage.remote( tp, patient, patient.vbm_options) for tp in tps])
 
-        patient.write(patient.pickle)  # copy new images in the pickle
+        if patient.do_cleanup:
+            patient.cleanup()
+        else:
+            # no need to write it, if we will cleanup
+            patient.write(patient.pickle)  # copy new images in the pickle
 
         return patient.id
     except mincError as e:
-        print("Exception in runPipeline:{}".format(repr(e)) )
+        print("Exception in runPipeline:{}".format(repr(e)),flush=True )
         traceback.print_exc(file=sys.stdout)
         raise
     except :
-        print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
+        print("Exception in runPipeline:{}".format(sys.exc_info()[0]),flush=True )
         traceback.print_exc(file=sys.stdout)
         raise
 
@@ -672,8 +715,6 @@ def cleanPickle(pickle):
     patient.write(pickle)
 
 
-
-
 def parse_options():
     usage = \
     """%(prog)s -l <patients.list> -o <outputdir> [--run]
@@ -681,11 +722,11 @@ def parse_options():
    or: %(prog)s -h
 
    The list have this structure:
-      id,visit,t1w(,t2w,pdw,sex,age,geot1,geot2,lesions)
+      id,visit,t1w(,t2w,pdw,age,sex,geot1,geot2,lesions)
 
       - id,visit,t1w are mandatory.
       - if the data do not exist, no space should be left
-          id,visit,t1w,,,sex,age -> to include sex and age in the pipeline
+          id,visit,t1w,,,age,sex -> to include sex and age in the pipeline
 
    -- alternative folder:
       It is a folder with the same structure as the processing <alt_folder>/<id>/<timepoint>
@@ -741,22 +782,22 @@ def parse_options():
         default=False,
         )
 
-    group.add_argument(
-        "-I",
-        "--inpaint",
-        dest="inpaint",
-        help="Inpaint T1W images based on the lesion mask",
-        action="store_true",
-        default=False)
+    # group.add_argument(
+    #     "-I",
+    #     "--inpaint",
+    #     dest="inpaint",
+    #     help="Inpaint T1W images based on the lesion mask",
+    #     action="store_true",
+    #     default=False)
 
-    group.add_argument(
-        '-N',
-        '--no-nonlinear',
-        dest='donl',
-        help="Don't do non linear registration (NOT YET)",
-        action='store_false',
-        default=True,
-        )
+    # group.add_argument(
+    #     '-N',
+    #     '--no-nonlinear',
+    #     dest='donl',
+    #     help="Don't do non linear registration (NOT YET)",
+    #     action='store_false',
+    #     default=True,
+    #     )
 
     group.add_argument('-3', '--3T', dest='mri3T',
                      help='Parameters for 3T scans', action='store_true',
@@ -868,20 +909,48 @@ def parse_options():
                      help='Directory with the beast library ',
                      default='/ipl/quarantine/models/beast')
 
-    #group.add_argument( '--sym', dest='sym',
-                     #help='Use symmetric minctracc (NOT YET)')
-
-    # group.add_argument('-4', '--4Dregu', dest='temporalregu',
-    #                  help="Use 4D regularization for the individual template creation with a linear regressor ('linear' or 'taylor' serie decomposition)",
-    #                  default=False)
-
     group.add_argument(
         '--skullreg',
         dest='skullreg',
-        help='Run skull registration in stx2',
+        help='Run skull registration in stx (REDSKULL)',
         action='store_true',
         default=False,
         )
+
+    group.add_argument('--redskull_onnx', 
+                     help='omnivision library for redskull brain+skull',
+                     default=None
+                     )
+    
+    group.add_argument('--redskull_var', 
+                     dest='redskull_var',
+                     help='Redskull variant',
+                     default='seg'
+                     )
+
+    group.add_argument('--synthstrip_onnx', 
+                     dest='synthstrip_onnx',
+                     help='onnx library for synthstrip segmentation'
+                     )
+    
+    group.add_argument('--bison_pfx', 
+                     help='Bison tissue classification model prefix'
+                     )
+    group.add_argument('--bison_atlas_pfx', 
+                     help='Bison atlas prefix'
+                     )
+    group.add_argument('--bison_method', 
+                     help='Bison method'
+                     )
+    group.add_argument('--wmh_bison_pfx', 
+                     help='Bison tissue classification model prefix'
+                     )
+    group.add_argument('--wmh_bison_atlas_pfx', 
+                     help='Bison atlas prefix'
+                     )
+    group.add_argument('--wmh_bison_method', 
+                     help='Bison method'
+                     )
 
     group.add_argument(
         '--large_atrophy',
@@ -934,7 +1003,6 @@ def parse_options():
         default=2.0
         )
 
-
     group.add_argument(
         '--add',
         action='append',
@@ -942,7 +1010,6 @@ def parse_options():
         help='Add custom step with description in .json file',
         default=[],
         )
-
 
     group = parser.add_argument_group('Execution options ',
                          ' Once the picke files are created')
@@ -968,7 +1035,18 @@ def parse_options():
         default=False,
         )
 
-    # parser.add_option_group(group)
+    group = parser.add_argument_group('Parallel execution options ')
+
+    group.add_argument('--ray_start',type=int,
+                        help='start local ray instance')
+    group.add_argument('--ray_local',action='store_true',
+                        help='local ray (single process)')
+    group.add_argument('--ray_host',
+                        help='ray host address')
+    group.add_argument('--ray_batch',default=0,type=int,
+                        help='Submit ray jobs in batches')
+    group.add_argument('--threads',default=1,type=int,
+                        help='Number of threads to use inside some ray jobs')
 
     group = parser.add_argument_group('General Options ')
 
@@ -980,23 +1058,26 @@ def parse_options():
         action='store_true',
         default=False,
         )
+    group.add_argument(
+        '-q',
+        '--quiet',
+        help='Suppress some logging messages',
+        action='store_true',
+        default=False,
+        )
 
     group.add_argument('-f', '--fast', dest='fast',
-                     help='Fast mode : quick & dirty mostly for testing pipeline'
-                     , action='store_true')
+                     help='Fast mode : quick & dirty mostly for testing pipeline', 
+                     action='store_true')
+    
+    group.add_argument('--cleanup', 
+                     help='Remove intermediate files to save disk space', 
+                     action='store_true',
+                     default=False)
 
-    group.add_argument('--pe', dest='pe',
-                     help='Submit jobs using parallel environment'
-                     )
-
-    group.add_argument('--peslots', dest='peslots',
-                     help='PE slots ', default=4, type=int)
-
-    group.add_argument('-q','--queue', dest='queue',
-                     help='Specify SGE queue for submission'
-                     )
 
     options = parser.parse_args()
+
 
     return options
 
@@ -1008,15 +1089,28 @@ def main():
     # VF: disabled in public release
     opts.temporalregu = False
 
+    if opts.ray_start is not None: # HACK?
+        ray.init(num_cpus=opts.ray_start,log_to_driver=not opts.quiet)
+    elif opts.ray_local:
+        ray.init(local_mode=True,log_to_driver=not opts.quiet)
+    elif opts.ray_host is not None:
+        ray.init(address=opts.ray_host+':6379',log_to_driver=not opts.quiet)
+    else:
+        ray.init(address='auto',log_to_driver=not opts.quiet)
+
     if opts.list is not None :
         if opts.output is None:
             print('Please specify and output dir (-o)')
             sys.exit(1)
         launchPipeline(opts)
     elif opts.pickle is not None:
-        runPipeline(opts.pickle,workdir=opts.workdir)
+        runPipeline(opts.pickle, workdir=opts.workdir)
     else:
         print("missing something...")
         sys.exit(1)
+
+    if opts.ray_start is not None:
+        ray.shutdown()
+    
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

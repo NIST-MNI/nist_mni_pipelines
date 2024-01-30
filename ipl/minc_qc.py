@@ -9,8 +9,9 @@ import copy
 
 import numpy as np
 import numpy.ma as ma
+import math
 
-import scipy 
+#import scipy 
 import matplotlib
 matplotlib.use('AGG')
 
@@ -60,26 +61,28 @@ def alpha_blend(si, so, ialpha, oalpha):
 
 
 def max_blend(si,so):
-    """Perform max-blending
+    """
+    Perform max-blending, just take the maximum intensity of the two images
     """
     return np.maximum(si,so)
 
 def over_blend(si,so, ialpha, oalpha):
-    """Perform over-blending
+    """
+    Perform over-blending, non-transparanet overaly takes over the image
     """
     si_rgb =   si[..., :3]
-    si_alpha = si[..., 3]*ialpha
+    si_alpha = si[..., 3]
     
     so_rgb =   so[..., :3]
-    so_alpha = so[..., 3]*oalpha
+    so_alpha = so[..., 3]
     
-    out_alpha = np.maximum(si_alpha ,  so_alpha )
+    #out_alpha = np.maximum(si_alpha,  so_alpha )
     
-    out_rgb = si_rgb * (si_alpha[..., None] - so_alpha[..., None]) + so_rgb * so_alpha[..., None] 
+    out_rgb = si_rgb * (so_alpha[..., None]<0.5) + so_rgb * (so_alpha[..., None]>=0.5)
     
     out = np.zeros_like(si)
     out[..., :3] = out_rgb 
-    out[..., 3]  = out_alpha
+    out[..., 3]  = si_alpha
     
     return out
 
@@ -104,7 +107,9 @@ def qc(
     oalpha=0.2,
     format=None,
     bg_color=None,
-    fg_color=None
+    fg_color=None,
+    style=None,
+    crop=None
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -132,6 +137,8 @@ def qc(
         format -- file format override
         bg_color -- background color
         fg_color -- foreground color
+        style    -- name of the matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
+        crop     -- Crop input image: [x1,x2,y1,y2,z1,z2]
     """
     
     _img=minc2_file(input)
@@ -163,11 +170,21 @@ def qc(
         else:
             omin=mask_range[0]
             omax=mask_range[1]
+            ### set values below mask_range[0] to NaN
+            _ovl_data[_ovl_data<omin]=math.nan
         _odata=_ovl_data
         
         if mask_bg is not None:
             _odata=ma.masked_less(_odata, mask_bg)
-        
+    
+
+    if crop is not None:
+        # apply cropping here
+        _idata=_idata[crop[4]:crop[5],crop[2]:crop[3],crop[0]:crop[1]]
+        if mask is not None:
+            _odata=_odata[crop[4]:crop[5],crop[2]:crop[3],crop[0]:crop[1]]
+        data_shape=_idata.shape
+
     slices=[]
     
     # setup ranges
@@ -183,10 +200,14 @@ def qc(
     cmo= copy.copy(plt.get_cmap(mask_cmap))
 
     cm.set_bad('k', alpha = 1.0)
+
+    # make transparent background
     cmo.set_bad('k',alpha = 0.0)
+    cmo.set_under('k',alpha = 0.0)
 
     cNorm  = colors.Normalize(vmin=vmin, vmax=vmax)
-    oNorm  = colors.Normalize(vmin=omin, vmax=omax)
+    #print("Image range:",vmin,vmax)
+    oNorm  = colors.Normalize(vmin=omin, vmax=omax, clip=False)
     
     scalarMap  = cmx.ScalarMappable(norm=cNorm, cmap=cm)
     oscalarMap = cmx.ScalarMappable(norm=oNorm, cmap=cmo)
@@ -254,41 +275,69 @@ def qc(
 
     if bg_color is not None:
          rc['figure.edgecolor']=bg_color
-         rc['figure.facecolor']=bg_color     
+         rc['figure.facecolor']=bg_color
          rc['grid.color']=bg_color
     if fg_color is not None:
          rc['text.color']=fg_color
          #axes.labelcolor
          #axes.titlecolor
+    #with plt.style.context(style if style is not None else "classic"): 
+
+    if show_image_bar or show_overlay_bar:
+        columns_add=1
+    else:
+        columns_add=0
 
     with matplotlib.rc_context(rc):
-    #with plt.style.context('dark_background'):
-        w, h = plt.figaspect(rows/columns)
+        if style is not None:
+            plt.style.use(style)
+
+        w, h = plt.figaspect(rows/(columns+columns_add))
         fig = plt.figure(figsize=(w,h))
-        # if bg_color is not None:
-        #     fig.set_facecolor(bg_color)
-        #     fig.set_edgecolor(bg_color)
-        #    fig.set_frameon(False)
-        #outer_grid = gridspec.GridSpec((len(slices)+1)/2, 2, wspace=0.0, hspace=0.0)
+
+        widths=[1.0/columns]*columns
+        # for color bar
+        if columns_add>0:
+            widths+=[widths[0]/10]
+        
+        grid=gridspec.GridSpec(rows, (columns+columns_add),width_ratios=widths)
+        #subplotspec=gridspec.new_subplotspec(loc, rowspan, colspan)
         ax=None
         imgplot=None
         
-        print(f"rows:{rows} columns:{columns}")
         for i,j in enumerate(slices):
-            ax =  plt.subplot2grid( (rows, columns), ( i//columns, i%columns) )
-            # if bg_color is not None:
-            #     ax.set_facecolor(bg_color)
+            ax =  fig.add_subplot(grid[ i//columns, i%columns])
             imgplot = ax.imshow(j, origin='lower',  cmap=cm, aspect=aspects[i])
             ax.set_xticks([])
             ax.set_yticks([])
             ax.title.set_visible(False)
+            ax.set_frame_on(False)
 
-        # show for the last plot
+        # for color bar
         if show_image_bar:
-            cbar = fig.colorbar(imgplot)
+            ax =  fig.add_subplot(grid[ 1:(rows-1), columns])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.title.set_visible(False)
+            ax.set_frame_on(True)
+            cbar = fig.colorbar(scalarMap,cax=ax)
+
+        if show_overlay_bar:
+            ax =  fig.add_subplot(grid[ 1:(rows-1), columns])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.title.set_visible(False)
+            ax.set_frame_on(False)
+            cbar = fig.colorbar(oscalarMap)
         
         if title is not None:
-            plt.suptitle(title,fontsize=10)
+            plt.suptitle(title,fontsize=7, y=0.99, x=0.05, 
+                         ha='left',
+                         va='top',
+                         color='black' if fg_color is None else fg_color,
+                         backgroundcolor='none',#'white' if bg_color is None else bg_color,
+                         alpha=0.8)
+            #plt.text(x=0.0,y=0.97,ha='left',va='top',s=title,color='black',backgroundcolor='white')
             #plt.subplots_adjust(wspace = 0.0 ,hspace=0.0)
             plt.subplots_adjust(top=1.0,bottom=0.0,left=0.0,right=1.0,wspace = 0.0 ,hspace=0.0)
         else:

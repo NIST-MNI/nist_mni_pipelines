@@ -151,7 +151,7 @@ if __name__=='__main__':
                               cv_fusion_segment, cv, library,
                               cv_dir, segmentation_options, debug=debug) )
     
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
+    ray.wait(results,num_returns=len(results))
     # TODO: gather stats?
     print("Done!")
 

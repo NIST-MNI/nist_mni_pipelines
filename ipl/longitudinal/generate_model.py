@@ -296,7 +296,7 @@ class LinearModelGenerator(mincTools):
         else:
             self.average(avg, model.mri)
 
-    # average masks
+        # average masks
 
         if samples[0].mask:
             avg = []

@@ -23,7 +23,7 @@ from ipl.model.registration     import average_transforms
 from ipl.model.resample         import concat_resample
 from ipl.model.resample         import concat_resample_nl
 
-from scoop import futures, shared
+import ray
 
 
 def generate_nonlinear_average(
@@ -85,9 +85,9 @@ def generate_nonlinear_average(
             if s.mask is not None:
                 s.mask_f=prefix+os.sep+'flip'+os.sep+'mask_'+_s_name
 
-            flip_all.append( futures.submit( generate_flip_sample,s )  )
+            flip_all.append( generate_flip_sample.remote(s )  )
 
-        futures.wait(flip_all, return_when=futures.ALL_COMPLETED)
+        ray.wait(flip_all, num_returns=len(flip_all))
     # go through all the iterations
     it=0
     for (i,p) in enumerate(protocol):
@@ -99,8 +99,8 @@ def generate_nonlinear_average(
             # this will be a model for next iteration actually
 
             # 1 register all subjects to current template
-            next_model=MriDataset(prefix=prefix,iter=it,name='avg')
-            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd')
+            next_model   =MriDataset(prefix=prefix,iter=it,name='avg',has_mask=current_model.has_mask())
+            next_model_sd=MriDataset(prefix=prefix,iter=it,name='sd' ,has_mask=current_model.has_mask())
             transforms=[]
 
             it_prefix=prefix+os.sep+str(it)
@@ -129,8 +129,8 @@ def generate_nonlinear_average(
                 if it>skip and it<stop_early:
                     if use_dd:
                         transforms.append(
-                            futures.submit(
-                                dd_register_step,
+                            
+                                dd_register_step.remote(
                                 s,
                                 current_model,
                                 sample_xfm,
@@ -145,8 +145,8 @@ def generate_nonlinear_average(
                             )
                     elif use_ants:
                         transforms.append(
-                            futures.submit(
-                                ants_register_step,
+                            
+                                ants_register_step.remote(
                                 s,
                                 current_model,
                                 sample_xfm,
@@ -161,8 +161,8 @@ def generate_nonlinear_average(
                             )
                     elif use_elastix:
                         transforms.append(
-                            futures.submit(
-                                elastix_register_step,
+                            
+                                elastix_register_step.remote(
                                 s,
                                 current_model,
                                 sample_xfm,
@@ -177,8 +177,7 @@ def generate_nonlinear_average(
                             )
                     else:
                         transforms.append(
-                            futures.submit(
-                                non_linear_register_step,
+                                non_linear_register_step.remote(
                                 s,
                                 current_model,
                                 sample_xfm,
@@ -196,22 +195,22 @@ def generate_nonlinear_average(
 
             # wait for jobs to finish
             if it>skip and it<stop_early:
-                futures.wait(transforms, return_when=futures.ALL_COMPLETED)
+                ray.wait(transforms, num_returns=len(transforms))
 
             if cleanup and it>1 :
                 # remove information from previous iteration
                 for s in corr_samples:
-                    s.cleanup(verbose=True)
+                    s.cleanup()
                 for x in corr_transforms:
-                    x.cleanup(verbose=True)
+                    x.cleanup()
 
             # here all the transforms should exist
             avg_inv_transform=MriTransform(name='avg_inv', prefix=it_prefix, iter=it)
 
             # 2 average all transformations
             if it>skip and it<stop_early:
-                result=futures.submit(average_transforms, inv_transforms, avg_inv_transform, nl=True, symmetric=symmetric)
-                futures.wait([result], return_when=futures.ALL_COMPLETED)
+                result=average_transforms.remote(inv_transforms, avg_inv_transform, nl=True, symmetric=symmetric)
+                ray.wait([result])
 
             corr=[]
             corr_transforms=[]
@@ -222,8 +221,8 @@ def generate_nonlinear_average(
                 x=MriTransform(name=s.name+'_corr',prefix=it_prefix,iter=it)
 
                 if it>skip and it<stop_early:
-                    corr.append(futures.submit( 
-                        concat_resample_nl, 
+                    corr.append(
+                        concat_resample_nl.remote(
                         s, 
                         fwd_transforms[i], 
                         avg_inv_transform, 
@@ -235,7 +234,7 @@ def generate_nonlinear_average(
                 corr_samples.append(c)
 
             if it>skip and it<stop_early:
-                futures.wait(corr, return_when=futures.ALL_COMPLETED)
+                ray.wait(corr, num_returns=len(corr))
 
             # cleanup transforms
             if cleanup :
@@ -247,8 +246,8 @@ def generate_nonlinear_average(
                 
             # 4 average resampled samples to create new estimate
             if it>skip and it<stop_early:
-                result=futures.submit(average_samples, corr_samples, next_model, next_model_sd, symmetric=symmetric, symmetrize=symmetric,median=use_median)
-                futures.wait([result], return_when=futures.ALL_COMPLETED)
+                result=average_samples.remote( corr_samples, next_model, next_model_sd, symmetric=symmetric, symmetrize=symmetric,median=use_median)
+                ray.wait([result])
 
             if cleanup and it>1:
                 # remove previous template estimate
@@ -259,14 +258,14 @@ def generate_nonlinear_average(
             current_model_sd=next_model_sd
 
             if it>skip and it<stop_early:
-                result=futures.submit(average_stats, next_model, next_model_sd)
+                result=average_stats.remote( next_model, next_model_sd)
                 sd.append(result)
     
     # copy output to the destination
-    futures.wait(sd, return_when=futures.ALL_COMPLETED)
+    ray.wait(sd, num_returns=len(sd))
     with open(prefix+os.sep+'stats.txt','w') as f:
         for s in sd:
-            f.write("{}\n".format(s.result()))
+            f.write("{}\n".format(ray.get(s)))
             
     results={
             'model':      current_model,
@@ -300,7 +299,10 @@ def generate_nonlinear_model_csv(input_csv, model=None, mask=None, work_prefix=N
     with open(input_csv, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
         for row in reader:
-            internal_sample.append(MriDataset(scan=row[0],mask=row[1]))
+            if len(row)>=2:
+                internal_sample.append(MriDataset(scan=row[0],mask=row[1]))
+            else:
+                internal_sample.append(MriDataset(scan=row[0]))
 
     internal_model=None
     if model is not None:

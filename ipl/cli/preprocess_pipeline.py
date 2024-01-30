@@ -24,6 +24,9 @@ from ipl.lp.structures      import MriScan,MriTransform,MriQCImage,MriAux
 from ipl.lp.structures      import save_pipeline_output,load_pipeline_output
 
 
+import ray
+
+
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -69,6 +72,13 @@ def parse_options():
                     dest="modalities",
                     default="t2w,pdw")
 
+    parser.add_argument('--ray_start',type=int,
+                        help='start local ray instance')
+    parser.add_argument('--ray_local',action='store_true',
+                        help='local ray (single process)')
+    parser.add_argument('--ray_host',
+                        help='ray host address')
+
     #parser.add_argument("--json",
                         #help="load json description")
 
@@ -104,6 +114,17 @@ def main():
     pipeline_parameters = default_pipeline_options
     pipeline_info = {}
     modalities = options.modalities.split(',')
+    
+    # deal with ray
+    if options.ray_start is not None: # HACK?
+        ray.init(num_cpus=options.ray_start)
+    elif options.ray_local:
+        ray.init(local_mode=True)
+    elif options.ray_host is not None:
+        ray.init(address=options.ray_host+':6379')
+    else:
+        ray.init(address='auto')
+
     try:
         if options.options is not None:
             try:
@@ -182,19 +203,14 @@ def main():
             
             run_pipeline = []
 
-            # only needed for parallel execution
-            from scoop import futures, shared
-
             for (i, s) in enumerate(inputs):
                 output_dir=options.output+os.sep+s['subject']+os.sep+s['visit']
                 manual_dir=None
                 
                 if options.manual is not None:
                     manual_dir=options.manual+os.sep+s['subject']+os.sep+s['visit']
-                
-                
-                run_pipeline.append( futures.submit( 
-                    standard_pipeline,
+                                
+                run_pipeline.append( standard_pipeline.remote(
                         s,
                         output_dir, 
                         options=pipeline_parameters ,
@@ -204,10 +220,8 @@ def main():
             #
             # wait for all to finish
             #
-            futures.wait(run_pipeline, return_when=futures.ALL_COMPLETED)
-
-            for j,i in enumerate(run_pipeline):
-                inputs[j]['output']=i.result()
+            for j,i in enumerate(ray.get(run_pipeline)):
+                inputs[j]['output']=i
 
             save_pipeline_output(inputs,options.output+os.sep+'summary.json')
 
@@ -226,12 +240,12 @@ def main():
             add=[]
             
             for l,ll in enumerate(modalities):
-                if len(options.scans)>(l+1):
+                if len(options.scans)>(l+1) and options.scans[(l+1)]!='':
                     add.append(MriScan(name=data_name, 
                                     scan=options.scans[(l+1)], 
                                     modality=ll, 
                                     mask=None))
-            
+        
             if len(add)==0: add=None
             
             info={  'subject':options.subject, 
@@ -251,12 +265,13 @@ def main():
                 if len(options.corr)>1:
                     info['corr_t2w']=MriTransform(None,'corr_t2w',xfm=options.corr[1])
             
-            ret=standard_pipeline( info,
+            ret=standard_pipeline.remote( info,
                                output_dir, 
                                options=pipeline_parameters, 
                                work_dir=output_dir,
                                manual_dir=manual_dir
                              )
+            ret=ray.get(ret)
             # TODO: make a check if there is a summary file there already?
             #save_pipeline_output([info],options.output+os.sep+'summary.json')
             

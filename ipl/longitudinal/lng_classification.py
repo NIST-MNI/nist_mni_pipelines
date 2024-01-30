@@ -36,7 +36,6 @@ def pipeline_lng_classification(patient):
             break
 
     if allDone:
-        print(' -- pipeline_lng_classification is done!')
         return 1
 
     if patient.pipeline_version == '1.0':

@@ -15,9 +15,7 @@ from ipl.minc_tools import mincTools,mincError
 
 from .filter import *
 
-
-# scoop parallel execution
-from scoop import futures, shared
+import ray
 
 def create_fake_mask(in_seg, out_mask, op=None ):
     try:
@@ -60,8 +58,8 @@ def resample_split_segmentations(input, output,xfm=None, like=None, order=4, inv
         if not output.seg_split.has_key(i):
             output.seg_split[i]='{}_{:03d}.mnc'.format(base,i)
             
-        results.append(futures.submit(
-            resample_file,j,output.seg_split[i],xfm=xfm,like=like,order=order,invert_transform=invert_transform
+        results.append(
+            resample_file.remote(j,output.seg_split[i],xfm=xfm,like=like,order=order,invert_transform=invert_transform
         ))
     if symmetric:
         base=input.seg_f.rsplit('.mnc',1)[0]
@@ -69,12 +67,13 @@ def resample_split_segmentations(input, output,xfm=None, like=None, order=4, inv
             if not output.seg_f_split.has_key(i):
                 output.seg_split[i]='{}_{:03d}.mnc'.format(base,i)
 
-            results.append(futures.submit(
-                resample_file,j,output.seg_f_split[i],xfm=xfm,like=like,order=order,invert_transform=invert_transform
+            results.append(
+                resample_file.remote(output.seg_f_split[i],xfm=xfm,like=like,order=order,invert_transform=invert_transform
             ))
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
+    
+    ray.wait(results, num_returns=len(results))
 
-
+@ray.remote
 def warp_rename_seg( sample, model, output, 
                     transform=None, 
                     symmetric=False, 
@@ -163,7 +162,7 @@ def warp_rename_seg( sample, model, output,
         traceback.print_exc( file=sys.stdout) 
         raise
 
-
+@ray.remote
 def warp_sample( sample,
                  model, 
                  output,
@@ -259,7 +258,7 @@ def warp_sample( sample,
         traceback.print_exc( file=sys.stdout)
         raise
 
-
+@ray.remote
 def warp_model_mask( model,
                  output,
                  transform=None,
@@ -300,7 +299,7 @@ def warp_model_mask( model,
         raise
 
 
-
+@ray.remote
 def concat_resample(lib_scan,
                     xfm_lib,
                     xfm_sample,

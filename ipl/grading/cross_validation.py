@@ -9,8 +9,7 @@ import random
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-# scoop parallel execution
-from scoop import futures, shared
+import ray
 
 from .fuse             import *
 from .structures       import *
@@ -189,14 +188,14 @@ def loo_cv_fusion_grading(validation_library,
             results_json.append( (output_experiment+'_stats.json',
                                   output_experiment+'_out.json') )
     
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
+    ray.wait(results,num_returns=len(results))
 
     stat_results=[]
     output_results=[]
     
     if cv_iter is None:
-        stat_results  = [ _i.result()[0] for _i in results ]
-        output_results= [ _i.result()[1] for _i in results ]
+        stat_results  = [ ray.get(_i)[0] for _i in results ]
+        output_results= [ ray.get(_i)[1] for _i in results ]
         
     elif cv_iter==-1:
         # TODO: load from json files
@@ -282,9 +281,9 @@ def full_cv_fusion_grading(validation_library,
                 grading=float(k[-1])
                 ))
                 
-    futures.wait(results, return_when=futures.ALL_COMPLETED)
-    stat_results   = [ i.result()[0] for i in results ]
-    output_results = [ i.result()[1] for i in results ]
+    ray.wait(results,num_returns=len(results))
+    stat_results   = [ ray.get(i)[0] for i in results ]
+    output_results = [ ray.get(i)[1] for i in results ]
     
     return ( stat_results, output_results )
 

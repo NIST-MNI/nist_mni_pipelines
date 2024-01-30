@@ -13,6 +13,7 @@ version = '1.0'
 # - vol pol
 
 from .general import *
+from .t1_preprocessing import run_nlm
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
@@ -21,6 +22,8 @@ import ipl.ants_registration
 import ipl.elastix_registration
 
 import shutil
+
+import ray
 
 # Run preprocessing using patient info
 # - Function to read info from the pipeline patient
@@ -36,7 +39,6 @@ def pipeline_t2pdpreprocessing(patient, tp):
         if os.path.exists(patient[tp].clp[s]) \
             and os.path.exists(patient[tp].stx_xfm[s]) \
             and os.path.exists(patient[tp].stx_mnc[s]):
-            print(' -- T2/PD Processing was already performed')
             isDone = True
         else:
             isDone = False
@@ -50,9 +52,7 @@ def pipeline_t2pdpreprocessing(patient, tp):
         else:
             isDone = False
 
-    if isDone:
-        print(' -- pipeline_t2pdpreprocessing was already performed or not required')
-    else:
+    if not isDone:
         t2pdpreprocessing_v10(patient, tp)
 
     if not 't2' in patient[tp].native:
@@ -76,6 +76,20 @@ def pipeline_t2pdpreprocessing(patient, tp):
                 )
     return True
 
+
+def pipeline_t2pdpreprocessing_s0(patient, tp):
+    if 't2' in patient[tp].native:
+        if patient.denoise:
+            run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+            ray.get(run_nlm_c.remote(patient[tp].native['t2'],  patient[tp].den['t2']))
+
+    if 'pd' in patient[tp].native:
+        if patient.denoise:
+            run_nlm_c = run_nlm.options(num_cpus=patient.threads)
+            ray.get(run_nlm_c.remote(patient[tp].native['pd'],  patient[tp].den['pd']))
+    #
+    return True
+
 def t2pdpreprocessing_v10(patient, tp):
 
     with  mincTools() as minc:
@@ -96,7 +110,7 @@ def t2pdpreprocessing_v10(patient, tp):
         elif os.path.exists(patient[tp].clp['t2']) \
             and os.path.exists(patient[tp].stx_xfm['t2']) \
             and os.path.exists(patient[tp].stx_mnc['t2']):
-            print(' -- T2 preprocessing exists!')
+            pass
         else:
 
             tmpt2 =   minc.tmp('float_t2.mnc')
@@ -107,20 +121,19 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_t2_stx_xfm = minc.tmp('t2_stx_0.xfm')
             tmpstats = minc.tmp('volpol_t2.stats')
 
-            # 0. Convert to float (repair brokenfiles)
-            minc.reshape(patient[tp].native['t2'], tmpt2,
-                         normalize=True, datatype='float')
+            # minc.convert(patient[tp].native['t2'], tmpt2)
 
-            for s in ['xspace', 'yspace', 'zspace']:
-                spacing = minc.query_attribute(tmpt2, s + ':spacing')
+            # for s in ['xspace', 'yspace', 'zspace']:
+            #     spacing = minc.query_attribute(tmpt2, s + ':spacing')
 
-                if spacing.count( 'irregular' ):
-                    minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
+            #     if spacing.count( 'irregular' ):
+            #         minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
             
             # 1. Do nlm
             if patient.denoise:
-                minc.nlm(tmpt2, tmpnlm, beta=0.7)
+                tmpnlm = patient[tp].den['t2']
             else:
+                minc.convert_and_fix(patient[tp].native['t2'], tmpt2)
                 tmpnlm = tmpt2
 
             # # manual initialization
@@ -284,23 +297,12 @@ def t2pdpreprocessing_v10(patient, tp):
             tmp_pd_stx_xfm = minc.tmp('pd_stx_0.xfm')
             init_xfm = None
 
-            # 0. Convert to float (repair brokenfiles)
-            minc.reshape(patient[tp].native['pd'], tmppd,
-                         normalize=True, datatype='float')
-
-            for s in ['xspace', 'yspace', 'zspace']:
-                spacing = minc.query_attribute(tmppd, s + ':spacing')
-                
-                if spacing.count( 'irregular' ):
-                    minc.set_attribute( tmppd, s + ':spacing', 'regular__' )
-                        
-            # 1. Do nlm
-            
+            # 1. Do nlm 
             if patient.denoise:
-                minc.nlm(tmppd, tmpnlm, beta=0.7)
+                tmpnlm = patient[tp].den['pd']
             else:
-                tmpnlm=tmppd
-
+                minc.convert_and_fix(patient[tp].native['pd'], tmppd)
+                tmpnlm = tmppd
 
             # 2. Best lin reg T2 to T1
             # if there is no T2, we register the data
@@ -473,11 +475,11 @@ def t2pdpreprocessing_v10(patient, tp):
         # #####################
 
         if not 't2les' in patient[tp].native:
-            print(' -- No T2les image!')
+            pass
         elif os.path.exists(patient[tp].stx_mnc['t2les']) \
             and os.path.exists(patient[tp].stx_mnc['masknoles']) \
             and os.path.exists(patient[tp].stx_ns_mnc['masknoles']):
-            print(' -- T2Lesions preprocessing exists!')
+            pass
         else:
 
             tmpdilated = minc.tmp('dilated.mnc')

@@ -15,8 +15,8 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
-# scoop parallel execution
-from scoop import futures
+import ray
+
 
 from .structures       import *
 from .fuse             import *
@@ -118,8 +118,8 @@ def train_ec_loo( segmentation_library,
                     experiment_segmentation_library = copy.deepcopy(segmentation_library)
                     print("Running pre-processing on {} - {}".format(train_sample,train_presegment))
                     
-                    results2.append( futures.submit( 
-                            fusion_segment,
+                    results2.append( 
+                            fusion_segment.remote(
                             train_sample, 
                             experiment_segmentation_library,
                             work_dir+os.sep+n,
@@ -136,13 +136,13 @@ def train_ec_loo( segmentation_library,
                         ))
                     ###
                 print("waiting for {} jobs".format(len(results2)))
-                futures.wait(results2, return_when=futures.ALL_COMPLETED)
+                ray.wait(results2, num_returns=len(results2))
                 print("Finished!")
                 #train_list=range()
                 
                 # now pre-fill training library with freshly pre-processed samples
                 for (_i, _j) in enumerate(results2):
-                    print("{} - done ".format(_j.result()[1]['bbox_sample'].seg))
+                    print("{} - done ".format(ray.get(_j)[1]['bbox_sample'].seg))
                     # raise("Not FINISHED!")
                     sample_id = os.path.basename(train_list[_i][0]).rsplit('.gz',1)[0].rsplit('.mnc',1)[0]
                     # include into the training list
@@ -154,7 +154,7 @@ def train_ec_loo( segmentation_library,
                         match = segmentation_library.library[train_list_i[0]]
                         
                         train = match[0:2]
-                        train.append(_j.result()[1]['bbox_sample'].seg)
+                        train.append(ray.get(_j)[1]['bbox_sample'].seg)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                     elif len(train_list_i) == 2:
@@ -164,7 +164,7 @@ def train_ec_loo( segmentation_library,
                         match = segmentation_library.library[train_list_i[0]]
                         
                         train = match[0:2]
-                        train.append(_j.result()[1]['bbox_sample'].seg)
+                        train.append(ray.get(_j)[1]['bbox_sample'].seg)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                         
@@ -172,7 +172,7 @@ def train_ec_loo( segmentation_library,
                         match = segmentation_library.library[train_list_i[1]]
                         
                         train = match[0:2]
-                        train.append(_j.result()[1]['bbox_sample'].seg_f)
+                        train.append(ray.get(_j)[1]['bbox_sample'].seg_f)
                         train.extend(match[2:len(match)])
                         _train_list.append(train)
                     else:
@@ -283,8 +283,8 @@ def train_ec_loo( segmentation_library,
                         
                         ec_train_library.append(sample)
                         
-                        results.append(futures.submit(
-                                fusion_segment,
+                        results.append(
+                                fusion_segment.remote(
                                 k[0], 
                                 experiment_segmentation_library,
                                 output_experiment,
@@ -300,7 +300,7 @@ def train_ec_loo( segmentation_library,
                             ))
                         ec_work_dirs.append(ec_work_dir)
 
-            futures.wait(results, return_when=futures.ALL_COMPLETED)
+            ray.wait(results, num_returns=len(results))
 
             results2=[]
             results3=[]
@@ -310,13 +310,13 @@ def train_ec_loo( segmentation_library,
                 train_segment=j[1]
                 train_add=j[2:2+modalities]
                 train_mask=local_model_mask
-                auto_segment=results[i].result()[0]
+                auto_segment=ray.get(results[i])[0]
                 
                 # TODO: use the subject-specific mask somehow?
                 if ec_border_mask:
                     train_mask=auto_segment.rsplit( '.mnc',1 )[0] + '_' + ec_variant+'_train_mask.mnc'
                     results2.append( 
-                        futures.submit( make_border_mask, 
+                        make_border_mask.remote( 
                                         auto_segment,  
                                         train_mask, 
                                         width=ec_border_mask_width, 
@@ -328,7 +328,7 @@ def train_ec_loo( segmentation_library,
                     print("Splitting into individual files: class_number={} use_raw={}".format(experiment_segmentation_library[ 'classes_number' ],ec_use_raw))
                     labels_prefix=auto_segment.rsplit('.mnc', 1)[0]
 
-                    results3.append( futures.submit( split_labels, auto_segment, 
+                    results3.append(  split_labels.remote( auto_segment, 
                                                     experiment_segmentation_library.classes_number,
                                                     labels_prefix,
                                                     antialias=ec_antialias_labels,
@@ -350,10 +350,10 @@ def train_ec_loo( segmentation_library,
                     ec_train.append( ec_input )
 
             if ec_border_mask:
-                futures.wait(results2, return_when=futures.ALL_COMPLETED)
+                ray.wait(results2, num_returns=len(results2))
 
             if experiment_segmentation_library.classes_number>2 :
-                futures.wait(results3, return_when=futures.ALL_COMPLETED)
+                ray.wait(results3, num_returns=len(results3))
 
             # TODO run Error correction here
             with open(ec_train_file ,'w') as f:
@@ -379,7 +379,7 @@ def train_ec_loo( segmentation_library,
                         parameters=ec_parameters, debug=debug, partition=ec_split, part=s, 
                         multilabel=segmentation_library[ 'classes_number' ] ) )
 
-            futures.wait(results, return_when=futures.ALL_COMPLETED)
+            ray.wait(results, num_returns=len(results))
 
         # TODO: cleanup not-needed files here!
         if cleanup:

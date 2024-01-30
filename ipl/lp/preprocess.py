@@ -16,6 +16,10 @@ from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
 import ipl.registration
 
+# local
+from .structures   import *
+
+
 def fix_spacing(scan):
     """make sure all spacing in 3D volume are regular
     
@@ -49,7 +53,7 @@ def denoise(in_scan, out_scan, parameters={}):
         # TODO: maybe USE anlm sometimes?
     
 
-def estimate_nu(in_scan, out_field, parameters={},model=None):
+def estimate_nu(in_scan, out_field, parameters={}, model=None):
     """Estimate non-uniformity correction field
     
     Arguments: in `MriScan` input
@@ -105,14 +109,22 @@ def estimate_nu(in_scan, out_field, parameters={},model=None):
                         datatype=parameters.get('datatype',None)
                         )
             else:
-                minc.n4(in_scan.scan,
+                in_scan__ = in_scan
+                if 'denoise' in parameters:
+                    # apply denoise before running non-uniformity correction
+                    in_scan__ = MriScan(prefix=minc.tempdir,    name=in_scan.name+'_denoised', modality=in_scan.modality)
+
+                    denoise(in_scan, in_scan__, parameters=parameters['denoise'])
+                    in_scan__.mask = in_scan.mask
+
+                minc.n4(in_scan__.scan,
                     output_field=out_field.scan,
                     weight_mask=weight_mask,
                     shrink=parameters.get('shrink',4),
-                    datatype=parameters.get('datatype',None),
+                    datatype=parameters.get('datatype','short'),
                     iter=parameters.get('iter','200x200x200'),
                     distance=parameters.get('distance',200),
-                    downsample_field=parameters.get('downsample_field',None))
+                    downsample_field=parameters.get('downsample_field',4))
 
 def apply_nu(in_scan, field, out_scan, parameters={}):
     """ Apply non-uniformity correction 

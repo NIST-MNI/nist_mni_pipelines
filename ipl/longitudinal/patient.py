@@ -10,6 +10,8 @@
 import pickle  # to store the class
 import os
 import copy
+import shutil
+
 from  .general import *  # functions to call binaries and general functions
 from   ipl.minc_tools import mincError
 
@@ -58,7 +60,7 @@ class LngPatient(dict):
         self.inpaint = False  # Do inpainting
         self.dobiascorr = False  # Do longitudinal bias correction
         self.dolngcls = True  # Do longitudinal classification
-        self.donl = True  # Do non linear registration
+        #self.donl = True  # Do non linear registration
         self.mask_n3 = False  # Use brain mask for N3
         self.n4 = True  # Use N4 for non-uniformity correction
         self.nl_method = 'nlfit_s'  # Do non-linear registration
@@ -71,12 +73,24 @@ class LngPatient(dict):
         self.temporalregu = False  # default no temporal regularization for template creations
         self.run_face = False  # default - do not attempt to run FACE
         self.run_deep = False  # default - do not perform deep structures segmentation
-        self.run_skullreg = False  # default - do not attempt to run skull registration
+        self.skullreg = False  # default - do not attempt to run skull registration
         self.large_atrophy = False  # default - do not use the ventricle mask for the linear template creation
         self.geo_corr = False  # default - do not perform distortion correction
         self.dodbm = False  #  default - do not create dbm files
         self.dovbm = False  #  default - do not create vbm files
         self.vbm_options = {} # VBM options
+        self.threads = 1 # number of threads to use per patient
+        self.do_cleanup = False # remove intermediate files
+
+        # Tissue classification BISON (GM,WM,CSF)
+        self.bison_pfx = None # BISON model prefix
+        self.bison_atlas_pfx = None # BISON atlas prefix
+        self.bison_method = None # BISON method
+
+        # WMH classification BISON, WMH will be set to WM in the tissue classification
+        self.wmh_bison_pfx = None # BISON model prefix
+        self.wmh_bison_atlas_pfx = None # BISON atlas prefix
+        self.wmh_bison_method = None # BISON method
 
         # model used in the processing
 
@@ -84,8 +98,11 @@ class LngPatient(dict):
         self.modelname = ''  # model name
         self.beastdir = ''  # beast library directory
 
-        # patient data
+        self.redskull_onnx = None # Redskull segmentation library for ONNX
+        self.redskull_var = None # Redskull variant
+        self.synthstrip_onnx = None # Synthstrip segmentation library for ONNX
 
+        # patient data
         self.id = id  # subject id
         self.sex = ''  # subject gender
         self.clinicaldata = {}  # additional info
@@ -111,6 +128,7 @@ class LngPatient(dict):
         self.linreg    = None
 
     def clean(self):
+        ##### remove non existing images
         cleanImages(self.template)
         cleanImages(self.stx_mnc)
         cleanImages(self.stx2_mnc)
@@ -129,6 +147,45 @@ class LngPatient(dict):
         if len(self) > 0:
             for (i, j) in self.items():
                 j.clean()
+
+    @staticmethod # remove file(s) if it exists
+    def _remove_file(fn):
+        if isinstance(fn,list):
+            for f in fn:
+                LngPatient._remove_file(f)
+        elif isinstance(fn,dict):
+            for (k,f) in fn.items():
+                LngPatient._remove_file(f)
+        else: 
+            if os.path.exists(fn):
+                os.unlink(fn)
+
+    def cleanup(self):
+        # remove intermediate files to save disk space
+        # remove temporary dir
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir)
+        # remove template sd files
+        LngPatient._remove_file(self.template['linear_template_sd'])
+        LngPatient._remove_file(self.template['nl_template_sd'])
+
+        for tp in self.keys(): # iterate over all timepoints
+            # native space
+            LngPatient._remove_file(self[tp].clp)
+            LngPatient._remove_file(self[tp].den)
+            LngPatient._remove_file(self[tp].nuc)
+            # stx space
+            LngPatient._remove_file(self[tp].stx_mnc)
+            LngPatient._remove_file(self[tp].stx_ns_mnc)
+            # lng space
+            LngPatient._remove_file(self[tp].lng_mnc)
+
+            # remove extraneous QC files ?
+            # for s in self[tp].native.keys():
+            #     LngPatient._remove_file(self[tp].qc_jpg['stx_' + s])
+        # TODO: reshape _grid files to use short datatype instead of float ?
+        # finally remove the pickle
+        LngPatient._remove_file(self.pickle) 
 
     @staticmethod  # static function to load pickle
     def read(filename):
@@ -171,7 +228,7 @@ class LngPatient(dict):
         print('        - denoise      = ' + str(self.denoise))
         print('        - mask N3      = ' + str(self.mask_n3))
         print('        - advanced N4  = ' + str(self.n4))
-        print('        - donl         = ' + str(self.donl))
+        #print('        - donl         = ' + str(self.donl))
         print("        - dolngcls     = " + str(self.dolngcls))
         print("        - onlyt1       = " + str(self.onlyt1))
         print('        - dodbm        = ' + str(self.dodbm))
@@ -265,9 +322,10 @@ class TP:
         # non linear images
 
         self.lng_xfm = {}  # registration towards the lng template
+        self.lng_grid = {}  # registration towards the lng template
         self.lng_ixfm = {}  # registration from lng templat to scan
         self.lng_igrid = {}  # registration from lng templat to scan
-        self.lng_det = {}  # registration from lng templat to scan  determinant
+        self.lng_det = {}  # registration from lng templat to scan determinant
         self.nl_xfm = ''  # registration towards the atlas
 
         # qc images
@@ -402,7 +460,8 @@ def setFilenames(patient):
         os.makedirs(voldir,exist_ok=True)
         lngdir = patient[tp].tpdir + 'lng' + os.sep
         os.makedirs(lngdir,exist_ok=True)
-
+        segdir = patient[tp].tpdir + 'seg' + os.sep
+        os.makedirs(segdir,exist_ok=True)
         # take the sequences of the patient from the native images
         # this includes t1,t2,pd and t2les
 
@@ -439,6 +498,9 @@ def setFilenames(patient):
                 + '_' + tp + '_' + s + '.mnc'
             patient[tp].stx_ns_xfm[s] = stxdir + 'nsstx_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
+            # hack
+            patient[tp].stx_ns_xfm['unscale_'+s] = stxdir + 'nsstx_unscale_' + patient.id \
+                + '_' + tp + '_' + s + '.xfm'
 
             # stx2 space
             patient[tp].stx2_mnc[s] = stx2dir + 'stx2_' + patient.id \
@@ -446,19 +508,9 @@ def setFilenames(patient):
             patient[tp].stx2_xfm[s] = stx2dir + 'stx2_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
 
-            # stx2 space
-            # patient[tp].stx2v0_mnc[s] = stx2dir+"stx2v0_"+patient.id+"_"+tp+"_"+s+".mnc"
-            # patient[tp].stx2v0_xfm[s] = stx2dir+"stx2v0_"+patient.id+"_"+tp+"_"+s+".xfm"
-            # if len(patient)==1: # cross sectional
-            #  patient[tp].stx2_mnc[s]  =patient[tp].stx_mnc[s]
-            #  patient[tp].stx2_xfm[s]  =patient[tp].stx_xfm[s]
-            # qc
-
             patient[tp].qc_jpg['stx_' + s] = patient.qcdir + 'qc_stx_' + s + '_' + patient.id + '_' + tp + '.jpg'
             patient[tp].qc_jpg['stx2_' + s] = patient.qcdir + 'qc_stx2_' + s + '_' + patient.id + '_' + tp + '.jpg'
             patient[tp].qc_jpg['nl_' + s] = patient.qcdir + 'qc_nl_' + s + '_' + patient.id + '_' + tp + '.jpg'
-
-            # patient[tp].qc_jpg["stx2v0_"+s]=patient.qcdir+"qc_stx2v0_"+s+"_"+patient.id+"_"+tp+".jpg"
 
             if not s == 't1':
                 patient[tp].qc_jpg['t1' + s] = patient.qcdir + 'qc_t1' \
@@ -502,7 +554,11 @@ def setFilenames(patient):
         patient[tp].clp2["mask"]       = clp2dir+'clp2_'+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx_mnc["mask"]    = stxdir+"stx_"+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx2_mnc["mask"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_mask.mnc"
-        
+
+        # HACK
+        patient[tp].stx_mnc["redskull"]    = segdir+"stx_"+patient.id+"_"+tp+"_redskull2.mnc"
+
+
         # depricated files
         patient[tp].stx2_mnc["rhc"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_rhc.mnc"
         patient[tp].stx2_mnc["lhc"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_lhc.mnc"
@@ -510,9 +566,15 @@ def setFilenames(patient):
         patient[tp].stx2_mnc["lam"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_lam.mnc"
         patient[tp].stx2_mnc["vent"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_vent.mnc"
         
-        #patient[tp].stx2v0_mnc["mask"]   = stx2dir+"stx2v0_"+patient.id+"_"+tp+"_mask.mnc"
-        patient[tp].stx_ns_mnc["mask"] = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
+        # non-scaled
+        patient[tp].stx_ns_mnc["mask"]  = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
+        patient[tp].stx_ns_mnc["skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_skull.mnc"
+        patient[tp].stx_ns_mnc["redskull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_redskull.mnc"
+        patient[tp].stx_ns_mnc["head"]  = segdir+"nsstx_"+patient.id+"_"+tp+"_head.mnc"
+
+
         patient[tp].qc_jpg['stx_mask'] = patient.qcdir+"qc_stx_mask_"+patient.id+"_"+tp+".jpg"
+        patient[tp].qc_jpg['synthstrip'] = patient.qcdir+"qc_synthstrip_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_mask']= patient.qcdir+"qc_stx2_mask_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_rhc']= patient.qcdir+"qc_stx2_rhc_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['stx2_lhc']= patient.qcdir+"qc_stx2_lhc_"+patient.id+"_"+tp+".jpg"
@@ -522,6 +584,7 @@ def setFilenames(patient):
         patient[tp].qc_jpg['stx2_deep']= patient.qcdir+"qc_stx2_deep_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['lng_det']= patient.qcdir+"qc_lngdet_"+patient.id+"_"+tp+".jpg"
         patient[tp].qc_jpg['nl_det']= patient.qcdir+"qc_nldet_"+patient.id+"_"+tp+".jpg"
+        patient[tp].qc_jpg['stx_skull']= patient.qcdir+"qc_stx_skull_"+patient.id+"_"+tp+".jpg"
         
         if 't2les' in patient[tp].native:
             patient[tp].stx_mnc['masknoles'] = stxdir + 'stx_' \
@@ -569,6 +632,8 @@ def setFilenames(patient):
 
         patient[tp].lng_xfm['t1'] = lngdir + 'lng_' + patient.id + '_' \
             + tp + '_t1.xfm'
+        patient[tp].lng_grid['t1'] = lngdir + 'lng_' + patient.id \
+            + '_' + tp + '_t1_grid_0.mnc'
         patient[tp].lng_ixfm['t1'] = lngdir + 'lng_' + patient.id + '_' \
             + tp + '_t1_inv.xfm'
         patient[tp].lng_igrid['t1'] = lngdir + 'lng_' + patient.id \
@@ -587,11 +652,20 @@ def setFilenames(patient):
             + patient.id + '_' + tp + '.mnc'
         patient[tp].stx2_mnc['lng_classification'] = clsdir + 'lngcls_' \
             + patient.id + '_' + tp + '.mnc'
+        patient[tp].stx2_mnc['wmh'] = clsdir + 'wmh_' \
+            + patient.id + '_' + tp + '.mnc'
 
         patient[tp].stx2_mnc['lobes'] = clsdir + 'lob_' + patient.id \
             + '_' + tp + '.mnc'
+        
         patient[tp].vol['lobes'] = voldir + 'vol_' + patient.id + '_' \
             + tp + '.txt'
+        
+        patient[tp].vol['lobes_json'] = voldir + 'vol_' + patient.id + '_' \
+            + tp + '.json'
+        
+        patient[tp].vol['lobes_csv'] = voldir + 'vol_' + patient.id + '_' \
+            + tp + '.csv'
 
         patient[tp].stx2_mnc["add_prefix"] = adddir + 'add_' + patient.id + '_' + tp 
         
@@ -637,16 +711,17 @@ def setFilenames(patient):
     # ## template images
     # a) linear
 
-    patient.template['linear_template'] = lngtmpldir + 'lin_template_' \
-        + patient.id + '_t1.mnc'
-    patient.template['linear_template_sd'] = lngtmpldir \
-        + 'lin_template_' + patient.id + '_t1_sd.mnc'
-    patient.template['linear_template_mask'] = lngtmpldir \
-        + 'lin_template_' + patient.id + '_mask.mnc'
-    patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' \
-        + patient.id + '_t1.xfm'
-    patient.qc_jpg['linear_template'] = patient.qcdir \
-        + 'qc_lin_template_' + patient.id + '.jpg'
+    patient.template['linear_template'] = lngtmpldir + 'lin_template_' + patient.id + '_t1.mnc'
+    patient.template['linear_template_sd'] = lngtmpldir + 'lin_template_' + patient.id + '_t1_sd.mnc'
+    patient.template['linear_template_mask'] = lngtmpldir + 'lin_template_' + patient.id + '_mask.mnc'
+    patient.template['scale_xfm'] = lngtmpldir + 'lin_template_scale_' + patient.id + '_t1.xfm'
+    patient.template['stx2_xfm'] = lngtmpldir + 'lin_template_' + patient.id + '_t1.xfm'
+    patient.template['linear_template_skull'] = lngtmpldir + 'lin_template_' + patient.id + '_skull.mnc'
+    patient.template['linear_template_redskull'] = lngtmpldir + 'lin_template_' + patient.id + '_redskull.mnc'
+
+    patient.qc_jpg['linear_template'] = patient.qcdir + 'qc_lin_template_' + patient.id + '_t1.jpg'
+    patient.qc_jpg['linear_template_redskull'] = patient.qcdir + 'qc_lin_template_' + patient.id + '_redskull.jpg'
+
 
     # b) non-linear
 

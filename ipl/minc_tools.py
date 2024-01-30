@@ -92,6 +92,9 @@ class temp_files(object):
             os.makedirs(self.tempdir)
 
     def __enter__(self):
+        # setup ITK multithreading, to avoid oversubscribing , when OMP_NUM_THREADS is used
+        if 'OMP_NUM_THREADS' in os.environ and 'ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS' not in os.environ:
+            os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=os.environ['OMP_NUM_THREADS']
         return self
 
     def __exit__(
@@ -302,7 +305,7 @@ class mincTools(temp_files):
                 logger.warn('     otime ' + str(otime) + ' < itime ' + str(itime))
                 return True
             else:
-                logger.warn(' -- Skipping: Output Exists:{}'.format(repr(exists)))
+                logger.debug(' -- Skipping: Output Exists:{}'.format(repr(exists)))
                 return False
         return True
 
@@ -538,7 +541,7 @@ class mincTools(temp_files):
         i = subprocess.Popen(['mincinfo', '-vardims', 'image', input],
                              stdout=subprocess.PIPE).communicate()
         return i[0].decode().rstrip('\n').split(' ')
-    
+
     @staticmethod
     def query_attribute(input, attribute):
         '''read a value of an attribute inside minc file'''
@@ -546,8 +549,8 @@ class mincTools(temp_files):
         i = subprocess.Popen(['mincinfo', '-attvalue', attribute,
                              input],
                              stdout=subprocess.PIPE).communicate()
-        return i[0].decode().rstrip('\n').rstrip(' ')
-        
+        return i[0].decode(encoding='utf-8', errors='ignore').rstrip('\n').rstrip(' ')
+
     @staticmethod
     def set_attribute(input, attribute, value):
         '''set a value of an attribute inside minc file
@@ -572,7 +575,7 @@ class mincTools(temp_files):
         """
         # TODO: make this robust to errors!
         _image_dims = subprocess.Popen(['mincinfo', '-vardims', 'image', input],
-                             stdout=subprocess.PIPE).communicate()[0].decode().rstrip('\n').rstrip(' ').split(' ')
+                             stdout=subprocess.PIPE).communicate()[0].decode(encoding='utf-8', errors='ignore').rstrip('\n').rstrip(' ').split(' ')
         
         _req=['mincinfo']
         for i in _image_dims:
@@ -582,7 +585,7 @@ class mincTools(temp_files):
                          '-attvalue', '{}:direction_cosines'.format(i)])
         _req.append(input)
         _info= subprocess.Popen(_req,
-                             stdout=subprocess.PIPE).communicate()[0].decode().rstrip('\n').rstrip(' ').split("\n")
+                             stdout=subprocess.PIPE).communicate()[0].decode(encoding='utf-8', errors='ignore').rstrip('\n').rstrip(' ').split("\n")
 
         diminfo=collections.namedtuple('dimension',['length','start','step','direction_cosines'])
         
@@ -918,13 +921,35 @@ class mincTools(temp_files):
         cmd.extend(inputs)
         cmd.append(output)
 
-        if madfile:
+        if madfile is not None:
             cmd.extend(['--mad', madfile])
-        if datatype:
+        if datatype is not None:
             cmd.append(datatype)
             
         self.command(cmd, inputs=inputs, outputs=[output], verbose=self.verbose)
 
+    def multiple_volume_similarity(
+            self,
+            inputs,
+            maj=None,
+            ovl=None,
+            bg=False):
+        """ Calculate multiple labelled volume similarity"""
+        cmd = ['multiple_volume_similarity']
+        cmd += inputs
+        outputs=[]
+        if maj is not None:
+            cmd+=['--maj', maj]
+            outputs+=[maj]
+        if ovl is not None:
+            cmd+=['--ovl', ovl]
+            outputs+=[ovl]
+        if bg:
+            cmd+=['--bg']
+
+        out=self.execute_w_output(cmd, verbose=self.verbose)
+
+        return float(out)
 
     def calc(
         self,
@@ -1043,7 +1068,7 @@ class mincTools(temp_files):
                   output, datatype='-float')
 
 
-    def param2xfm(self, output, scales=None, translation=None, rotations=None, shears=None):
+    def param2xfm(self, output, scales=None, translation=None, rotations=None, shears=None,center=None):
         cmd = ['param2xfm','-clobber',output]
 
         if translation is not None:
@@ -1054,6 +1079,8 @@ class mincTools(temp_files):
             cmd.extend(['-scales',str(scales[0]),str(scales[1]),str(scales[2])])
         if shears is not None:
             cmd.extend(['-shears',str(shears[0]),str(shears[1]),str(shears[2])])
+        if center is not None:
+            cmd.extend(['-center',str(center[0]),str(center[1]),str(center[2])])
         self.command(cmd, inputs=[], outputs=[output], verbose=self.verbose)
 
 
@@ -1691,6 +1718,35 @@ class mincTools(temp_files):
             cmd.append('--'+datatype)
         self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
 
+    def convert(
+        self,
+        input,
+        output,
+        out_v2=True,
+        compress=0
+        ):
+        "convert minc file type"
+        cmd = ['mincconvert', input, output,'-compress',str(compress)]
+        if out_v2: cmd+=['-2']
+        self.command(cmd, inputs=[input], outputs=[output], verbose=self.verbose)
+
+    def convert_and_fix(
+        self,
+        input,
+        output,
+        out_v2=True,
+        compress=0
+        ):
+
+        ## Convert minc file and optionaly fix spacing issues
+        self.convert( input, output, out_v2=out_v2, compress=compress)
+
+        for s in ['xspace', 'yspace', 'zspace']:
+            spacing = self.query_attribute( output, s + ':spacing' )
+            if spacing.count( 'irregular' ):
+                self.set_attribute( output, s + ':spacing', 'regular__' )
+        return output
+
     def reshape(
         self,
         input,
@@ -1845,105 +1901,7 @@ class mincTools(temp_files):
         stxtemplate_xfm=None,
         ):
         """perform linear registration based on the skull segmentaton"""
-        # TODO: probably broken, do not use!
-
-        temp_dir = self.temp_dir(prefix='skullregistration') + os.sep
-        fit = '-xcorr'
-        try:
-            if init_xfm:
-                resampled_source = temp_dir + 'resampled_source.mnc'
-                resampled_source_mask = temp_dir \
-                    + 'resampled_source_mask.mnc'
-                self.resample_smooth(source, resampled_source,
-                        like=target, transform=init_xfm)
-                self.resample_labels(source_mask,
-                        resampled_source_mask, like=target,
-                        transform=init_xfm)
-                source = resampled_source
-                source_mask = resampled_source_mask
-            if stxtemplate_xfm:
-                resampled_target = temp_dir + 'resampled_target.mnc'
-                resampled_target_mask = temp_dir \
-                    + 'resampled_target_mask.mnc'
-                self.resample_smooth(target, resampled_target,
-                        transform=stxtemplate_xfm)
-                self.resample_labels(target_mask,
-                        resampled_target_mask,
-                        transform=stxtemplate_xfm)
-                target = resampled_target
-                target_mask = resampled_target_mask
-
-            self.command(['itk_morph', '--exp', 'D[3]', source_mask,
-                         temp_dir + 'dilated_source_mask.mnc'], verbose=self.verbose)
-            self.calc([temp_dir + 'dilated_source_mask.mnc', source],
-                      'A[0]<=0.1 && A[0]>=-0.1 ? A[1]:0', temp_dir
-                      + 'non_brain_source.mnc' )
-            self.command(['mincreshape', '-dimrange', 'zspace=48,103',
-                         temp_dir + 'non_brain_source.mnc', temp_dir
-                         + 'non_brain_source_crop.mnc'], verbose=self.verbose )
-            self.command(['itk_morph', '--exp', 'D[3]', target_mask,
-                         temp_dir + 'dilated_target_mask.mnc'], verbose=self.verbose)
-            self.calc([temp_dir + 'dilated_target_mask.mnc', target],
-                      'A[0]<=0.1 && A[0]>=-0.1 ? A[1]:0', temp_dir
-                      + 'non_brain_target.mnc')
-            self.command(['mincreshape', '-dimrange', 'zspace=48,103',
-                         temp_dir + 'non_brain_target.mnc', temp_dir
-                         + 'non_brain_target_crop.mnc'], verbose=self.verbose )
-            self.command([
-                'bestlinreg_s2',
-                '-clobber', '-lsq12', source, target,
-                temp_dir + '1.xfm',
-                ], verbose=self.verbose )
-            self.command([
-                'minctracc',
-                '-quiet','-clobber',
-                fit,
-                '-step', '2', '2', '2',
-                '-simplex','1',
-                '-lsq12',
-                '-model_mask', target_mask,
-                source,
-                target,
-                temp_dir + '2.xfm',
-                '-transformation', temp_dir + '1.xfm',
-                ], verbose=self.verbose)
-
-            self.command([
-                'minctracc',
-                '-quiet','-clobber',
-                fit,
-                '-step', '2', '2','2',
-                '-simplex', '1',
-                '-lsq12','-transformation', temp_dir + '2.xfm',
-                temp_dir + 'non_brain_source_crop.mnc',
-                temp_dir + 'non_brain_target_crop.mnc',
-                temp_dir + '3.xfm',
-                ], verbose=self.verbose)
-
-            self.command([
-                'minctracc',
-                '-quiet', '-clobber',
-                fit,
-                '-step', '2', '2', '2',
-                '-transformation',
-                temp_dir + '3.xfm',
-                '-simplex', '1',
-                '-lsq12',
-                '-w_scales', '0', '0', '0',
-                '-w_shear',  '0', '0', '0',
-                '-model_mask', target_mask,
-                source,
-                target,
-                temp_dir + '4.xfm',
-                ], verbose=self.verbose)
-
-            if init_xfm:
-                self.command(['xfmconcat', init_xfm, temp_dir + '4.xfm'
-                             , output_xfm, '-clobber'], verbose=self.verbose)
-            else:
-                shutil.move(temp_dir + '4.xfm', output_xfm)
-        finally:
-            shutil.rmtree(temp_dir)
+        assert False, "Obsolete do not use"
 
     def binary_morphology(self, source, expression, target , binarize_bimodal=False, binarize_threshold=None):
         cmd=['itk_morph',source,target]

@@ -14,6 +14,8 @@ import traceback
 from ipl.minc_tools import mincTools,mincError
 import ipl.minc_hl as hl
 
+import ray
+
 
 def filter_sample(input, output, filters, model=None):
     
@@ -173,7 +175,7 @@ def split_labels(input, n_labels,output_prefix,
         traceback.print_exc( file=sys.stdout)
         raise
 
-
+@ray.remote
 def generate_flip_sample(input, labels_datatype='byte'):
     '''generate flipped version of sample'''
     try:
@@ -197,6 +199,7 @@ def generate_flip_sample(input, labels_datatype='byte'):
         traceback.print_exc( file=sys.stdout)
         raise
 
+
 def create_unflip_remap(remap,remap_flip):
     if remap is not None and remap_flip is not None:
         # convert both into dict
@@ -210,6 +213,7 @@ def create_unflip_remap(remap,remap_flip):
         return _rr
     else:
         return None
+
 
 def log_transform_sample(input, output, threshold=1.0):
     try:

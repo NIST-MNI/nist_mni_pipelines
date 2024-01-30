@@ -14,6 +14,10 @@ import traceback
 # MINC stuff
 from ipl.minc_tools import mincTools,mincError
 
+# distributed
+import ray
+
+
 # local stuff
 from .structures   import *
 from .preprocess   import *
@@ -23,6 +27,7 @@ from .resample     import *
 from .segment      import *
 from .qc           import *
 
+@ray.remote
 def iter_step(  t1w_scan, 
                 iteration,
                 output_dir,
