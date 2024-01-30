@@ -26,6 +26,6 @@ END
 
 docker run --rm --shm-size=10gb -v $(pwd):/data -w /data --user $(id -u):$(id -g) \
 	--env PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
-         nist_mni_pipeline:0.1.00 subject43.csv output_docker
+         nistmni/nist_mni_pipeline:0.1.00 subject43.csv output_docker
 
 
