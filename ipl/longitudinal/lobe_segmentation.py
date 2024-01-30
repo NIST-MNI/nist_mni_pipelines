@@ -180,11 +180,13 @@ def lobe_segmentation_v10(patient, tp):
                    patient[tp].stx2_xfm['t1']],
                    [patient[tp].vol['lobes']])
         
-        ## HACK to calculate WMH volumes
         if os.path.exists(patient[tp].stx2_mnc['wmh']):
             wmh_volume=float(minc.execute_w_output(['mincstats' ,'-vol', '-binvalue' ,'1' ,'-q', patient[tp].stx2_mnc['wmh']]).strip())
+            params=minc.xfm2param(patient[tp].stx2_xfm['t1'])
+            vol_scale=params['scale'][0]*params['scale'][1]*params['scale'][2]
+
             with open(patient[tp].vol['lobes'],"a") as f:
-                f.write(f"WMH_vol {wmh_volume}\n")
+                f.write(f"WMH_vol {wmh_volume/vol_scale}\n")
         
         lobes_to_json(patient, tp,
                       patient[tp].vol['lobes'],
