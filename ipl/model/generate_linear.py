@@ -326,7 +326,10 @@ def generate_linear_model_csv(input_csv,model=None,mask=None,work_prefix=None,op
     with open(input_csv, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
         for row in reader:
-            internal_sample.append(MriDataset(scan=row[0],mask=row[1]))
+            if len(row)>=2:
+                internal_sample.append(MriDataset(scan=row[0],mask=row[1]))
+            else:
+                internal_sample.append(MriDataset(scan=row[0]))
 
     internal_model=None
     if model is not None:
