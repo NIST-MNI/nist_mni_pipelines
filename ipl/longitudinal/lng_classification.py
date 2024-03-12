@@ -38,12 +38,7 @@ def pipeline_lng_classification(patient):
     if allDone:
         return 1
 
-    if patient.pipeline_version == '1.0':
-        lng_classification_v10(patient)  # beast by simon fristed
-    else:
-        print(' -- Chosen version not found!')
-
-    # @todo add history
+    lng_classification_v10(patient) 
 
 
 

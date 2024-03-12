@@ -32,11 +32,10 @@ def pipeline_linearatlasregistration(patient, tp):
     #     print(' -- pipeline_linearatlasregistration exists')
     #     return True
 
-    if patient.pipeline_version == '1.0':
-        linearatlasregistration_v10(patient, tp)  # beast by simon fristed
-    else:
-        print(' -- Chosen version not found!')
+    linearatlasregistration_v10(patient, tp)  # beast by simon fristed
 
+
+    
 def linearatlasregistration_v10(patient, tp):
 
 

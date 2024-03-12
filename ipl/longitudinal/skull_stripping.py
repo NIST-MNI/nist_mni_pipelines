@@ -135,10 +135,7 @@ def pipeline_stx2_skullstripping(patient, tp):
 # Last preprocessing (or more common one)
 
 def runSkullstripping(params, synthstrip_onnx=None):
-    if params.pipeline_version == '1.0':
-        skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx)  # beast by simon fristed
-    else:
-        print(' -- Chosen version not found!')
+    skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx)  # beast by simon fristed
 
 
 # function using beast

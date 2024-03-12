@@ -18,10 +18,7 @@ version = '1.0'
 
 def pipeline_lngDBM(patient, tp=None):
 
-    if patient.pipeline_version == '1.0':
-        pipeline_lngDBM_v10(patient, tp)
-    else:
-        print(' -- Chosen version not found!')
+    pipeline_lngDBM_v10(patient, tp)
 
     # # Write qc images
     # ################
