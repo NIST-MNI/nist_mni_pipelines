@@ -611,11 +611,15 @@ def setFilenames(patient):
         #  patient[tp].stx2_mnc['masknoles']=patient[tp].stx_mnc['masknoles']
 
         # t2-> t1 registration
-
         patient[tp].clp['t2t1xfm'] = clpdir + 'clp_' + patient.id + '_' \
             + tp + '_t2t1.xfm'
+        # pd-> t1 registration
         patient[tp].clp['pdt1xfm'] = clpdir + 'clp_' + patient.id + '_' \
             + tp + '_pdt1.xfm'
+        # flr-> t1 registration
+        patient[tp].clp['flrt1xfm'] = clpdir + 'clp_' + patient.id + '_' \
+            + tp + '_flrt1.xfm'
+
 
         # MANUAL: manually corrected native space image
 

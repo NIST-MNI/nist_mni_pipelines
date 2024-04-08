@@ -166,6 +166,42 @@ def linearatlasregistration_v10(patient, tp):
                                  patient[tp].stx2_mnc['pd'],
                                  transform=patient[tp].stx2_xfm['pd'],
                                  like=template_mask)
+            
+        if 'flr' in patient[tp].native:
+            templateflr = template.replace('t1', 'flr')
+            if not os.path.exists(templateflr):
+                templateflr = template.replace('t1', 't2')
+            if not os.path.exists(templateflr):
+                templateflr = template
+
+            # assume pd comes from the dual echo sequence
+            minc.resample_labels(patient[tp].clp['mask'],
+                                minc.tmp('flr_mask.mnc'),
+                                transform=patient[tp].clp['flrt1xfm'],
+                                invert_transform=True,
+                                like=patient[tp].clp['flr'])
+
+            minc.nu_correct(patient[tp].clp['flr'], 
+                            output_image=minc.tmp('clp2_flr.mnc'), 
+                            mask=minc.tmp('flr_mask.mnc'), 
+                            mri3t=patient.mri3T )
+
+            minc.volume_pol(
+                minc.tmp('clp2_flr.mnc'),
+                templatet2,
+                patient[tp].clp2['flr'],
+                source_mask=minc.tmp('flr_mask.mnc') ,
+                target_mask=template_mask,
+                datatype='-short' )
+
+            minc.xfmconcat([patient[tp].clp['flrt1xfm'],
+                           patient[tp].stx_ns_xfm['t1'],
+                           patient.template['stx2_xfm']],
+                           patient[tp].stx2_xfm['flr'])
+            minc.resample_smooth(patient[tp].clp2['flr'],
+                                 patient[tp].stx2_mnc['flr'],
+                                 transform=patient[tp].stx2_xfm['flr'],
+                                 like=template_mask)
 
         if 't2les' in patient[tp].native:
             minc.resample_labels(patient[tp].native['t2les'],

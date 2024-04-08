@@ -118,7 +118,10 @@ def setup_patient(id, options):
     # end of creating a patient
     return patient
 
-def setup_visit(patient,visit,t1=None,t2=None,pd=None,age=None,geo_t1=None,geo_t2=None,t2les=None):
+def setup_visit(patient,visit,
+                t1=None,t2=None,pd=None,flr=None,
+                age=None,
+                geo_t1=None,geo_t2=None,t2les=None):
     assert visit not in patient , f' -- ERROR : Timepoint {visit} repeated in patient {patient.id}'
 
     patient[visit] = TP(visit)  # creating a timepoint for the patient[id]
@@ -142,6 +145,11 @@ def setup_visit(patient,visit,t1=None,t2=None,pd=None,age=None,geo_t1=None,geo_t
     
     if pd is not None and len(pd) > 0:
         patient[visit].native['pd'] = pd
+
+    if flr is not None and len(flr) > 0:
+        patient[visit].native['flr'] = flr
+
+    ### TODO: add FLAIR
 
     if age is not None:
         patient[visit].age = age
@@ -220,12 +228,46 @@ def launchPipeline(options):
                         t1=p['t1w'],
                         t2=p.get('t2w',None),
                         pd=p.get('pdw',None),
+                        flr=p.get('flr',None),
                         age=p.get('age',None),
                         geo_t1=p.get('geot1',None),
                         geo_t2=p.get('geot2',None),
                         t2les=p.get('t2les',None),
                         )
+    elif options.csv is not None: # CSV list , with header
+        import pandas as pd
+        df=pd.read_csv(options.csv)
+        assert 'subject' in df.columns, "csv file should contain a list of patients with 'subject' column"
+        assert 'visit' in df.columns, "csv file should contain a list of patients with 'visit' column"
+        assert 't1w' in df.columns, "css file should contain a list of patients with 't1w' column"
+        
+        for i in range(len(df)):
+            id=str(df.loc[i,'id'])
+            visit=str(df.loc[i,'visit'])
+            if id not in patients:
+                patients[id] = setup_patient(id,options)
+            
+            t1=df.loc[i,'t1w']
+            # optional fields
+            age=df.loc[i,'age'].float() if 'age' in df.columns else None
+            geo_t1=df.loc[i,'geot1'] if 'geot1' in df.columns else None
+            geo_t2=df.loc[i,'geot2'] if 'geot2' in df.columns else None
+            t2les=df.loc[i,'t2les'] if 't2les' in df.columns else None
+            t2=df.loc[i,'t2w'] if 't2w' in df.columns else None
+            pd_=df.loc[i,'pdw'] if 'pdw' in df.columns else None
+            flr_=df.loc[i,'flr'] if 'flr' in df.columns else None
+            # TODO: add flair
 
+            setup_visit(patients[id], visit,
+                        t1=t1,
+                        t2=t2,
+                        pd=pd_,
+                        flr=flr_,
+                        age=age,
+                        geo_t1=geo_t1,
+                        geo_t2=geo_t2,
+                        t2les=t2les,
+                        )
     elif options.list is not None: # legacy option
         # for each patient
         with open(options.list) as p:

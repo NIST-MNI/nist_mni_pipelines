@@ -19,6 +19,7 @@ from ipl.minc_tools import mincTools,mincError
 # files storing all processing
 from ipl.longitudinal.t1_preprocessing   import pipeline_t1preprocessing,pipeline_t1preprocessing_s0
 from ipl.longitudinal.t2pd_preprocessing import pipeline_t2pdpreprocessing,pipeline_t2pdpreprocessing_s0
+from ipl.longitudinal.flr_preprocessing  import pipeline_flrpreprocessing,pipeline_flrpreprocessing_s0
 from ipl.longitudinal.skull_stripping    import pipeline_stx_skullstripping
 from ipl.longitudinal.skull_stripping    import pipeline_stx2_skullstripping
 from ipl.longitudinal.linear_template    import pipeline_linearlngtemplate
@@ -62,6 +63,7 @@ def runTimePoint_FirstStageA(tp, patient):
                         + patient.id + ' ' + tp)
 
         pipeline_t2pdpreprocessing_s0(patient, tp)
+        pipeline_flrpreprocessing_s0(patient, tp)
 
         return True
     except mincError as e:
@@ -101,6 +103,10 @@ def runTimePoint_FirstStageB(tp, patient):
         # t2/pd preprocessing
         # ################
         pipeline_t2pdpreprocessing(patient, tp)
+
+        # flr preprocessing
+        # ################
+        pipeline_flrpreprocessing(patient, tp)
 
         return True
     except mincError as e:

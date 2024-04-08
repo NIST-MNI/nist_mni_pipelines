@@ -103,7 +103,24 @@ def classification_v10(patient, tp):
         wmh_bison_atlases={'av_t1':f"{patient.modeldir}/{patient.modelname}.mnc", # standard T1w model
                             # 'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
                             # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
-                           'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
+                            'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
+        if patient.mri3T:
+            #wmh_bison_fld="3T" if patient.mri3T else "15T"
+            wmh_bison_atlases.update({'p1':f'patient.wmh_bison_pfx/3T_2009c_1.mnc'})
+            # TODO: use FLAIR atlas if available
+            if 'flr' in patient[tp].native:
+                wmh_bison_input['flr']=[patient[tp].native['flr']]
+                wmh_bison_atlases['av_flr']=f'patient.wmh_bison_pfx/3T_2009c_flair.mnc'
+        else:
+            wmh_bison_atlases.update({'p1':f'patient.wmh_bison_pfx/15T_2009c_1.mnc'})
+            if 't2' in patient[tp].native:
+                wmh_bison_input['t2']=[patient[tp].native['t2']]
+                wmh_bison_atlases['av_t2']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc"
+            if 'pd' in patient[tp].native:
+                wmh_bison_input['pd']=[patient[tp].native['pd']]
+                wmh_bison_atlases['av_pd']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc"
+
+
         # FOR now, use only T1, even though it is bad
         # if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
         #     wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]

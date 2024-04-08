@@ -32,16 +32,14 @@ import ray
 def pipeline_t2pdpreprocessing(patient, tp):
 
     isDone = True
-    for s in list(patient[tp].native.keys()):
-        if s == 't1' or s == 't2les':
-            continue  # t1 has its own processing
-
-        if os.path.exists(patient[tp].clp[s]) \
-            and os.path.exists(patient[tp].stx_xfm[s]) \
-            and os.path.exists(patient[tp].stx_mnc[s]):
-            isDone = True
-        else:
-            isDone = False
+    for s in ['t2', 'pd']:
+        if s in patient[tp].native:
+            if os.path.exists(patient[tp].clp[s]) \
+                and os.path.exists(patient[tp].stx_xfm[s]) \
+                and os.path.exists(patient[tp].stx_mnc[s]):
+                isDone = True
+            else:
+                isDone = False
 
     if 't2les' in patient[tp].native:
         if isDone and os.path.exists(patient[tp].stx_mnc['masknoles']) \
