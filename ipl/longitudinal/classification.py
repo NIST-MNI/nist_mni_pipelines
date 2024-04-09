@@ -100,6 +100,8 @@ def classification_v10(patient, tp):
         }
         # if patient.wmh_bison_atlas_pfx is None:
         #     # need to populate atlases
+        print(f"{patient.wmh_bison_pfx=}")
+        
         wmh_bison_atlases={'av_t1':f"{patient.modeldir}/{patient.modelname}.mnc", # standard T1w model
                             # 'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
                             # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
