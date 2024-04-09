@@ -105,7 +105,6 @@ def classification_v10(patient, tp):
                             # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
                             'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
         if patient.mri3T:
-            
             wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_3T"
             wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/3T_2009c_1.mnc'})
             # TODO: use FLAIR atlas if available
