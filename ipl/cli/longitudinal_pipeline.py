@@ -147,9 +147,7 @@ def setup_visit(patient,visit,
         patient[visit].native['pd'] = pd
 
     if flr is not None and len(flr) > 0:
-        patient[visit].native['flr'] = flr
-
-    ### TODO: add FLAIR
+        patient[visit].native['flair'] = flr
 
     if age is not None:
         patient[visit].age = age
@@ -163,7 +161,7 @@ def setup_visit(patient,visit,
     if t2les is not None and len(t2les) > 0:
         patient[visit].native['t2les'] = t2les
 
-           
+
 
 def launchPipeline(options):
     '''
@@ -228,7 +226,7 @@ def launchPipeline(options):
                         t1=p['t1w'],
                         t2=p.get('t2w',None),
                         pd=p.get('pdw',None),
-                        flr=p.get('flr',None),
+                        flr=p.get('flair', p.get('flair',None)),
                         age=p.get('age',None),
                         geo_t1=p.get('geot1',None),
                         geo_t2=p.get('geot2',None),
@@ -237,12 +235,13 @@ def launchPipeline(options):
     elif options.csv is not None: # CSV list , with header
         import pandas as pd
         df=pd.read_csv(options.csv)
+        
         assert 'subject' in df.columns, "csv file should contain a list of patients with 'subject' column"
         assert 'visit' in df.columns, "csv file should contain a list of patients with 'visit' column"
         assert 't1w' in df.columns, "css file should contain a list of patients with 't1w' column"
         
         for i in range(len(df)):
-            id=str(df.loc[i,'id'])
+            id=str(df.loc[i,'subject'])
             visit=str(df.loc[i,'visit'])
             if id not in patients:
                 patients[id] = setup_patient(id,options)
@@ -255,9 +254,15 @@ def launchPipeline(options):
             t2les=df.loc[i,'t2les'] if 't2les' in df.columns else None
             t2=df.loc[i,'t2w'] if 't2w' in df.columns else None
             pd_=df.loc[i,'pdw'] if 'pdw' in df.columns else None
-            flr_=df.loc[i,'flr'] if 'flr' in df.columns else None
-            # TODO: add flair
 
+            if 'flair' in df.columns:
+                flr_=df.loc[i,'flair']
+            elif  'flair' in df.columns:
+                flr_=df.loc[i,'flair']
+            else:
+                flr_=None
+
+            # TODO: add flair
             setup_visit(patients[id], visit,
                         t1=t1,
                         t2=t2,
@@ -323,8 +328,8 @@ def launchPipeline(options):
     jobs_done = []
     while len(pickles)>0:
 
-        jobs=[runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch]
-        pickles=pickles[len(jobs):]
+        jobs=[ runPipeline.remote(i) for j,i in enumerate(pickles) if j<options.ray_batch ]
+        pickles = pickles[len(jobs):]
         print(f"waiting for {len(jobs)} jobs")
 
         while jobs:
@@ -357,6 +362,7 @@ def parse_options():
     usage = \
     """%(prog)s -l <patients.list> -o <outputdir> [--run]
    or: %(prog)s --json <patients.json> -o <outputdir> [--run]
+   or: %(prog)s --csv <patients.csv> -o <outputdir> [--run]
    or: %(prog)s -p <patient.pickle> [--status|--run]
    or: %(prog)s -h
 
@@ -389,6 +395,10 @@ def parse_options():
 
     group.add_argument('-j', '--json', dest='json',
                      help='Json file with a list of datapoints to process',
+                     default=None)
+
+    group.add_argument('--csv', dest='csv',
+                     help='csv file with a list of datapoints to process',
                      default=None)
     
     group.add_argument('-l', '--list', dest='list',
@@ -698,7 +708,9 @@ def main():
     else:
         ray.init(address='auto',log_to_driver=not opts.quiet)
 
-    if opts.list is not None or opts.json is not None:
+    if opts.list is not None or \
+       opts.json is not None or \
+       opts.csv is not None:
         if opts.output is None:
             print('Please specify and output dir (-o)')
             sys.exit(1)
@@ -706,7 +718,7 @@ def main():
     elif opts.pickle is not None:
         runPipeline(opts.pickle, workdir=opts.workdir)
     else:
-        print("missing something...")
+        print("missing input file")
         sys.exit(1)
 
     if opts.ray_start is not None:

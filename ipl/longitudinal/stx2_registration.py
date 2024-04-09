@@ -152,7 +152,7 @@ def linearatlasregistration_v10(patient, tp):
 
             minc.volume_pol(
                 minc.tmp('clp2_pd.mnc'),
-                templatet2,
+                templatepd,
                 patient[tp].clp2['pd'],
                 source_mask=minc.tmp('t2_mask.mnc') ,
                 target_mask=template_mask,
@@ -167,8 +167,8 @@ def linearatlasregistration_v10(patient, tp):
                                  transform=patient[tp].stx2_xfm['pd'],
                                  like=template_mask)
             
-        if 'flr' in patient[tp].native:
-            templateflr = template.replace('t1', 'flr')
+        if 'flair' in patient[tp].native:
+            templateflr = template.replace('t1', 'flair')
             if not os.path.exists(templateflr):
                 templateflr = template.replace('t1', 't2')
             if not os.path.exists(templateflr):
@@ -179,17 +179,17 @@ def linearatlasregistration_v10(patient, tp):
                                 minc.tmp('flr_mask.mnc'),
                                 transform=patient[tp].clp['flrt1xfm'],
                                 invert_transform=True,
-                                like=patient[tp].clp['flr'])
+                                like=patient[tp].clp['flair'])
 
-            minc.nu_correct(patient[tp].clp['flr'], 
+            minc.nu_correct(patient[tp].clp['flair'], 
                             output_image=minc.tmp('clp2_flr.mnc'), 
                             mask=minc.tmp('flr_mask.mnc'), 
                             mri3t=patient.mri3T )
 
             minc.volume_pol(
                 minc.tmp('clp2_flr.mnc'),
-                templatet2,
-                patient[tp].clp2['flr'],
+                templateflr,
+                patient[tp].clp2['flair'],
                 source_mask=minc.tmp('flr_mask.mnc') ,
                 target_mask=template_mask,
                 datatype='-short' )
@@ -197,10 +197,10 @@ def linearatlasregistration_v10(patient, tp):
             minc.xfmconcat([patient[tp].clp['flrt1xfm'],
                            patient[tp].stx_ns_xfm['t1'],
                            patient.template['stx2_xfm']],
-                           patient[tp].stx2_xfm['flr'])
-            minc.resample_smooth(patient[tp].clp2['flr'],
-                                 patient[tp].stx2_mnc['flr'],
-                                 transform=patient[tp].stx2_xfm['flr'],
+                           patient[tp].stx2_xfm['flair'])
+            minc.resample_smooth(patient[tp].clp2['flair'],
+                                 patient[tp].stx2_mnc['flair'],
+                                 transform=patient[tp].stx2_xfm['flair'],
                                  like=template_mask)
 
         if 't2les' in patient[tp].native:

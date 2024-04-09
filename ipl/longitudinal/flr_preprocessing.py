@@ -32,10 +32,10 @@ import ray
 def pipeline_flrpreprocessing(patient, tp):
 
     isDone = True
-    if 'flr' in patient[tp].native:
-        if os.path.exists(patient[tp].clp['flr']) \
-            and os.path.exists(patient[tp].stx_xfm['flr']) \
-            and os.path.exists(patient[tp].stx_mnc['flr']):
+    if 'flair' in patient[tp].native:
+        if os.path.exists(patient[tp].clp['flair']) \
+            and os.path.exists(patient[tp].stx_xfm['flair']) \
+            and os.path.exists(patient[tp].stx_mnc['flair']):
             isDone = True
         else:
             isDone = False
@@ -49,7 +49,7 @@ def pipeline_flrpreprocessing(patient, tp):
     # 7. Qc image: t1/flr registration #TODO: convert to call to minctoools
 
     if os.path.exists(patient[tp].stx_mnc['t1']) \
-        and os.path.exists(patient[tp].stx_mnc['flr']):
+        and os.path.exists(patient[tp].stx_mnc['flair']):
 
         with mincTools( ) as minc:
             minc_qc.qc(
@@ -57,7 +57,7 @@ def pipeline_flrpreprocessing(patient, tp):
                 patient[tp].qc_jpg['t1flr'],
                 title=patient[tp].qc_title,
                 image_range=[0, 100],
-                mask=patient[tp].stx_mnc['flr'],
+                mask=patient[tp].stx_mnc['flair'],
                 samples=20,dpi=200,use_max=True,
                 image_cmap='red',
                 mask_cmap='green',
@@ -66,10 +66,10 @@ def pipeline_flrpreprocessing(patient, tp):
 
 
 def pipeline_flrpreprocessing_s0(patient, tp):
-    if 'flr' in patient[tp].native:
+    if 'flair' in patient[tp].native:
         if patient.denoise:
             run_nlm_c = run_nlm.options(num_cpus=patient.threads)
-            ray.get(run_nlm_c.remote(patient[tp].native['flr'],  patient[tp].den['flr']))
+            ray.get(run_nlm_c.remote(patient[tp].native['flair'],  patient[tp].den['flair']))
     return True
 
 def flrpreprocessing_v10(patient, tp):
@@ -78,7 +78,7 @@ def flrpreprocessing_v10(patient, tp):
 
         model = patient.modeldir + os.sep + patient.modelname + '.mnc'
         
-        modelflr = model.replace('t1', 'flr')
+        modelflr = model.replace('t1', 'flair')
         if not os.path.exists(modelflr): # use T2 model
             modelflr = model.replace('t1', 't2')
         if not os.path.exists(modelflr): # use t1
@@ -90,11 +90,11 @@ def flrpreprocessing_v10(patient, tp):
         # # FLR Preprocessing
         # ##################
 
-        if not 'flr' in patient[tp].native:
+        if not 'flair' in patient[tp].native:
             print(' -- No FLAIR image!')
-        elif os.path.exists(patient[tp].clp['flr']) \
-            and os.path.exists(patient[tp].stx_xfm['flr']) \
-            and os.path.exists(patient[tp].stx_mnc['flr']):
+        elif os.path.exists(patient[tp].clp['flair']) \
+            and os.path.exists(patient[tp].stx_xfm['flair']) \
+            and os.path.exists(patient[tp].stx_mnc['flair']):
             pass
         else:
 
@@ -106,7 +106,7 @@ def flrpreprocessing_v10(patient, tp):
             tmp_flr_stx_xfm = minc.tmp('flr_stx_0.xfm')
             tmpstats = minc.tmp('volpol_flr.stats')
 
-            # minc.convert(patient[tp].native['flr'], tmpflr)
+            # minc.convert(patient[tp].native['flair'], tmpflr)
 
             # for s in ['xspace', 'yspace', 'zspace']:
             #     spacing = minc.query_attribute(tmpflr, s + ':spacing')
@@ -116,9 +116,9 @@ def flrpreprocessing_v10(patient, tp):
             
             # 1. Do nlm
             if patient.denoise:
-                tmpnlm = patient[tp].den['flr']
+                tmpnlm = patient[tp].den['flair']
             else:
-                minc.convert_and_fix(patient[tp].native['flr'], tmpflr)
+                minc.convert_and_fix(patient[tp].native['flair'], tmpflr)
                 tmpnlm = tmpflr
 
             # # manual initialization
@@ -144,7 +144,7 @@ def flrpreprocessing_v10(patient, tp):
                 )
 
             minc.xfmconcat([tmp_flr_t1_xfm, patient[tp].stx_xfm['t1']],
-                           tmp_flr_stx_xfm)  # patient[tp].stx_xfm["flr"]
+                           tmp_flr_stx_xfm)  # patient[tp].stx_xfm['flair']
 
             if patient.n4:
                 minc.winsorize_intensity(tmpnlm,minc.tmp('trunc_flr.mnc'))
@@ -167,7 +167,7 @@ def flrpreprocessing_v10(patient, tp):
                 if patient.mri3T: dist=50 # ??
                 
                 minc.n4(minc.tmp('masked_flr.mnc'),
-                        output_field=patient[tp].nuc['flr'],
+                        output_field=patient[tp].nuc['flair'],
                         output_corr=tmpn3,
                         iter='200x200x200x200',
                         weight_mask=minc.tmp('weightmask_flr.mnc'),
@@ -180,7 +180,7 @@ def flrpreprocessing_v10(patient, tp):
                 minc.volume_pol(
                     tmpn3,
                     modelflr,
-                    patient[tp].clp['flr'],
+                    patient[tp].clp['flair'],
                     source_mask=minc.tmp('weightmask_flr.mnc'),
                     target_mask=modelmask,
                     datatype='-short',
@@ -196,7 +196,7 @@ def flrpreprocessing_v10(patient, tp):
                 # 4. Apply n3
                 minc.nu_correct(tmpnlm, output_image=tmpn3,
                                 mask=tmpmask, mri3t=patient.mri3T,
-                                output_field=patient[tp].nuc['flr'],
+                                output_field=patient[tp].nuc['flair'],
                                 downsample_field=4,
                                 datatype='short')
 
@@ -204,7 +204,7 @@ def flrpreprocessing_v10(patient, tp):
                 minc.volume_pol(
                     tmpn3,
                     modelflr,
-                    patient[tp].clp['flr'],
+                    patient[tp].clp['flair'],
                     target_mask=modelmask,
                     source_mask=tmpmask,
                     datatype='-short',
@@ -214,27 +214,27 @@ def flrpreprocessing_v10(patient, tp):
                 # 4. Apply n3
                 minc.nu_correct(tmpnlm, output_image=tmpn3,
                                 mri3t=patient.mri3T,
-                                output_field=patient[tp].nuc['flr'],
+                                output_field=patient[tp].nuc['flair'],
                                 downsample_field=4,
                                 datatype='short')
 
                 # 5. vol pol
-                minc.volume_pol(tmpn3, modelflr, patient[tp].clp['flr'],
+                minc.volume_pol(tmpn3, modelflr, patient[tp].clp['flair'],
                                 datatype='-short')
 
             # register to the stx space
-            flr_corr = patient[tp].clp['flr']
+            flr_corr = patient[tp].clp['flair']
             t1_corr = patient[tp].clp['t1']
             
             if 't1' in patient[tp].geo and patient.geo_corr:
                 t1_corr = patient[tp].corr['t1']
 
-            if 'flr' in patient[tp].geo and patient.geo_corr:
-                flr_corr = patient[tp].corr['flr']
+            if 'flair' in patient[tp].geo and patient.geo_corr:
+                flr_corr = patient[tp].corr['flair']
                 
-                minc.resample_smooth( patient[tp].clp['flr'],
+                minc.resample_smooth( patient[tp].clp['flair'],
                                     flr_corr,
-                                    transform=patient[tp].geo['flr'] )
+                                    transform=patient[tp].geo['flair'] )
 
 
             # 6. second round of co-registration
@@ -251,18 +251,18 @@ def flrpreprocessing_v10(patient, tp):
             # 7. create final flr stx transform
             minc.xfmconcat([patient[tp].clp['flrt1xfm'],
                            patient[tp].stx_xfm['t1']],
-                           patient[tp].stx_xfm['flr'])
+                           patient[tp].stx_xfm['flair'])
 
             # 7. Resample n3 image to stx
             minc.resample_smooth(flr_corr,
-                                 patient[tp].stx_mnc['flr'], 
+                                 patient[tp].stx_mnc['flair'], 
                                  like=model,
-                                 transform=patient[tp].stx_xfm['flr'])
+                                 transform=patient[tp].stx_xfm['flair'])
 
             # # 8. concat flrnat->t1nat and t1nat->stx native BB
             minc.xfmconcat([patient[tp].clp['flrt1xfm'],
                             patient[tp].stx_ns_xfm['t1']],
-                            patient[tp].stx_ns_xfm['flr'])
+                            patient[tp].stx_ns_xfm['flair'])
 
 
 if __name__ == '__main__':

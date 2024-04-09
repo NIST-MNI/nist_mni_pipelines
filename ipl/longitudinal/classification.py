@@ -105,21 +105,25 @@ def classification_v10(patient, tp):
                             # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
                             'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
         if patient.mri3T:
-            #wmh_bison_fld="3T" if patient.mri3T else "15T"
-            wmh_bison_atlases.update({'p1':f'patient.wmh_bison_pfx/3T_2009c_1.mnc'})
+            
+            wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_3T"
+            wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/3T_2009c_1.mnc'})
             # TODO: use FLAIR atlas if available
-            if 'flr' in patient[tp].native:
-                wmh_bison_input['flr']=[patient[tp].native['flr']]
-                wmh_bison_atlases['av_flr']=f'patient.wmh_bison_pfx/3T_2009c_flair.mnc'
+            if 'flair' in patient[tp].native:
+                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_flair_3T"
+                wmh_bison_input['flair']=[patient[tp].stx2_mnc['flair']]
+                wmh_bison_atlases['av_flair']=f'{patient.wmh_bison_pfx}/3T_2009c_flair.mnc'
         else:
-            wmh_bison_atlases.update({'p1':f'patient.wmh_bison_pfx/15T_2009c_1.mnc'})
+            wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/15T_2009c_1.mnc'})
+            wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_15T"
             if 't2' in patient[tp].native:
-                wmh_bison_input['t2']=[patient[tp].native['t2']]
+                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_t2_15T"
+                wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
                 wmh_bison_atlases['av_t2']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc"
             if 'pd' in patient[tp].native:
-                wmh_bison_input['pd']=[patient[tp].native['pd']]
+                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_t2_pd_15T"
+                wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
                 wmh_bison_atlases['av_pd']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc"
-
 
         # FOR now, use only T1, even though it is bad
         # if 't2' in patient[tp].stx2_mnc and not patient.onlyt1:
@@ -151,12 +155,16 @@ def classification_v10(patient, tp):
         else:
             bison_atlases=None
 
+        print(f"{wmh_bison_pfx=}")
+        print(repr(wmh_bison_atlases))
+        print(f"{wmh_bison_input=}")
+        print(f"{wmh_bison_input=}")
         # Standard bison trained only on T1w scans
         run_bison_wmh_c=run_bison_wmh.options(num_cpus=patient.threads)
-        ray.get(run_bison_wmh_c.remote(bison_input, bison_input,
+        ray.get(run_bison_wmh_c.remote(wmh_bison_input, bison_input,
                         patient[tp].stx2_mnc['wmh'],
                         patient[tp].stx2_mnc['classification'],
-                        wmh_bison_pfx=patient.wmh_bison_pfx,
+                        wmh_bison_pfx=wmh_bison_pfx,
                         wmh_bison_atlases=wmh_bison_atlases,
                         wmh_bison_method=patient.wmh_bison_method,
                         bison_atlases=bison_atlases,
