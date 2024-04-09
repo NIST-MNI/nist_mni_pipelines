@@ -119,7 +119,7 @@ def setup_patient(id, options):
     return patient
 
 def setup_visit(patient,visit,
-                t1=None,t2=None,pd=None,flr=None,
+                t1=None,t2=None,pd=None,flair=None,
                 age=None,
                 geo_t1=None,geo_t2=None,t2les=None):
     assert visit not in patient , f' -- ERROR : Timepoint {visit} repeated in patient {patient.id}'
@@ -146,8 +146,8 @@ def setup_visit(patient,visit,
     if pd is not None and len(pd) > 0:
         patient[visit].native['pd'] = pd
 
-    if flr is not None and len(flr) > 0:
-        patient[visit].native['flair'] = flr
+    if flair is not None and len(flair) > 0:
+        patient[visit].native['flair'] = flair
 
     if age is not None:
         patient[visit].age = age
@@ -226,7 +226,7 @@ def launchPipeline(options):
                         t1=p['t1w'],
                         t2=p.get('t2w',None),
                         pd=p.get('pdw',None),
-                        flr=p.get('flair', p.get('flair',None)),
+                        flair=p.get('flr', p.get('flair',None)),
                         age=p.get('age',None),
                         geo_t1=p.get('geot1',None),
                         geo_t2=p.get('geot2',None),
@@ -255,19 +255,19 @@ def launchPipeline(options):
             t2=df.loc[i,'t2w'] if 't2w' in df.columns else None
             pd_=df.loc[i,'pdw'] if 'pdw' in df.columns else None
 
-            if 'flair' in df.columns:
-                flr_=df.loc[i,'flair']
+            if 'flr' in df.columns:
+                flair_=df.loc[i,'flr']
             elif  'flair' in df.columns:
-                flr_=df.loc[i,'flair']
+                flair_=df.loc[i,'flair']
             else:
-                flr_=None
+                flair_=None
 
             # TODO: add flair
             setup_visit(patients[id], visit,
                         t1=t1,
                         t2=t2,
                         pd=pd_,
-                        flr=flr_,
+                        flair=flair_,
                         age=age,
                         geo_t1=geo_t1,
                         geo_t2=geo_t2,

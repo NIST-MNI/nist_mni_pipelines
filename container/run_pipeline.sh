@@ -62,7 +62,7 @@ while  [[ $# -gt 0 ]]; do
   elif [[ $1 = -l ]]; then in_par="-l $2"; shift 2
   elif [[ $1 = -out    ]]; then out_pfx=$2;shift 2;
   elif [[ $1 = -prl    ]]; then PRL=$2;shift 2;
-  elif [[ $1 = -threads    ]]; then THREADS=$2;shift 2;
+  elif [[ $1 = -threads ]]; then THREADS=$2;shift 2;
   elif [[ $1 = -field    ]]; then FIELD=$2;shift 2;
   elif [[ $1 = -cleanup ]]; then CLEANUP=YES; shift
   elif [[ $1 = -fast ]]; then FAST=YES; shift
@@ -72,13 +72,13 @@ while  [[ $# -gt 0 ]]; do
   fi
 done
 
-if [[ -z "$CSV" ]]; then
-  echo "Error: missing input csv file"
+if [[ -z "$in_par" ]]; then
+  echo "Error: missing input file"
   Usage
   exit 1
 fi
 
-if [[ -z $OUT ]]; then
+if [[ -z $out_pfx ]]; then
   echo "Error: missing output directory"
   Usage
   exit 1
