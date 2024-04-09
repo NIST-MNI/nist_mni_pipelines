@@ -529,7 +529,7 @@ def parse_options():
         )
 
     group.add_argument('--redskull_onnx', 
-                     help='omnivision library for redskull brain+skull',
+                     help='onnx library for redskull brain+skull',
                      default=None
                      )
     

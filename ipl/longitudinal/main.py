@@ -151,7 +151,8 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
 
         # vbm images
         # ###########
-        pipeline_vbm(patient, tp, vbm_options)
+        if patient.dovbm:
+            pipeline_vbm(patient, tp, vbm_options)
 
     except mincError as e:
         print("Exception in runTimePoint_SecondStage:{}".format(repr(e)) )
@@ -214,7 +215,8 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
 
         # vbm images
         # ###########
-        pipeline_vbm(patient, tp, vbm_options)
+        if patient.dovbm:
+            pipeline_vbm(patient, tp, vbm_options)
 
         if len(patient.add)>0:
             pipeline_run_add_tp(patient,tp)
