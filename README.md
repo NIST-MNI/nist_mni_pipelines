@@ -68,8 +68,7 @@ Example:
     --nl_cost_fun CC \
     --bison_pfx /opt/models/ipl_bison_1.3.0 \
     --bison_method  HGB1 \
-    --wmh_bison_pfx /opt/models/wmh_bison_1.3.0/t1_15T \
-    --wmh_bison_atlas_pfx /opt/models/wmh_bison_1.3.0/15T_2009c_ \
+    --wmh_bison_pfx /opt/models/wmh_bison_1.3.0 \
     --wmh_bison_method HGB1 \
     --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx 
 
