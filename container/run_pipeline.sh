@@ -63,7 +63,7 @@ while  [[ $# -gt 0 ]]; do
   elif [[ $1 = -u ]]; then Usage; exit 1
   elif [[ $1 = --csv ]]; then in_par="--csv $2"; shift 2
   elif [[ $1 = --json ]]; then in_par="--json $2"; shift 2
-  elif [[ $1 = --l ]]; then in_par="-l $2"; shift 2
+  elif [[ $1 = --list ]]; then in_par="-l $2"; shift 2
   elif [[ $1 = --out    ]]; then out_pfx=$2;shift 2;
   elif [[ $1 = --prl    ]]; then PRL=$2;shift 2;
   elif [[ $1 = --threads ]]; then THREADS=$2;shift 2;
