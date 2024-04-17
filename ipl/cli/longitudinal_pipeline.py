@@ -301,12 +301,12 @@ def launchPipeline(options):
                 # ## Add timepoint to the patient
                 setup_visit(patients[id], visit,
                             t1=sp[2],
-                            t2=sp[3]     if size > 2 and len(sp[3])>0 else None,
-                            pd=sp[4]     if size > 3 and len(sp[4])>0 else None,
-                            age=float(sp[5])  if size > 4 and len(sp[5])>0 else None,
-                            geo_t1=sp[7] if size > 6 and len(sp[7])>0 else None,
-                            geo_t2=sp[8] if size > 7 and len(sp[8])>0 else None,
-                            t2les=sp[9]  if size > 8 and len(sp[9])>0 else None,
+                            t2=sp[3]     if size > 3 and len(sp[3])>0 else None,
+                            pd=sp[4]     if size > 4 and len(sp[4])>0 else None,
+                            age=float(sp[5])  if size > 5 and len(sp[5])>0 else None,
+                            geo_t1=sp[7] if size > 7 and len(sp[7])>0 else None,
+                            geo_t2=sp[8] if size > 8 and len(sp[8])>0 else None,
+                            t2les=sp[9]  if size > 9 and len(sp[9])>0 else None,
                             )
                 # end of adding timepoint
                 print('{} - {}'.format(id,visit) )
