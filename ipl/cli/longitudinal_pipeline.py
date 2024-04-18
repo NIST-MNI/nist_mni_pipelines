@@ -234,21 +234,21 @@ def launchPipeline(options):
                         )
     elif options.csv is not None: # CSV list , with header
         import pandas as pd
-        df=pd.read_csv(options.csv)
+        df=pd.read_csv(options.csv,dtype=str,na_filter=False)
         
         assert 'subject' in df.columns, "csv file should contain a list of patients with 'subject' column"
         assert 'visit' in df.columns, "csv file should contain a list of patients with 'visit' column"
         assert 't1w' in df.columns, "css file should contain a list of patients with 't1w' column"
         
         for i in range(len(df)):
-            id=str(df.loc[i,'subject'])
-            visit=str(df.loc[i,'visit'])
+            id=df.loc[i,'subject']
+            visit=df.loc[i,'visit']
             if id not in patients:
                 patients[id] = setup_patient(id,options)
             
             t1=df.loc[i,'t1w']
             # optional fields
-            age=df.loc[i,'age'].float() if 'age' in df.columns else None
+            age=float(df.loc[i,'age']) if 'age' in df.columns else None
             geo_t1=df.loc[i,'geot1'] if 'geot1' in df.columns else None
             geo_t2=df.loc[i,'geot2'] if 'geot2' in df.columns else None
             t2les=df.loc[i,'t2les'] if 't2les' in df.columns else None

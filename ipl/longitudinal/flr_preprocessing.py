@@ -48,8 +48,9 @@ def pipeline_flrpreprocessing(patient, tp):
 
     # 7. Qc image: t1/flr registration #TODO: convert to call to minctoools
 
-    if os.path.exists(patient[tp].stx_mnc['t1']) \
-        and os.path.exists(patient[tp].stx_mnc['flair']):
+    if 'flair' in patient[tp].native and \
+        os.path.exists(patient[tp].stx_mnc['t1']) and \
+        os.path.exists(patient[tp].stx_mnc['flair']):
 
         with mincTools( ) as minc:
             minc_qc.qc(
