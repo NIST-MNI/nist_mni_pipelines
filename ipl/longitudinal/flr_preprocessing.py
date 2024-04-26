@@ -55,7 +55,7 @@ def pipeline_flrpreprocessing(patient, tp):
         with mincTools( ) as minc:
             minc_qc.qc(
                 patient[tp].stx_mnc['t1'],
-                patient[tp].qc_jpg['t1flr'],
+                patient[tp].qc_jpg['t1flair'],
                 title=patient[tp].qc_title,
                 image_range=[0, 100],
                 mask=patient[tp].stx_mnc['flair'],
