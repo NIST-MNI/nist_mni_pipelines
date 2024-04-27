@@ -453,6 +453,20 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
             minc.resample_labels(tp.native['t2les'],
                     tp.stx2_mnc['t2les'],
                     transform=stx2_t2, like=modelt1)
+            
+        if 'flair' in tp.native:
+            clp_flair_tp = tp.clp['flair']
+            
+            if patient.geo_corr and 'flair' in patient[i].geo:
+                clp_flair_tp = tp.corr['flair']
+                
+            minc.xfmconcat([tp.clp['flairt1xfm'],
+                        stx_xfm_file,
+                        patient.template['stx2_xfm']],
+                        tp.stx2_xfm['flair'])
+            minc.resample_smooth(clp_flair_tp,
+                    tp.stx2_mnc['flair'],
+                    transform=tp.stx2_xfm['flair'], like=modelt1)
 
 
 def linearlngtemplate_v11(patient):

@@ -225,7 +225,7 @@ def flrpreprocessing_v10(patient, tp):
 
             # register to the stx space
             flr_corr = patient[tp].clp['flair']
-            t1_corr = patient[tp].clp['t1']
+            t1_corr  = patient[tp].clp['t1']
             
             if 't1' in patient[tp].geo and patient.geo_corr:
                 t1_corr = patient[tp].corr['t1']
@@ -242,7 +242,7 @@ def flrpreprocessing_v10(patient, tp):
             ipl.registration.linear_register_to_self(
                 flr_corr,
                 t1_corr,
-                patient[tp].clp['flrt1xfm'],
+                patient[tp].clp['flairt1xfm'],
                 init_xfm=tmp_flr_t1_xfm,
                 nocrop=True,
                 noautothreshold=True,
@@ -250,7 +250,7 @@ def flrpreprocessing_v10(patient, tp):
                 )
 
             # 7. create final flr stx transform
-            minc.xfmconcat([patient[tp].clp['flrt1xfm'],
+            minc.xfmconcat([patient[tp].clp['flairt1xfm'],
                            patient[tp].stx_xfm['t1']],
                            patient[tp].stx_xfm['flair'])
 
@@ -261,7 +261,7 @@ def flrpreprocessing_v10(patient, tp):
                                  transform=patient[tp].stx_xfm['flair'])
 
             # # 8. concat flrnat->t1nat and t1nat->stx native BB
-            minc.xfmconcat([patient[tp].clp['flrt1xfm'],
+            minc.xfmconcat([patient[tp].clp['flairt1xfm'],
                             patient[tp].stx_ns_xfm['t1']],
                             patient[tp].stx_ns_xfm['flair'])
 

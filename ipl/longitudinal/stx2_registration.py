@@ -177,7 +177,7 @@ def linearatlasregistration_v10(patient, tp):
             # assume pd comes from the dual echo sequence
             minc.resample_labels(patient[tp].clp['mask'],
                                 minc.tmp('flr_mask.mnc'),
-                                transform=patient[tp].clp['flrt1xfm'],
+                                transform=patient[tp].clp['flairt1xfm'],
                                 invert_transform=True,
                                 like=patient[tp].clp['flair'])
 
@@ -194,7 +194,7 @@ def linearatlasregistration_v10(patient, tp):
                 target_mask=template_mask,
                 datatype='-short' )
 
-            minc.xfmconcat([patient[tp].clp['flrt1xfm'],
+            minc.xfmconcat([patient[tp].clp['flairt1xfm'],
                            patient[tp].stx_ns_xfm['t1'],
                            patient.template['stx2_xfm']],
                            patient[tp].stx2_xfm['flair'])
