@@ -16,6 +16,10 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml
 RUN --mount=type=cache,target=/opt/conda/pkgs \
     micromamba install -y -n base -f /tmp/env.yaml
 
+RUN micromamba clean --all --yes && \
+    rm -f /tmp/env.yaml
+
+
 # Download and install nist_mni_pipelines
 # USER root
 # RUN curl -q -L https://github.com/NIST-MNI/nist_mni_pipelines/archive/refs/heads/ray_skull.tar.gz --output /tmp/nist_mni_pipelines.tar.gz && \
@@ -32,24 +36,23 @@ USER root
 RUN mkdir /opt/pipeline  && \
     chown $MAMBA_USER:$MAMBA_USER -R /opt/pipeline
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines_0.2.00.beta.tar.gz /nist_mni_pipelines.tar.gz
+COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines_0.2.00.beta.tar.gz /tmp/nist_mni_pipelines.tar.gz
 USER $MAMBA_USER
-RUN tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1  
+RUN tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1 && \
+    rm -f /tmp/nist_mni_pipelines.tar.gz
+
 COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 
-
-
 # make a clean image without temporary files
-FROM ghcr.io/mamba-org/micromamba:1.5.6-focal
-COPY --from=builder /opt/conda    /opt/conda
-COPY --from=builder /opt/pipeline /opt/pipeline
+#FROM ghcr.io/mamba-org/micromamba:1.5.6-focal
+#COPY --from=builder /opt/conda    /opt/conda
+#COPY --from=builder /opt/pipeline /opt/pipeline
 #COPY --from=builder /opt/models   /opt/models
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/icbm152_model_09c   /opt/models/icbm152_model_09c
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0     /opt/models/ipl_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0     /opt/models/wmh_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip          /opt/models/synthstrip
-
 
 # Distroless for execution
 # FROM gcr.io/distroless/base-debian12
@@ -72,6 +75,6 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip          /opt/models/synt
 
 USER $MAMBA_USER
 
-# SHELL ["/usr/local/bin/_dockerfile_shell.sh"]
+SHELL ["/usr/local/bin/_dockerfile_shell.sh"]
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "/opt/pipeline/run_pipeline.sh"]
 ENV PYTHONPATH=/opt/pipeline
