@@ -32,14 +32,12 @@ USER root
 RUN mkdir /opt/pipeline  && \
     chown $MAMBA_USER:$MAMBA_USER -R /opt/pipeline
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines.tar.gz /tmp/nist_mni_pipelines.tar.gz 
+COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines_0.2.00.beta.tar.gz /nist_mni_pipelines.tar.gz
 USER $MAMBA_USER
 RUN tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1  
 COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 
 
-#install local models
-#USER $MAMBA_USER
 
 # make a clean image without temporary files
 FROM ghcr.io/mamba-org/micromamba:1.5.6-focal
