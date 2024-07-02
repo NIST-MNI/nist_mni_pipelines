@@ -1,14 +1,17 @@
-from scoop import futures, shared
-
-import iplScoopGenerateModel as gm
 import os
+import ray
+
+from ipl.model.generate_nonlinear  import generate_nonlinear_model_csv
+
 
 if __name__ == '__main__':
   
   # limit number of threads
   os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='1'
+  ray.init()
+
   # setup data for parallel processing
-  gm.generate_nonlinear_model_csv('subjects.lst',
+  generate_nonlinear_model_csv('subjects.lst',
     work_prefix='tmp_nl_ants_nr',
     options={'symmetric':False,
              
@@ -30,5 +33,4 @@ if __name__ == '__main__':
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc'
-            
   )

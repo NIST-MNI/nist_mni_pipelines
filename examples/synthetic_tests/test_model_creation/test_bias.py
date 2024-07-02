@@ -1,10 +1,15 @@
-from scoop import futures, shared
+import os
+import ray
 
-import iplScoopGenerateModel as gm
+
+from ipl.model.generate_linear  import generate_linear_model_csv
 
 if __name__ == '__main__':
   # setup data for parallel processing
-  gm.generate_linear_model_csv(
+  os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='1'
+  ray.init()
+
+  generate_linear_model_csv(
    'big_subjects.lst',
     work_prefix=           'tmp_bias_lsq6',
     options={'symmetric':  False,

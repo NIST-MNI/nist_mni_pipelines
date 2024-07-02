@@ -12,6 +12,9 @@ import ipl.dd_registration
 from .filter_ldd     import build_approximation
 from .structures_ldd import *
 
+import ray
+
+@ray.remote
 def non_linear_register_step_ldd(
     sample,
     model,

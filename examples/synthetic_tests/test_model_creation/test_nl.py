@@ -1,8 +1,10 @@
+import os
 import ray
 
 from ipl.model.generate_nonlinear  import generate_nonlinear_model_csv
 
 if __name__ == '__main__':
+  os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='1'
   ray.init(num_cpus=4)
   # setup data for parallel processing
   generate_nonlinear_model_csv('subjects.lst',
@@ -15,6 +17,4 @@ if __name__ == '__main__':
             },
     model='test_data/ellipse_1.mnc',
     mask='test_data/mask.mnc',
-    #stop_early=4,
-    #skip=0,
   )

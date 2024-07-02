@@ -8,11 +8,9 @@ import traceback
 from ipl.minc_tools import mincTools,mincError
 from .filter_ldd import *
 
+import ray
 
-# scoop parallel execution
-from scoop import futures, shared
-
-
+@ray.remote
 def concat_resample_ldd(
     input_mri,
     input_transform,

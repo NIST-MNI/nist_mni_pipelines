@@ -87,7 +87,7 @@ def generate_linear_average(
 
             flip_all.append( generate_flip_sample.remote(s )  )
 
-        ray.wait(flip_all, num_returns=len(flip_all))
+        ray.get(flip_all)
 
     # go through all the iterations
     for it in range(1,iterations+1):
@@ -147,7 +147,7 @@ def generate_linear_average(
 
         # wait for jobs to finish
         if it>skip and it<stop_early:
-            ray.wait(transforms, num_returns=len(transforms))
+            ray.get(transforms)
     
         # remove information from previous iteration
         if cleanup and it>1 :
@@ -162,7 +162,7 @@ def generate_linear_average(
         # 2 average all transformations
         if it>skip and it<stop_early:
             # TODO: maybe make median transforms?
-            ray.wait([average_transforms.remote(inv_transforms, avg_inv_transform, nl=False, symmetric=symmetric)])
+            ray.get([average_transforms.remote(inv_transforms, avg_inv_transform, nl=False, symmetric=symmetric)])
 
         corr=[]
         corr_transforms=[]
@@ -186,7 +186,7 @@ def generate_linear_average(
             corr_samples.append(c)
         
         if it>skip and it<stop_early:
-            ray.wait(corr, num_returns=len(corr))
+            ray.get(corr)
 
         # cleanup transforms
         if cleanup :
@@ -206,8 +206,8 @@ def generate_linear_average(
             models.append(next_model)
             models_sd.append(next_model_sd)
 
-        if it>skip and it<stop_early:        
-            ray.wait([result])
+        if it>skip and it<stop_early:
+            ray.get([result])
 
         if biascorr:
             biascorr_results=[]
@@ -229,8 +229,8 @@ def generate_linear_average(
                 new_bias_fields.append(b)
 
             if it>skip and it<stop_early:
-                ray.wait(biascorr_results, num_returns=len(biascorr_results))
-                ray.wait([average_bias_fields.remote( new_bias_fields, next_model_bias, symmetric=symmetric )])
+                ray.get(biascorr_results)
+                ray.get([average_bias_fields.remote( new_bias_fields, next_model_bias, symmetric=symmetric )])
                 
             biascorr_results=[]
             new_corr_bias_fields=[]
@@ -249,7 +249,7 @@ def generate_linear_average(
                 new_corr_bias_fields.append( out )
             
             if it>skip and it<stop_early:
-                ray.wait(biascorr_results, num_returns=len(biascorr_results))
+                ray.get(biascorr_results)
 
         # swap bias fields
         if biascorr: bias_fields=new_bias_fields
