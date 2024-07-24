@@ -216,7 +216,6 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
                                     threads=n_threads, dist=True,largest=True,
                                     ) # 
 
-        
         if out_qc is not None:
             minc_qc.qc(
                 in_t1w,

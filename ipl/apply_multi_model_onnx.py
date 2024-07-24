@@ -13,12 +13,26 @@ import math
 
 import numpy as np
 
-from minc2_simple import minc2_file
+
 from .minc.io  import *
 from .minc.geo import *
 
 import onnxruntime
 from onnx import numpy_helper
+
+import traceback
+
+class SegmentationError(Exception):
+    """SegmentationError error"""
+    def __init__(self, description=""):
+        self.description = description
+        self.stack = traceback.extract_stack()
+
+    def __repr__(self):
+        return "Segmentation error:{}\nAT:{}".format(self.description, self.stack)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 def parse_options():
@@ -159,7 +173,10 @@ def find_largest_component(input):
     from scipy.ndimage import label
     structure = np.ones((3, 3, 3), dtype=np.int32)
     labeled, ncomponents = label(input, structure)
-    largest = np.argmax([np.sum(labeled==i) for i in range(1,ncomponents+1)])+1
+    if ncomponents>0:
+        largest = np.argmax([np.sum(labeled==i) for i in range(1,ncomponents+1)])+1
+    else: # there were no segmented labels !
+        raise SegmentationError("Failed to find largest component")
     return labeled == largest
 
 
@@ -179,6 +196,15 @@ def segment_with_patches_whole(
 
     target_shape = np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size
 
+    # normalize before padding with zeros
+    if normalize:
+        dataset_norm = dataset-dataset.min()
+        dataset_norm = np.clip(dataset_norm / np.percentile(dataset_norm,99),0.0, 1.0)
+    elif normalize_max:
+        dataset_norm = dataset / np.max(conformed)
+    else:
+        dataset_norm = dataset
+
     if np.any(target_shape != dataset.shape[2:]):
         conformed = np.zeros( (1,1, *target_shape), dtype='float32')
         conformed[:,:, :dataset.shape[2], :dataset.shape[3], :dataset.shape[4]] = dataset
@@ -188,11 +214,6 @@ def segment_with_patches_whole(
     if freesurfer:
         conformed=conformed.transpose([0,1,4,2,3])[:,:,:,::-1,:].copy()
 
-    if normalize:
-        conformed -= conformed.min()
-        conformed = np.clip(conformed / np.percentile(conformed,99),0.0, 1.0)
-    elif normalize_max:
-        conformed = conformed / np.max(conformed)
 
     out = model.run([out_name],{'scan':conformed})[0]
 
@@ -438,6 +459,7 @@ def segment_with_onnx(  in_scans,
                 out_fuzzy=True,
                 freesurfer=freesurfer,
                 normalize=normalize,
+                normalize_max=normalize_max,
                 dist=dist) 
         else:
             dset_out, dset_out_fuzzy = segment_with_patches_overlap_ov(
