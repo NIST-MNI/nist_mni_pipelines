@@ -466,7 +466,7 @@ def qc_field_contour(
 
 
 # register custom maps
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('red',
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('red',
     {'red':   ((0.0, 0.0, 0.0),
                 (1.0, 1.0, 1.0)),
 
@@ -480,7 +480,7 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('red',
                 (1.0, 1.0, 1.0))         
     }))
       
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('green', 
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('green', 
     {'green': ((0.0, 0.0, 0.0),
                 (1.0, 1.0, 1.0)),
 
@@ -494,7 +494,8 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('green',
                 (1.0, 1.0, 1.0))         
     }))
 
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue', 
+
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('blue', 
     {'blue':  ((0.0, 0.0, 0.0),
                 (1.0, 1.0, 1.0)),
 
@@ -508,7 +509,7 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue',
                 (1.0, 1.0, 1.0))         
     }))
 
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('spectral',
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('spectral',
     {
         'red': [
             (0.0, 0.0, 0.0), (0.05, 0.4667, 0.4667),
