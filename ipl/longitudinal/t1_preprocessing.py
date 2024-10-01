@@ -99,7 +99,7 @@ def pipeline_t1preprocessing(patient, tp):
 
     if not os.path.exists(modeloutline):
         modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
-        outline_range=[1,1]
+        outline_range=[0.5,1]
         mask_cmap='red'
 
     if not os.path.exists(patient[tp].qc_jpg['stx_t1']):

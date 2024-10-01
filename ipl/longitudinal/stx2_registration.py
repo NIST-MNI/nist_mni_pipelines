@@ -98,6 +98,30 @@ def linearatlasregistration_v10(patient, tp):
                              patient[tp].stx2_mnc['t1'],
                              transform=patient[tp].stx2_xfm['t1'],
                              like=template_mask)
+        
+        modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
+        outline_range=[1,2]
+        mask_cmap='autumn'
+
+        if not os.path.exists(modeloutline):
+            modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
+            outline_range=[0.5,1]
+            mask_cmap='red'
+        # TODO: fix the problem when _outline is missing ? 
+
+        ### generate QC image
+        if not os.path.exists(patient[tp].qc_jpg['stx2_t1']):
+            minc_qc.qc(
+                patient[tp].stx2_mnc['t1'],
+                patient[tp].qc_jpg['stx2_t1'],
+                title=patient[tp].qc_title,
+                image_range=[0, 150],
+                mask=modeloutline,
+                mask_range=outline_range,
+                use_over=True, 
+                mask_cmap=mask_cmap,
+                bg_color="black",fg_color="white",
+                samples=20,dpi=200  )
 
         # 1bis. concatenate all transforms t2 BB
         if 't2' in patient[tp].native:
@@ -155,7 +179,7 @@ def linearatlasregistration_v10(patient, tp):
                 templatepd,
                 patient[tp].clp2['pd'],
                 source_mask=minc.tmp('t2_mask.mnc') ,
-                target_mask=template_mask,
+                target_matsk=template_mask,
                 datatype='-short' )
 
             minc.xfmconcat([patient[tp].clp['pdt1xfm'],
