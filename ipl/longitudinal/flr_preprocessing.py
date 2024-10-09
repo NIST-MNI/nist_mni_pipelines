@@ -43,9 +43,6 @@ def pipeline_flrpreprocessing(patient, tp):
     if not isDone:
         flrpreprocessing_v10(patient, tp)
 
-    if not 't2' in patient[tp].native:
-        return True
-
     # 7. Qc image: t1/flr registration #TODO: convert to call to minctoools
 
     if 'flair' in patient[tp].native and \
@@ -114,7 +111,7 @@ def flrpreprocessing_v10(patient, tp):
 
             #     if spacing.count( 'irregular' ):
             #         minc.set_attribute( tmpflr, s + ':spacing', 'regular__' )
-            
+
             # 1. Do nlm
             if patient.denoise:
                 tmpnlm = patient[tp].den['flair']
@@ -154,7 +151,7 @@ def flrpreprocessing_v10(patient, tp):
                 minc.autocrop(minc.tmp('otsu_defrag_flr.mnc'),minc.tmp('otsu_defrag_expanded_flr.mnc'),isoexpand='50mm')
                 minc.binary_morphology(minc.tmp('otsu_defrag_expanded_flr.mnc'),'D[25] E[25]',minc.tmp('otsu_expanded_closed_flr.mnc'))
                 minc.resample_labels(minc.tmp('otsu_expanded_closed_flr.mnc'),minc.tmp('otsu_closed_flr.mnc'),like=minc.tmp('trunc_flr.mnc'))
-                
+
                 minc.calc([minc.tmp('trunc_flr.mnc'),minc.tmp('otsu_closed_flr.mnc')], 'A[0]*A[1]',  minc.tmp('trunc_masked_flr.mnc'))
                 minc.calc([tmpnlm,minc.tmp('otsu_closed_flr.mnc')],'A[0]*A[1]' ,minc.tmp('masked_flr.mnc'))
                 

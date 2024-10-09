@@ -98,7 +98,7 @@ def linearatlasregistration_v10(patient, tp):
                              patient[tp].stx2_mnc['t1'],
                              transform=patient[tp].stx2_xfm['t1'],
                              like=template_mask)
-        
+
         modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
         outline_range=[1,2]
         mask_cmap='autumn'
@@ -190,7 +190,7 @@ def linearatlasregistration_v10(patient, tp):
                                  patient[tp].stx2_mnc['pd'],
                                  transform=patient[tp].stx2_xfm['pd'],
                                  like=template_mask)
-            
+
         if 'flair' in patient[tp].native:
             templateflr = template.replace('t1', 'flair')
             if not os.path.exists(templateflr):

@@ -126,7 +126,6 @@ def t2pdpreprocessing_v10(patient, tp):
 
             #     if spacing.count( 'irregular' ):
             #         minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
-            
             # 1. Do nlm
             if patient.denoise:
                 tmpnlm = patient[tp].den['t2']
