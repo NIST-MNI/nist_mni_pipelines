@@ -179,7 +179,7 @@ def linearatlasregistration_v10(patient, tp):
                 templatepd,
                 patient[tp].clp2['pd'],
                 source_mask=minc.tmp('t2_mask.mnc') ,
-                target_matsk=template_mask,
+                target_mask=template_mask,
                 datatype='-short' )
 
             minc.xfmconcat([patient[tp].clp['pdt1xfm'],
