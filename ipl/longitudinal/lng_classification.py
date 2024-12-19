@@ -158,10 +158,10 @@ def lng_classification_v10(patient):
     
     with mincTools() as minc:
         tmpdir  = minc.tempdir
-        tmp_bkg = tmpdir + 'prior_bkg.mnc'
-        tmp_csf = tmpdir + 'prior_csf.mnc'
-        tmp_gm  = tmpdir + 'prior_gm.mnc'
-        tmp_wm  = tmpdir + 'prior_wm.mnc'
+        tmp_bkg = os.path.join(tmpdir,'prior_bkg.mnc')
+        tmp_csf = os.path.join(tmpdir, 'prior_csf.mnc')
+        tmp_gm  = os.path.join(tmpdir, 'prior_gm.mnc')
+        tmp_wm  = os.path.join(tmpdir, 'prior_wm.mnc')
 
         # take all cross sectional segmentations
 
@@ -204,16 +204,16 @@ def lng_classification_v10(patient):
 
                 # constructing tmpoutput
 
-                gcut1.append(tmpdir + 'gcut1_' + i + '.mnc')
-                gcut2.append(tmpdir + 'gcut2_' + i + '.mnc')
+                gcut1.append(os.path.join(tmpdir,'gcut1_' + i + '.mnc'))
+                gcut2.append(os.path.join(tmpdir, 'gcut2_' + i + '.mnc'))
                 lngclassif.append(tp.stx2_mnc['lng_classification'])
 
             # constructing output list
 
             # 1. Sum gw, wm
 
-            tmp_black = tmpdir + 'dark_apriori.mnc'
-            tmp_bright = tmpdir + 'bright_apriori.mnc'
+            tmp_black = os.path.join(tmpdir, 'dark_apriori.mnc')
+            tmp_bright = os.path.join(tmpdir, 'bright_apriori.mnc')
             minc.command(['mincmath', '-add', tmp_wm, tmp_gm, tmp_bright],inputs=[tmp_wm, tmp_gm], outputs=[tmp_bright])
 
             # 2. Sum csf+gm
@@ -221,7 +221,7 @@ def lng_classification_v10(patient):
 
             # 3. Do gc csf vs. gm+wm
 
-            tmp_tissue = tmpdir + 'tmp_tissue.mnc'
+            tmp_tissue = os.path.join(tmpdir , 'tmp_tissue.mnc')
             minc.command([ 'gcut4D', '-i', ','.join(t1), '-m',masks,
                 '-t', tmp_bright, '-b', tmp_csf,
                 '-a', '10', '-s', '10', '-n','2', '-p', '-o', ','.join(gcut1) ],
@@ -232,7 +232,7 @@ def lng_classification_v10(patient):
             #    We include CSF in the GM proba to avoid errors with the csf
             #    The masks are the output of the first gc
 
-            binary_wm = tmpdir + 'binary_wm.mnc'
+            binary_wm = os.path.join(tmpdir, 'binary_wm.mnc')
             minc.command(['gcut4D', '-i', ','.join(t1),
                 '-m', ','.join(gcut1),'-t', tmp_wm,'-b', tmp_black, 
                 '-a','10','-s','10', '-n', '2', '-p',
@@ -319,7 +319,7 @@ def lng_classification_v10(patient):
                 robust = '0.02'
             else:
                 robust = '0.05'
-            tmpclassif = tmpdir + 'tmpclassif.mnc'
+            tmpclassif = os.path.join(tmpdir, 'tmpclassif.mnc')
             comm = [
                 'Classification',
                 '-init',
