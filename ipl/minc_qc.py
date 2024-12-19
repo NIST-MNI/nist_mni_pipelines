@@ -109,7 +109,8 @@ def qc(
     bg_color=None,
     fg_color=None,
     style=None,
-    crop=None
+    crop=None,
+    percentile=False
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -139,6 +140,7 @@ def qc(
         fg_color -- foreground color
         style    -- name of the matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
         crop     -- Crop input image: [x1,x2,y1,y2,z1,z2]
+        percentile - use percentile for image range
     """
     
     _img=minc2_file(input)
@@ -168,8 +170,12 @@ def qc(
             omin=np.nanmin(_ovl_data)
             omax=np.nanmax(_ovl_data)
         else:
-            omin=mask_range[0]
-            omax=mask_range[1]
+            if percentile:
+                omin=np.nanpercentile(_ovl_data, image_range[0])
+                omax=np.nanpercentile(_ovl_data, image_range[1])
+            else:
+                omin=mask_range[0]
+                omax=mask_range[1]
             ### set values below mask_range[0] to NaN
             _ovl_data[_ovl_data<omin]=math.nan
         _odata=_ovl_data
@@ -190,8 +196,13 @@ def qc(
     # setup ranges
     vmin=vmax=0.0
     if image_range is not None:
-        vmin=image_range[0]
-        vmax=image_range[1]
+
+        if percentile:
+            vmin=np.nanpercentile(_idata, image_range[0])
+            vmax=np.nanpercentile(_idata, image_range[1])
+        else:
+            vmin=image_range[0]
+            vmax=image_range[1]
     else:
         vmin=np.nanmin(_idata)
         vmax=np.nanmax(_idata)
