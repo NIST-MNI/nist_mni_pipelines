@@ -221,6 +221,7 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
                 in_t1w,
                 out_qc,
                 title=qc_title,
+                image_range=[0, 120],
                 mask=out_synthstrip,dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white"
                 )
