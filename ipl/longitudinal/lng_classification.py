@@ -378,7 +378,11 @@ def lng_classification_v10(patient):
                 title=tp.qc_title,
                 image_range=[0,120],dpi=200,use_max=True,
                 mask=tp.stx2_mnc['lng_classification'],
-                samples=20,bg_color="black",fg_color="white")
+                mask_range=[0.5,3.5],
+                mask_cmap='jet',
+                samples=20,
+                bg_color="black",
+                fg_color="white")
             
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on
