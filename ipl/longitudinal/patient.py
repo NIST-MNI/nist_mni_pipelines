@@ -98,6 +98,7 @@ class LngPatient(dict):
         self.modelname = ''  # model name
         self.beastdir = ''  # beast library directory
 
+        self.redskull_native = None # Apply redskull in the native space
         self.redskull_onnx = None # Redskull segmentation library for ONNX
         self.redskull_var = None # Redskull variant
         self.synthstrip_onnx = None # Synthstrip segmentation library for ONNX
