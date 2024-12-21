@@ -58,6 +58,9 @@ def launchPipeline(options):
         if 'redskull_onnx' in _opts:
             options.redskull_onnx=_opts['redskull_onnx']
 
+        if 'redskull_native' in _opts:
+            options.redskull_native=_opts['redskull_native']
+
         if 'redskull_var' in _opts:
             options.redskull_var=_opts['redskull_var']
 
@@ -265,6 +268,7 @@ def launchPipeline(options):
                 patients[id].fast     = options.fast
                 patients[id].temporalregu = options.temporalregu
                 patients[id].skullreg = options.skullreg
+                patients[id].redskull_native = options.redskull_native
                 patients[id].redskull_onnx = options.redskull_onnx
                 patients[id].redskull_var = options.redskull_var
                 patients[id].synthstrip_onnx = options.synthstrip_onnx

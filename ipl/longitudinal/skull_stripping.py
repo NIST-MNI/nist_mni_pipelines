@@ -146,8 +146,7 @@ def skullstripping_v10(params,
 
     with mincTools()  as minc:
         if synthstrip_onnx is not None: # use deep learning
-            # apply synthstrip in the native space to ease everything else
-            # need to resample to 1x1x1mm^2
+            # apply synthstrip 
             ray.get(run_synthstrip_onnx.remote(params.stxt1, 
                     params.stx_mask, 
                     synthstrip_model=synthstrip_onnx))

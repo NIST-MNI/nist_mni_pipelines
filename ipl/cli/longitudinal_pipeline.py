@@ -527,6 +527,13 @@ def parse_options():
         action='store_true',
         default=False,
         )
+    
+    group.add_argument(
+        '--redskull_native',
+        help='Run 1st redskull in the native space',
+        action='store_true',
+        default=False,
+        )
 
     group.add_argument('--redskull_onnx', 
                      help='onnx library for redskull brain+skull',

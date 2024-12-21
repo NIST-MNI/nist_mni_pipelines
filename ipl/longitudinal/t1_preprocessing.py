@@ -49,7 +49,17 @@ except:
 
 
 def pipeline_t1preprocessing_s0(patient, tp):
-    if patient.synthstrip_onnx is not None:
+
+    # if redskull is available, use it to create initial mask
+    if patient.redskull_native and patient.redskull_onnx is not None:
+        run_redskull_onnx_c = run_redskull_onnx.options(num_cpus=patient.threads)
+        ray.get(run_redskull_onnx_c.remote(
+                    patient[tp].native['t1'], patient[tp].clp['brain_skull'], 
+                    out_brain_mask=patient[tp].clp['mask'],
+                    out_qc=patient[tp].qc_jpg['synthstrip'],
+                    normalize_1x1x1=True,
+                    redskull_model=patient.redskull_onnx))
+    elif patient.synthstrip_onnx is not None:
         if not os.path.exists(patient[tp].clp['mask']):
             # apply synthstrip in the native space to ease everything else
             # need to resample to 1x1x1mm^2
@@ -123,42 +133,48 @@ def pipeline_t1preprocessing(patient, tp):
 
 @ray.remote(num_cpus=4, memory=10000 * 1024 * 1024) # 
 def run_redskull_onnx(in_t1w, out_redskull, 
-        unscale_xfm, out_ns_skull, out_ns_redskull, 
+        unscale_xfm=None, out_ns_skull=None, out_ns_redskull=None, 
         out_qc=None,qc_title=None,reference=None,
-        redskull_model=None,
+        redskull_model=None,normalize_1x1x1=False,
+        out_brain_mask=None,
         redskull_var='seg' ):
     assert _have_segmentation_onnx, "Failed to import segment_with_onnx"
     n_threads=int(ray.runtime_context.get_runtime_context().get_assigned_resources()["CPU"])
 
     with mincTools() as minc:
         # run redskull segmentation to create skull mask
+            
         if not os.path.exists(out_redskull):
+            if normalize_1x1x1:
+                minc.resample_smooth(in_t1w, minc.tmp('t1_1x1x1.mnc'), unistep=1.0)
+                in_t1w_=minc.tmp('t1_1x1x1.mnc')
+                out_redskull_=minc.tmp('brain_1x1x1.mnc')
+            else:
+                in_t1w_=in_t1w
+                out_redskull_=out_redskull
+
             if redskull_var=='seg':
-                segment_with_onnx([in_t1w], out_redskull,
+                segment_with_onnx([in_t1w_], out_redskull_,
                                     model=redskull_model,
                                     whole=False, freesurfer=False, 
                                     normalize=True, 
                                     dist=False, largest=False,
-                                    patch_sz=[192, 192, 192],
-                                    stride=96,
+                                    patch_sz=[160, 160, 160],
+                                    stride=80,
                                     threads=n_threads 
                                     ) # 
-            elif redskull_var=='synth': # experimental
-                segment_with_onnx([in_t1w], out_redskull,
-                                    model=redskull_model,
-                                    whole=True, freesurfer=True, 
-                                    normalize=True, 
-                                    dist=True, largest=True,
-                                    threads=n_threads 
-                                    ) # 
-        
-        # generate unscaling transform
-        minc.calc([out_redskull],'abs(A[0]-2)<0.5?1:0', 
-            minc.tmp("skull.mnc"), labels=True)
-        
-        minc.resample_labels(minc.tmp("skull.mnc"), out_ns_skull, transform=unscale_xfm,like=reference)
-        minc.resample_labels(out_redskull, out_ns_redskull, transform=unscale_xfm,like=reference)
-        
+            # elif redskull_var=='synth': # experimental
+            #     segment_with_onnx([in_t1w_], out_redskull_,
+            #                         model=redskull_model,
+            #                         whole=True, freesurfer=True, 
+            #                         normalize=True, 
+            #                         dist=True, largest=True,
+            #                         threads=n_threads 
+            #                         ) # 
+            if normalize_1x1x1:
+                minc.resample_labels(out_redskull_, out_redskull, 
+                                     like=in_t1w, datatype='byte')
+
         if out_qc is not None:
             minc_qc.qc(
                 in_t1w,
@@ -168,6 +184,20 @@ def run_redskull_onnx(in_t1w, out_redskull,
                 mask=minc.tmp("skull.mnc"),dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white"
                 )
+            
+        if out_brain_mask is not None:
+            minc.calc([out_redskull],'abs(A[0]-1)<0.5?1:0', 
+                out_brain_mask, labels=True)
+
+        # generate unscaling transform
+        if unscale_xfm is not None:
+            minc.calc([out_redskull],'abs(A[0]-2)<0.5?1:0', 
+                minc.tmp("skull.mnc"), labels=True)
+            
+            if out_ns_skull is None:
+                minc.resample_labels(minc.tmp("skull.mnc"), out_ns_skull, transform=unscale_xfm,like=reference)
+            if out_ns_redskull is None:
+                minc.resample_labels(out_redskull, out_ns_redskull, transform=unscale_xfm,like=reference)
 
 @ray.remote(num_cpus=4) 
 def run_nlm(in_t1w, out_den):

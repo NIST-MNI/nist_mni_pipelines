@@ -551,7 +551,9 @@ def setFilenames(patient):
 
         # masks
         patient[tp].clp["mask"]        = clpdir+'clp_'+patient.id+"_"+tp+"_mask.mnc"
+        patient[tp].clp["brain_skull"] = clpdir+'clp_'+patient.id+"_"+tp+"_brainskull.mnc"
         patient[tp].clp2["mask"]       = clp2dir+'clp2_'+patient.id+"_"+tp+"_mask.mnc"
+
         patient[tp].stx_mnc["mask"]    = stxdir+"stx_"+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx2_mnc["mask"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_mask.mnc"
 
