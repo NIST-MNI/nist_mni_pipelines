@@ -2051,6 +2051,7 @@ class mincTools(temp_files):
             cmd.append(str(max_connect))
         self.command(cmd, inputs=[input],outputs=[output], verbose=self.verbose)
 
+
     def winsorize_intensity(self,input,output,pct1=1,pct2=95):
         # obtain percentile
         _threshold_1=self.stats(input,['-pctT',str(pct1)])

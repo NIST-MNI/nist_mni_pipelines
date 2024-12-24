@@ -310,7 +310,6 @@ def segment_with_patches_overlap_ov(
     output_size[1] = 1 
     output_size_fuzzy = list( dsize )
     output_size_fuzzy[1] = out_classes
-
     output_fuzzy  = np.zeros( output_size_fuzzy, dtype=np.float32 )
     output_weight = np.zeros( output_size, dtype=np.float32 )
 

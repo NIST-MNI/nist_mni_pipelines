@@ -250,6 +250,8 @@ def runPipeline(pickle=None, patient=None, workdir=None):
         
         # prepare qc folder
         tps=sorted(list(patient.keys()))
+
+        print(f"{patient.redskull_onnx=} {patient.redskull_native=}")
         # first stage A, multithreading steps
         ray.get([runTimePoint_FirstStageA.remote(tp, patient) for tp in tps])
         patient.write(patient.pickle)  # copy new images in the pickle

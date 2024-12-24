@@ -3,18 +3,7 @@
 #
 # @author Daniel, Vladimir S. FONOV
 # @date 10/07/2011
-3
 version = '1.0'
-
-#
-# Preprocessing functions
-# - mri 2 tal
-# - n3 correction
-# - denoising
-# - vol pol
-
-from optparse import OptionParser  # to change when python updates in the machines for argparse
-from optparse import OptionGroup  # to change when python updates in the machines for argparse
 
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
@@ -87,12 +76,12 @@ def pipeline_t1preprocessing(patient, tp):
     # checking if processing was performed
     if os.path.exists(patient[tp].qc_jpg['stx_t1']) \
         and os.path.exists(patient[tp].clp['t1']) \
-        and (os.path.exists(patient[tp].clp['mask']) or patient.synthstrip_onnx is None) \
+        and (os.path.exists(patient[tp].clp['mask']) or (patient.synthstrip_onnx is None and patient.redskull_onnx is None) ) \
         and os.path.exists(patient[tp].stx_xfm['t1']) \
         and os.path.exists(patient[tp].stx_mnc['t1']) \
         and os.path.exists(patient[tp].stx_ns_xfm['t1']) \
         and   os.path.exists(patient[tp].stx_ns_mnc['t1']) \
-        and ( os.path.exists(patient[tp].stx_ns_mnc['redskull']) \
+        and ( os.path.exists(patient[tp].stx_ns_mnc['brain_skull']) \
               or patient.redskull_onnx is None ):
         pass
     else:
@@ -158,10 +147,12 @@ def run_redskull_onnx(in_t1w, out_redskull,
                                     model=redskull_model,
                                     whole=False, freesurfer=False, 
                                     normalize=True, 
-                                    dist=False, largest=False,
+                                    dist=False, 
+                                    largest=False,
                                     patch_sz=[160, 160, 160],
                                     stride=80,
-                                    threads=n_threads 
+                                    threads=n_threads,
+                                    n_classes=3
                                     ) # 
             # elif redskull_var=='synth': # experimental
             #     segment_with_onnx([in_t1w_], out_redskull_,
@@ -180,14 +171,17 @@ def run_redskull_onnx(in_t1w, out_redskull,
                 in_t1w,
                 out_qc,
                 title=qc_title,
-                image_range=[0, 120],
-                mask=minc.tmp("skull.mnc"),dpi=200,use_max=True,
+                image_range=[0, 100],mask_cmap='jet',
+                mask=out_redskull ,dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white"
                 )
             
         if out_brain_mask is not None:
+            ### extract largest connected component
+
             minc.calc([out_redskull],'abs(A[0]-1)<0.5?1:0', 
-                out_brain_mask, labels=True)
+                minc.tmp("brain.mnc"), labels=True)
+            minc.defrag(minc.tmp("brain.mnc"),out_brain_mask)
 
         # generate unscaling transform
         if unscale_xfm is not None:
@@ -285,7 +279,9 @@ def t1preprocessing_v10(patient, tp):
             shutil.copyfile(patient[tp].manual['clp_t1'],  patient[tp].clp['t1'])
             tmpt1 = patient[tp].clp['t1']  # In order to make the registration if needed
 
-        if patient.synthstrip_onnx is not None:
+        # if we have a native mask
+        have_native_mask=os.path.exists(patient[tp].clp['mask'])
+        if have_native_mask:
             tmpmask = patient[tp].clp['mask']
 
         if not os.path.exists( patient[tp].clp['t1'] ):
@@ -300,7 +296,7 @@ def t1preprocessing_v10(patient, tp):
                 or not os.path.exists( patient[tp].nuc['t1']):
 
                 if patient.n4:
-                    if patient.synthstrip_onnx is not None: # using synthstrip for N4 mask
+                    if have_native_mask: # using synthstrip for N4 mask
                         dist=200
                         if patient.mri3T: dist=50 # ??
                         
@@ -386,7 +382,7 @@ def t1preprocessing_v10(patient, tp):
                         )
                 else:
                     minc.nu_correct( tmpnlm,
-                                     mask=(tmpmask if patient.synthstrip_onnx is not None else None),
+                                     mask=(tmpmask if have_native_mask else None),
                                      output_image=tmpn3,
                                      mri3t=patient.mri3T,
                                      output_field=patient[tp].nuc['t1'],
@@ -406,7 +402,7 @@ def t1preprocessing_v10(patient, tp):
 
         # TODO: implement skull-based scaling here?
         if not os.path.exists( patient[tp].stx_xfm['t1']):
-            if patient.synthstrip_onnx is not None:
+            if have_native_mask:
                 # HACK: using masks for initial registration
                 ipl.registration.linear_register( tmpmask, modelmask,
                                     minc.tmp('mask_init.xfm'),
@@ -448,10 +444,10 @@ def t1preprocessing_v10(patient, tp):
 
             ray.get(run_redskull_onnx_c.remote(
                 patient[tp].stx_mnc['t1'], 
-                patient[tp].stx_mnc['redskull'],
-                patient[tp].stx_ns_xfm['unscale_t1'],
-                patient[tp].stx_ns_mnc["skull"], 
-                patient[tp].stx_ns_mnc["redskull"],
+                patient[tp].stx_mnc['brain_skull'],
+                unscale_xfm=patient[tp].stx_ns_xfm['unscale_t1'],
+                out_ns_skull=patient[tp].stx_ns_mnc["skull"], 
+                out_ns_redskull=patient[tp].stx_ns_mnc["brain_skull"],
                 out_qc=patient[tp].qc_jpg['stx_skull'],
                 qc_title=patient[tp].qc_title, 
                 reference=modelmask,
@@ -459,96 +455,5 @@ def t1preprocessing_v10(patient, tp):
                 redskull_var=patient.redskull_var ))
             
             # adjust scaling factor based on the skull here? 
-
-if __name__ == '__main__':
-
-  # We can create this as a stand alone script
-
-  # 1. Create a patient
-  # 2. Fill necessary images from the options (inputs and outputs)
-  # 3. Call the function -> preprocessing_v10
-  # 4. Exit
-
-  # Here a
-  # Using script as a stand-alone script
-  # copy output files into the structure!
-
-    usage = \
-        """usage: %prog <patient id> <patinet visit> <t1.mnc> -o <outputdir> 
-   or: %prog -h
-   
-   The list have this structure:
-      anatomical_scan.mnc[,mask.mnc]
-      
-   """
-    parser = OptionParser(usage=usage, version=version)
-
-    group = OptionGroup(parser, ' -- Mandatory options ', ' Necessary')
-    group.add_option('-o', '--output-dir', dest='output',
-                     help='Output dir')
-    parser.add_option_group(group)
-
-    group = OptionGroup(parser, ' -- Pipeline options ',
-                        ' Options to start processing')
-    group.add_option(
-        '-D',
-        '--denoise',
-        dest='denoise',
-        help='Denoise first images',
-        action='store_true',
-        default=False,
-        )
-    group.add_option('-3', '--3T', dest='mri3T',
-                     help='Parameters for 3T scans', action='store_true',default=False
-                     )
-    group.add_option('','--n4', dest='n4',
-                     help='Use Devenyi strategy for preprocessing with N4', action='store_true', default=False
-                     )
-    group.add_option('', '--model-dir', dest='modeldir',
-                     help='Directory with the model [%default]',
-                     default='/ipl/quarantine/models/icbm152_model_09c/'
-                     )
-    group.add_option('', '--model-name', dest='modelname',
-                     help='Model name',
-                     default='mni_icbm152_t1_tal_nlin_sym_09c')
-    group.add_option('-f', '--fast', dest='fast',
-                     help='Fast mode : quick & dirty mostly for testing pipeline'
-                     , action='store_true',default=False)
-    group.add_option('--resample', dest='resample',
-                     help='Resample algorithm: itk (b-spline 4th order), sinc, linear [%default]'
-                     , default='itk')
-    parser.add_option_group(group)
-
-    (opts, args) = parser.parse_args()
-
-    if opts.output is None:
-        print(' -- Please specify and output dir (-o)')
-        sys.exit(1)
-
-    (id, visit, t1w) = args
-
-    print(' -- Copying data to patient structure!')
-    patient = LngPatient(id)
-
-    patient.pipeline_version = version
-    patient.denoise = opts.denoise
-    patient.n4 = opts.n4
-    patient.mri3T = opts.mri3T
-    patient.fast = opts.fast
-    patient.modeldir = opts.modeldir
-    patient.modelname = opts.modelname
-    patient.patientdir = opts.output + os.sep + id + os.sep
-    patient.logfile = patient.patientdir + id + '.log'
-    patient.cmdfile = patient.patientdir + id + '.commands'
-
-    patient[visit] = TP(visit)
-
-    patient[visit].tpdir = patient.patientdir + visit + os.sep
-    patient[visit].qc_title = id + '_' + visit
-    patient[visit].native['t1'] = t1w
-
-    setFilenames(patient)
-
-    pipeline_t1preprocessing(patient, visit)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

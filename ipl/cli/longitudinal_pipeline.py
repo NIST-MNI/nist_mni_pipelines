@@ -82,6 +82,7 @@ def setup_patient(id, options):
     patient.fast     = options.fast
     patient.temporalregu = options.temporalregu
     patient.skullreg = options.skullreg
+    patient.redskull_native = options.redskull_native
     patient.redskull_onnx = options.redskull_onnx
     patient.redskull_var = options.redskull_var
     patient.synthstrip_onnx = options.synthstrip_onnx

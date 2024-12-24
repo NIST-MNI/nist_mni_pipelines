@@ -556,11 +556,10 @@ def setFilenames(patient):
         patient[tp].clp2["mask"]       = clp2dir+'clp2_'+patient.id+"_"+tp+"_mask.mnc"
 
         patient[tp].stx_mnc["mask"]    = stxdir+"stx_"+patient.id+"_"+tp+"_mask.mnc"
+        patient[tp].stx_mnc["brain_skull"]    = segdir+"stx_"+patient.id+"_"+tp+"_brainskull.mnc"
+
         patient[tp].stx2_mnc["mask"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_mask.mnc"
-
-        # HACK
-        patient[tp].stx_mnc["redskull"]    = segdir+"stx_"+patient.id+"_"+tp+"_redskull2.mnc"
-
+        patient[tp].stx2_mnc["brain_skull"] = stx2dir+"stx2_"+patient.id+"_"+tp+"_brainskull.mnc"
 
         # depricated files
         patient[tp].stx2_mnc["rhc"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_rhc.mnc"
@@ -572,7 +571,7 @@ def setFilenames(patient):
         # non-scaled
         patient[tp].stx_ns_mnc["mask"]  = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx_ns_mnc["skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_skull.mnc"
-        patient[tp].stx_ns_mnc["redskull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_redskull.mnc"
+        patient[tp].stx_ns_mnc["brain_skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_brain_skull.mnc"
         patient[tp].stx_ns_mnc["head"]  = segdir+"nsstx_"+patient.id+"_"+tp+"_head.mnc"
 
 

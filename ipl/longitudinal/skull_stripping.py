@@ -18,7 +18,7 @@ from optparse import OptionGroup  # to change when python updates in the machine
 from ipl.minc_tools import mincTools,mincError
 from ipl import minc_qc
 
-from .t1_preprocessing import run_synthstrip_onnx
+from .t1_preprocessing import run_synthstrip_onnx,run_redskull_onnx
 import ray
 
 
@@ -30,45 +30,51 @@ def pipeline_stx_skullstripping(patient, tp):
 
   # creation of a structure to pass the information
 
-    class params:
-        pass
+    params=dict()
 
-    params.pipeline_version = patient.pipeline_version
+    params["pipeline_version"] = patient.pipeline_version
 
-    params.cmdfile = patient.cmdfile
-    params.logfile = patient.logfile
-    params.qc_title = patient[tp].qc_title
+    params["cmdfile"] = patient.cmdfile
+    params["logfile"] = patient.logfile
+    params["qc_title"] = patient[tp].qc_title
 
-    params.novolpol = True
+    params["novolpol"] = True
 
-    params.final = patient.beastresolution  # This one we do not need it to be accurate (unless cross-sectional)
-    params.beastdir = patient.beastdir
+    params["final"] = patient.beastresolution  # This one we do not need it to be accurate (unless cross-sectional)
+    params["beastdir"] = patient.beastdir
 
     #  if len(patient)==1:
-    #    params.final="1" # In cross-sectional there is not a second version of the skullstripping
+    #    params["final"]="1" # In cross-sectional there is not a second version of the skullstripping
 
     # setting inputs
 
-    params.clpt1 = patient[tp].clp['t1']
-    params.stxt1 = patient[tp].stx_mnc['t1']
-    params.xfmt1 = patient[tp].stx_xfm['t1']
-    params.ns_stxt1 = patient[tp].stx_ns_mnc['t1']
-    params.ns_xfmt1 = patient[tp].stx_ns_xfm['t1']
-    params.ns_unscale_xfm = patient[tp].stx_ns_xfm['unscale_t1']
+    params["clpt1"] = patient[tp].clp['t1']
+    params["stxt1"] = patient[tp].stx_mnc['t1']
+    params["xfmt1"] = patient[tp].stx_xfm['t1']
+    params["ns_stxt1"] = patient[tp].stx_ns_mnc['t1']
+    params["ns_xfmt1"] = patient[tp].stx_ns_xfm['t1']
+    params["ns_unscale_xfm"] = patient[tp].stx_ns_xfm['unscale_t1']
 
     # setting outputs
 
-    params.stx_mask = patient[tp].stx_mnc['mask']
-    params.ns_stx_mask = patient[tp].stx_ns_mnc['mask']
-    params.clp_mask = patient[tp].clp['mask']
-    params.qc_stx_mask = patient[tp].qc_jpg['stx_mask']
+    params["stx_mask"] = patient[tp].stx_mnc['mask']
+    params['brain_skull'] = patient[tp].stx_mnc['brain_skull']
 
-    if os.path.exists(params.stx_mask) \
-        and os.path.exists(params.ns_stx_mask) \
-        and os.path.exists(params.qc_stx_mask):
+    params["ns_stx_mask"] = patient[tp].stx_ns_mnc['mask']
+    params["clp_mask"] = patient[tp].clp['mask']
+    params["qc_stx_mask"] = patient[tp].qc_jpg['stx_mask']
+
+    params["synthstrip_onnx"] = patient.synthstrip_onnx
+    params["redskull_onnx"] = patient.redskull_onnx
+    params["threads"] = patient.threads
+
+
+    if os.path.exists(params["stx_mask"]) \
+        and os.path.exists(params["ns_stx_mask"]) \
+        and os.path.exists(params["qc_stx_mask"]):
         pass
     else:
-        runSkullstripping(params, synthstrip_onnx=patient.synthstrip_onnx)
+        runSkullstripping(params)
 
     return True
 
@@ -83,26 +89,24 @@ def pipeline_stx2_skullstripping(patient, tp):
 
   # creation of a structure to pass data to the function
 
-    class params:
-        pass
-
-    params.pipeline_version = patient.pipeline_version
-
-    params.cmdfile = patient.cmdfile
-    params.logfile = patient.logfile
-    params.qc_title = patient[tp].qc_title
-
-    params.novolpol = True
-    params.final = patient.beastresolution
-
-    params.clpt1 = patient[tp].clp['t1']
-    params.stxt1 = patient[tp].stx2_mnc['t1']
-    params.xfmt1 = patient[tp].stx2_xfm['t1']
-    params.ns_stxt1 = None #patient[tp].stx_ns_mnc['t1']
-    params.ns_xfmt1 = None #patient[tp].stx_ns_xfm["t1"]
-    params.ns_unscale_xfm = None
-    params.beastdir = patient.beastdir
-
+    params=dict(
+        pipeline_version = patient.pipeline_version,
+        cmdfile = patient.cmdfile,
+        logfile = patient.logfile,
+        qc_title = patient[tp].qc_title,
+        novolpol = True,
+        final = patient.beastresolution,
+        clpt1 = patient[tp].clp['t1'],
+        stxt1 = patient[tp].stx2_mnc['t1'],
+        xfmt1 = patient[tp].stx2_xfm['t1'],
+        ns_stxt1 = None, #patient[tp].stx_ns_mnc['t1']
+        ns_xfmt1 = None, #patient[tp].stx_ns_xfm["t1"]
+        ns_unscale_xfm = None,
+        beastdir = patient.beastdir,
+        threads = patient.threads,
+        synthstrip_onnx = patient.synthstrip_onnx,
+        redskull_onnx = patient.redskull_onnx,
+    )
   # output files
   # ##############
 
@@ -111,14 +115,16 @@ def pipeline_stx2_skullstripping(patient, tp):
     stx2dir = patient[tp].tpdir + 'stx2/'
     mkdir(stx2dir)
 
-    params.stx_mask = patient[tp].stx2_mnc['mask']
-    params.ns_stx_mask = None  # stx2dir+'nsstx_'+patient.id+"_"+tp+"_mask.mnc"
-    params.clp_mask = patient[tp].clp2['mask']
-    params.qc_stx_mask = patient[tp].qc_jpg['stx2_mask']
+    params['stx_mask'] = patient[tp].stx2_mnc['mask']
+    params['brain_skull'] = patient[tp].stx2_mnc['brain_skull']
 
-    if not os.path.exists(params.stx_mask) \
-        or not os.path.exists(params.qc_stx_mask):
-        runSkullstripping(params, synthstrip_onnx=patient.synthstrip_onnx)
+    params['ns_stx_mask'] = None  # stx2dir+'nsstx_'+patient.id+"_"+tp+"_mask.mnc"
+    params['clp_mask'] = patient[tp].clp2['mask']
+    params['qc_stx_mask'] = patient[tp].qc_jpg['stx2_mask']
+
+    if not os.path.exists(params['stx_mask']) \
+        or not os.path.exists(params['qc_stx_mask']):
+        runSkullstripping(params)
 
 
     if 't2les' in patient[tp].native:
@@ -134,92 +140,99 @@ def pipeline_stx2_skullstripping(patient, tp):
 
 # Last preprocessing (or more common one)
 
-def runSkullstripping(params, synthstrip_onnx=None):
-    skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx) 
+def runSkullstripping(params):
+    skullstripping_v10(params) 
 
 
 # function using beast
 # needs image in standard space
 
-def skullstripping_v10(params,
-                       synthstrip_onnx=None):
+def skullstripping_v10(params):
 
     with mincTools()  as minc:
-        if synthstrip_onnx is not None: # use deep learning
+        if params["synthstrip_onnx"] is not None: # use deep learning
             # apply synthstrip 
-            ray.get(run_synthstrip_onnx.remote(params.stxt1, 
-                    params.stx_mask, 
-                    synthstrip_model=synthstrip_onnx))
+            run_synthstrip_onnx_c = run_synthstrip_onnx.options(num_cpus=params.threads)
+            ray.get(run_synthstrip_onnx_c.remote(params["stxt1"], 
+                    params["stx_mask"], 
+                    synthstrip_model=params["synthstrip_onnx"]))
+        elif params["redskull_onnx"] is not None:
+            run_redskull_onnx_c = run_redskull_onnx.options(num_cpus=params["threads"])
+            ray.get(run_redskull_onnx_c.remote(
+                        params["stxt1"], params["brain_skull"],
+                        out_brain_mask=params["stx_mask"],
+                        redskull_model=params["redskull_onnx"]))
+            
         else:
             # temporary images in the dimensions of beast database
             tmpstxt1 = minc.tmp('beast_stx_t1w.mnc')
             tmpmask = minc.tmp('beast_stx_mask.mnc')
 
-            beast_v10_template = params.beastdir + os.sep \
+            beast_v10_template = params["beastdir"] + os.sep \
                 + 'intersection_mask.mnc'
-            beast_v10_margin = params.beastdir + os.sep + 'margin_mask.mnc'
+            beast_v10_margin = params["beastdir"] + os.sep + 'margin_mask.mnc'
 
-            beast_v10_conffile = {'1': params.beastdir + os.sep \
+            beast_v10_conffile = {'1': params["beastdir"] + os.sep \
                                 + 'default.1mm.conf',
-                                '2': params.beastdir + os.sep \
+                                '2': params["beastdir"] + os.sep \
                                 + 'default.2mm.conf'}
-            beast_v10_intersect = params.beastdir + os.sep \
+            beast_v10_intersect = params["beastdir"] + os.sep \
                 + 'intersection_mask.mnc'
 
-            if not os.path.exists(params.stx_mask):
+            if not os.path.exists(params["stx_mask"]):
 
                 # changing the size of stx if necessary to fit with the beast images dimensions
-                minc.resample_smooth(params.stxt1, tmpstxt1,
+                minc.resample_smooth(params["stxt1"], tmpstxt1,
                                     like=beast_v10_template)
 
                 # perform segmentation
 
                 comm = [
                     'mincbeast',
-                    params.beastdir,
+                    params["beastdir"],
                     tmpstxt1,
                     tmpmask,
                     '-median',
                     '-fill',
                     '-conf',
-                    beast_v10_conffile[params.final],
+                    beast_v10_conffile[params["final"]],
                     '-same_resolution',
                     ]
                 minc.command(comm, [tmpstxt1], [tmpmask])
 
                 # reformat into the orginial stx size
-                minc.resample_labels(tmpmask, params.stx_mask,
-                                    like=params.stxt1)
+                minc.resample_labels(tmpmask, params["stx_mask"],
+                                    like=params["stxt1"])
 
         # reformat mask into native space if needed
-        if params.clp_mask is not None and \
-            synthstrip_onnx is None and \
-            os.path.exists(params.xfmt1) and \
-            os.path.exists(params.clpt1):
+        if params["clp_mask"] is not None and \
+            (params["synthstrip_onnx"] is None or params["run_redskull_onnx"] is not None)  and \
+            os.path.exists(params["xfmt1"]) and \
+            os.path.exists(params["clpt1"]):
 
-            minc.resample_labels(params.stx_mask, 
-                                 params.clp_mask,
-                                 like=params.clpt1,
+            minc.resample_labels(params["stx_mask"], 
+                                 params["clp_mask"],
+                                 like=params["clpt1"],
                                  invert_transform=True,
-                                 transform=params.xfmt1)
+                                 transform=params["xfmt1"])
 
         # reformat mask into ns space
-        if params.ns_stx_mask is not None \
-            and os.path.exists(params.ns_xfmt1) \
-            and os.path.exists(params.ns_stxt1):
+        if params["ns_stx_mask"] is not None \
+            and os.path.exists(params["ns_xfmt1"]) \
+            and os.path.exists(params["ns_stxt1"]):
 
-            minc.resample_labels(params.stx_mask, 
-                                 params.ns_stx_mask,
-                                 like=params.ns_stxt1,
-                                 transform=params.ns_unscale_xfm)
+            minc.resample_labels(params["stx_mask"], 
+                                 params["ns_stx_mask"],
+                                 like=params["ns_stxt1"],
+                                 transform=params["ns_unscale_xfm"])
 
-        if params.qc_stx_mask is not None:
+        if params["qc_stx_mask"] is not None:
             minc_qc.qc(
-                params.stxt1,
-                params.qc_stx_mask,
-                title=params.qc_title,
+                params["stxt1"],
+                params["qc_stx_mask"],
+                title=params["qc_title"],
                 image_range=[0, 120],
-                mask=params.stx_mask,dpi=200,use_max=True,
+                mask=params["stx_mask"],dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white"
                 )
 

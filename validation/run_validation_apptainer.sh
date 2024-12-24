@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e -x
 
+ver=0.2.03
 
 FIELD=1.5
 PRL=4
 THREADS=4
-out=output
-CLEANUP=YES
+out=output_apptainer_${ver}
+CLEANUP=NO
 ## number of threads should be less then PRL (parallel processes)
 
 
@@ -27,6 +28,6 @@ apptainer run \
     -B $(pwd):/data --pwd /data \
     --compat -e --net --network none \
     --env FIELD=$FIELD,PRL=$PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
-    nist_pipeline_0.2.00.sif  --csv subject43.csv  --out ${out}
+    ../container/nist_pipeline_${ver}.sif  --csv subject43.csv  --out ${out}
 
 

@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e -x
 
+ver=0.2.03
 
 FIELD=1.5
 PRL=4
 THREADS=4
-out=output_docker
+out=output_docker_${ver}
 CLEANUP=YES
 ## number of threads should be less then PRL (parallel processes)
 
@@ -24,4 +25,4 @@ mkdir -p $out
 
 docker run --rm --shm-size=10gb -v $(pwd):/data -w /data --user $(id -u):$(id -g) \
 	--env PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
-         nist_mni_pipeline:0.2.00 --csv subject43.csv --out output_docker
+         nistmni/nist_mni_pipeline:${ver} --csv subject43.csv --out output_docker_${ver}
