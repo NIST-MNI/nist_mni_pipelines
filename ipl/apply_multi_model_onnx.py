@@ -449,6 +449,19 @@ def segment_with_onnx(  in_scans,
         dset = np.ascontiguousarray( np.pad(dset, pad_width=((0,0),(0,0),(padvol,padvol),(padvol,padvol),(padvol,padvol)), 
             mode='constant', constant_values = padfill))
     
+    # Fix to make sure that volume is at least patch_sz[0]xpatch_sz[1]xpatch_sz[2] 
+    fix_shape=False
+    if np.any(np.array(dset.shape[2:]) < np.array(patch_sz)):
+        new_shape = np.maximum(patch_sz, dset.shape[2:])
+        new_shape = new_shape.tolist()
+        # keep original
+        orig_size = dset.shape
+        orig_fuzzy_size = dset.shape
+
+        dset = np.pad(dset, ((0,0),(0,0),(0,new_shape[0]-dset.shape[2]),(0,new_shape[1]-dset.shape[3]),(0,new_shape[2]-dset.shape[4])),
+                      mode='constant', constant_values = padfill)
+        fix_shape=True
+
     # apply model
     if fuzzy is not None : # or params.vae is not None or params.latent is not None
         if whole:
@@ -505,11 +518,14 @@ def segment_with_onnx(  in_scans,
             dset_out_fuzzy_[:, :, cropvol: orig_size[2]-cropvol*2, cropvol: orig_size[3]-cropvol*2, cropvol: orig_size[4]-cropvol*2]=\
                 dset_out_fuzzy
             dset_out_fuzzy = dset_out_fuzzy_
-
     elif padvol>0:
         dset_out = dset_out[:, :, padvol: orig_size[2]+padvol, padvol: orig_size[3]+padvol, padvol: orig_size[4]+padvol]
         if fuzzy is not None:
             dset_out_fuzzy = dset_out_fuzzy[:, :, padvol: orig_size[2]+padvol, padvol: orig_size[3]+padvol, padvol: orig_size[4]+padvol]
+    elif fix_shape:
+        dset_out = dset_out[:, :, :orig_size[2], :orig_size[3], :orig_size[4]]
+        if fuzzy is not None:
+            dset_out_fuzzy = dset_out_fuzzy[:, :, :orig_size[2], :orig_size[3], :orig_size[4]]
 
     dset_out = np.ascontiguousarray(dset_out.squeeze(), dtype=np.uint8)
 
