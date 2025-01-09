@@ -169,9 +169,15 @@ The pipeline produces following files:
 ### Data Flow Dagram 
 *work in progress*
 
+
+```mermaid
+  info
+```
+
+
 ```mermaid
 
-flowchart LP
+flowchart TD
    IN[Input Scans] --> BrainSegNative[Initial Brain segmentation in native space]
    IN[Input Scans] --> DEN[Non-local means denoising]
    DEN -- Scans --> NUC1[ Non Uniformity correction with N3 or N4]
