@@ -170,14 +170,12 @@ The pipeline produces following files:
 *work in progress*
 
 
-```mermaid
-  info
-```
-
 
 ```mermaid
 
 flowchart TD
+
+%% Native space
    IN[Input Scans] --> BrainSegNative[Initial Brain segmentation in native space]
    IN[Input Scans] --> DEN[Non-local means denoising]
    DEN -- Scans --> NUC1[ Non Uniformity correction with N3 or N4]
@@ -187,6 +185,8 @@ flowchart TD
    BrainSegNative -- Brain Mask --> NORM1
    TEMPLATE_SCAN[ Average Anatomical Template ] --> NORM1
    TEMPLATE_MASK[ Average Anatomical Template Brain Mask ] --> NORM1
+
+%% STX1 space
 
    NORM1 -- Scans --> STX1[ Initial Stereotaxic registration ]
    BrainSegNative -- Brain Mask --> STX1[ Initial Stereotaxic registration ]
@@ -200,6 +200,7 @@ flowchart TD
 
    LinTemplate --> STX2[ Registration to stereotaxic space of the Subject specific linear average template ]
 
+%% STX2 Space
    STX2 -- Scans --> SynthSeg[ ROI Segmentation ]
 
 ```
