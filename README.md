@@ -164,3 +164,36 @@ The pipeline produces following files:
     `<subject>/<visit>/vol/vol_<subject>_<visit>.txt` -  summary measurements in text format (two columns separated by space)
     `<subject>/<visit>/vol/vol_<subject>_<visit>.json` - summary measurements in json format
     `<subject>/<visit>/vol/vol_<subject>_<visit>.csv` - summary measurements in .csv format, (header and one line)
+
+
+### Data Flow Dagram 
+*work in progress*
+
+```mermaid
+
+flowchart LP
+   IN[Input Scans] --> BrainSegNative[Initial Brain segmentation in native space]
+   IN[Input Scans] --> DEN[Non-local means denoising]
+   DEN -- Scans --> NUC1[ Non Uniformity correction with N3 or N4]
+   BrainSegNative  -- Brain Mask --> NUC1
+
+   NUC1 -- Scans --> NORM1[ Intensity Normalization w.r.t template ]
+   BrainSegNative -- Brain Mask --> NORM1
+   TEMPLATE_SCAN[ Average Anatomical Template ] --> NORM1
+   TEMPLATE_MASK[ Average Anatomical Template Brain Mask ] --> NORM1
+
+   NORM1 -- Scans --> STX1[ Initial Stereotaxic registration ]
+   BrainSegNative -- Brain Mask --> STX1[ Initial Stereotaxic registration ]
+   TEMPLATE_SCAN --> STX1
+   TEMPLATE_MASK --> STX1
+
+   STX1 -- Scans --> BrainSegStx[ Brain Segmentation in stx space ]
+
+   STX1 -- Scans --> LinTemplate[ Subject specific linear average template ]
+   BrainSegStx -- Brain Mask --> LinTemplate
+
+   LinTemplate --> STX2[ Registration to stereotaxic space of the Subject specific linear average template ]
+
+   STX2 -- Scans --> SynthSeg[ ROI Segmentation ]
+
+```
