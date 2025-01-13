@@ -555,8 +555,8 @@ def setFilenames(patient):
         patient[tp].clp["brain_skull"] = clpdir+'clp_'+patient.id+"_"+tp+"_brainskull.mnc"
         patient[tp].clp2["mask"]       = clp2dir+'clp2_'+patient.id+"_"+tp+"_mask.mnc"
 
-        patient[tp].stx_mnc["mask"]    = stxdir+"stx_"+patient.id+"_"+tp+"_mask.mnc"
-        patient[tp].stx_mnc["brain_skull"]    = segdir+"stx_"+patient.id+"_"+tp+"_brainskull.mnc"
+        patient[tp].stx_mnc["mask"]    = stxdir + "stx_"+patient.id+"_"+tp+"_mask.mnc"
+        patient[tp].stx_mnc["brain_skull"] = stxdir + "stx_"+patient.id+"_"+tp+"_brainskull.mnc"
 
         patient[tp].stx2_mnc["mask"]   = stx2dir+"stx2_"+patient.id+"_"+tp+"_mask.mnc"
         patient[tp].stx2_mnc["brain_skull"] = stx2dir+"stx2_"+patient.id+"_"+tp+"_brainskull.mnc"
@@ -570,9 +570,9 @@ def setFilenames(patient):
         
         # non-scaled
         patient[tp].stx_ns_mnc["mask"]  = stxdir+"nsstx_"+patient.id+"_"+tp+"_mask.mnc"
-        patient[tp].stx_ns_mnc["skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_skull.mnc"
-        patient[tp].stx_ns_mnc["brain_skull"] = segdir+"nsstx_"+patient.id+"_"+tp+"_brain_skull.mnc"
-        patient[tp].stx_ns_mnc["head"]  = segdir+"nsstx_"+patient.id+"_"+tp+"_head.mnc"
+        patient[tp].stx_ns_mnc["skull"] = stxdir+"nsstx_"+patient.id+"_"+tp+"_skull.mnc"
+        patient[tp].stx_ns_mnc["brain_skull"] = stxdir+"nsstx_"+patient.id+"_"+tp+"_brain_skull.mnc"
+        patient[tp].stx_ns_mnc["head"]  = stxdir+"nsstx_"+patient.id+"_"+tp+"_head.mnc"
 
 
         patient[tp].qc_jpg['stx_mask'] = patient.qcdir+"qc_stx_mask_"+patient.id+"_"+tp+".jpg"

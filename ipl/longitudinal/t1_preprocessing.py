@@ -125,6 +125,7 @@ def run_redskull_onnx(in_t1w, out_redskull,
         unscale_xfm=None, out_ns_skull=None, out_ns_redskull=None, 
         out_qc=None,qc_title=None,reference=None,
         redskull_model=None,normalize_1x1x1=False,
+        qc_image_range=[5,95],
         out_brain_mask=None,
         redskull_var='seg' ):
     assert _have_segmentation_onnx, "Failed to import segment_with_onnx"
@@ -171,9 +172,10 @@ def run_redskull_onnx(in_t1w, out_redskull,
                 in_t1w,
                 out_qc,
                 title=qc_title,
-                image_range=[0, 100],mask_cmap='jet',
+                image_range=qc_image_range,mask_cmap='jet',
                 mask=out_redskull ,dpi=200,use_max=True,
-                samples=20,bg_color="black",fg_color="white"
+                samples=20,bg_color="black",fg_color="white",
+                percentile=True
                 )
             
         if out_brain_mask is not None:
