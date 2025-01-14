@@ -19,30 +19,10 @@ import traceback
 import collections
 import math
 import logging
-
-
 import inspect
-
 
 logger = logging.getLogger("MINC")
 logger.setLevel(logging.DEBUG)
-
-# hack to make it work on Python 3
-try:
-    unicode = unicode
-except NameError:
-    # 'unicode' is undefined, must be Python 3
-    str = str
-    unicode = str
-    bytes = bytes
-    basestring = (str,bytes)
-else:
-    # 'unicode' exists, must be Python 2
-    str = str
-    unicode = unicode
-    bytes = str
-    basestring = basestring
-
 
 def get_logger():
     return logger
@@ -80,13 +60,12 @@ class temp_files(object):
     def __init__(self, tempdir=None, prefix=None):
         
         self.tempdir = tempdir
-        self.clean_tempdir = False
         self.tempfiles = {}
         if not self.tempdir:
             if prefix is None:
                 prefix='iplMincTools'
-            self.tempdir = tempfile.mkdtemp(prefix=prefix, dir=os.environ.get('TMPDIR',None) )
-            self.clean_tempdir = True
+            self.tempdir_ = tempfile.TemporaryDirectory(prefix=prefix,ignore_cleanup_errors=True)
+            self.tempdir = self.tempdir_.name
             
         if not os.path.exists(self.tempdir):
             os.makedirs(self.tempdir)
@@ -97,27 +76,10 @@ class temp_files(object):
             os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=os.environ['OMP_NUM_THREADS']
         return self
 
-    def __exit__(
-        self,
-        type,
-        value,
-        traceback,
-        ):
-        self.do_cleanup()
-
-    def __del__(self):
-        self.do_cleanup()
-
-    def do_cleanup(self):
-        """remove temporary directory if present"""
-        if self.clean_tempdir and self.tempdir is not None:
-            shutil.rmtree(self.tempdir)
-            self.clean_tempdir=False
-
     def temp_file(self, suffix='', prefix=''):
         """create temporary file"""
 
-        (h, name) = tempfile.mkstemp(suffix=suffix, prefix=prefix,dir=self.tempdir)
+        (h, name) = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=self.tempdir)
         os.close(h)
         os.unlink(name)
         return name
@@ -259,7 +221,7 @@ class mincTools(temp_files):
         inputs_exist = True
 
         if inputs is not None:
-            if isinstance(inputs, basestring):  # check if input is only string and not list
+            if isinstance(inputs, str):  # check if input is only string and not list
                 if not os.path.exists(inputs):
                     inputs_exist = False
                     logger.error('One input does not exists! :: {}'.format(inputs))
@@ -283,7 +245,7 @@ class mincTools(temp_files):
         otime = -1
         exists=[]
         if outputs is not None:
-            if isinstance(outputs, basestring):
+            if isinstance(outputs, str):
                 outExists = os.path.exists(outputs)
                 if outExists:
                     otime = os.path.getmtime(outputs)
@@ -301,8 +263,8 @@ class mincTools(temp_files):
 
         if outExists:
             if timecheck and itime > 0 and otime > 0 and otime < itime:
-                logger.warn(' -- Warning: Output exists but older than input! Redoing command')
-                logger.warn('     otime ' + str(otime) + ' < itime ' + str(itime))
+                logger.warning(' -- Warning: Output exists but older than input! Redoing command')
+                logger.warning('     otime ' + str(otime) + ' < itime ' + str(itime))
                 return True
             else:
                 logger.debug(' -- Skipping: Output Exists:{}'.format(repr(exists)))
@@ -423,7 +385,7 @@ class mincTools(temp_files):
         outExists = False
         if outputs is None:
             outExists = True
-        elif isinstance(outputs, basestring):
+        elif isinstance(outputs, str):
             outExists = os.path.exists(outputs)
         else:
             for o in outputs:
@@ -558,7 +520,7 @@ class mincTools(temp_files):
         '''
         if value is None:
             mincTools.execute(['minc_modify_header', input, '-delete', attribute])
-        elif isinstance(value, basestring):
+        elif isinstance(value, str):
             mincTools.execute(['minc_modify_header', input, '-sinsert', attribute + '='
                     + value])
         else:
