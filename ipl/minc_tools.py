@@ -64,7 +64,7 @@ class temp_files(object):
         if not self.tempdir:
             if prefix is None:
                 prefix='iplMincTools'
-            self.tempdir_ = tempfile.TemporaryDirectory(prefix=prefix,ignore_cleanup_errors=True)
+            self.tempdir_ = tempfile.TemporaryDirectory(prefix=prefix)
             self.tempdir = self.tempdir_.name
             
         if not os.path.exists(self.tempdir):
