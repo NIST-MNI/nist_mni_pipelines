@@ -104,30 +104,39 @@ def classification_v10(patient, tp):
         }
         # if patient.wmh_bison_atlas_pfx is None:
         #     # need to populate atlases
-        wmh_bison_atlases={'av_t1':f"{patient.modeldir}/{patient.modelname}.mnc", # standard T1w model
-                            # 'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
-                            # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
-                            'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
-        if patient.mri3T:
-            wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/3T_2009c_1.mnc'})
-            # TODO: use FLAIR atlas if available
-            if 'flair' in patient[tp].native:
-                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_flair_3T"
-                wmh_bison_input['flair']=[patient[tp].stx2_mnc['flair']]
-                wmh_bison_atlases['av_flair']=f'{patient.wmh_bison_pfx}/3T_2009c_flair.mnc'
+
+        if not os.path.exists(f"{patient.wmh_bison_atlas_pfx}t.mnc"):    
+            # HACK: use model templates as priors, assuming it is MNI-ICBM152-2009c
+
+            wmh_bison_atlases={'av_t1':f"{patient.modeldir}/{patient.modelname}.mnc", # standard T1w model
+                                # 'av_t2':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc",
+                                # 'av_pd':f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc",
+                                'p1':f"{patient.wmh_bison_atlas_pfx}1.mnc"}
+            if patient.mri3T:
+                wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/3T_2009c_1.mnc'})
+                # TODO: use FLAIR atlas if available
+                if 'flair' in patient[tp].native:
+                    wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_flair_3T"
+                    wmh_bison_input['flair']=[patient[tp].stx2_mnc['flair']]
+                    wmh_bison_atlases['av_flair']=f'{patient.wmh_bison_pfx}/3T_2009c_flair.mnc'
+                else:
+                    wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_3T"
             else:
-                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_3T"
+                wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/15T_2009c_1.mnc'})
+                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_15T"
+                if 't2' in patient[tp].native:
+                    wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_t2_15T"
+                    wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
+                    wmh_bison_atlases['av_t2']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc"
+                if 'pd' in patient[tp].native:
+                    wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_t2_pd_15T"
+                    wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
+                    wmh_bison_atlases['av_pd']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc"
+            wmh_bison_atlas_pfx=None
         else:
-            wmh_bison_atlases.update({'p1':f'{patient.wmh_bison_pfx}/15T_2009c_1.mnc'})
-            wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_15T"
-            if 't2' in patient[tp].native:
-                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_t2_15T"
-                wmh_bison_input['t2']=[patient[tp].stx2_mnc['t2']]
-                wmh_bison_atlases['av_t2']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_t2_')}.mnc"
-            if 'pd' in patient[tp].native:
-                wmh_bison_pfx=f"{patient.wmh_bison_pfx}/t1_t2_pd_15T"
-                wmh_bison_input['pd']=[patient[tp].stx2_mnc['pd']]
-                wmh_bison_atlases['av_pd']=f"{patient.modeldir}/{patient.modelname.replace('_t1_','_pd_')}.mnc"
+            # assume that the atlas pfx has all the atlases
+            wmh_bison_atlases=None
+            wmh_bison_atlas_pfx=patient.wmh_bison_atlas_pfx
     else:
         wmh_bison_input=None
 
@@ -158,9 +167,12 @@ def classification_v10(patient, tp):
         ray.get(run_bison_wmh_c.remote(wmh_bison_input, bison_input,
                         patient[tp].stx2_mnc['wmh'],
                         patient[tp].stx2_mnc['classification'],
+                        # WMH
                         wmh_bison_pfx=wmh_bison_pfx,
+                        wmh_bison_atlas_pfx=wmh_bison_atlas_pfx,
                         wmh_bison_atlases=wmh_bison_atlases,
                         wmh_bison_method=patient.wmh_bison_method,
+                        # Tissue classification
                         bison_atlases=bison_atlases,
                         bison_pfx=patient.bison_pfx,
                         bison_atlas_pfx=patient.bison_atlas_pfx,
