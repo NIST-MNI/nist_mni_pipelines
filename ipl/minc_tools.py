@@ -181,20 +181,13 @@ class cache_files(temp_files):
         ):
         self.do_cleanup()
 
-
     def do_cleanup(self):
         """unlocking lock files """
         for f in self._locks.keys():
             if self._locks[f] is not None:
                 fcntl.flock(self._locks[f].fileno(), fcntl.LOCK_UN)
                 self._locks[f].close()
-#                try:
-#                    os.unlink(f)
-#                except OSError:
-#                    #probably somebody else is blocking
-#                    pass
         self._locks={}
-        super(cache_files,self).do_cleanup()
 
 class mincTools(temp_files):
     """minc toolkit interface , mostly basic tools """
