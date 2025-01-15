@@ -175,7 +175,7 @@ def run_redskull_onnx(in_t1w, out_redskull,
                 image_range=qc_image_range,mask_cmap='jet',
                 mask=out_redskull ,dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white",
-                percentile=True
+                percentile=True,mask_range=[0.5,2]
                 )
             
         if out_brain_mask is not None:

@@ -181,8 +181,7 @@ def qc(
         _odata=_ovl_data
         
         if mask_bg is not None:
-            _odata=ma.masked_less(_odata, mask_bg)
-    
+            _odata=ma.masked_less_equal(_odata, mask_bg)
 
     if crop is not None:
         # apply cropping here
