@@ -76,6 +76,10 @@ class temp_files(object):
             os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']=os.environ['OMP_NUM_THREADS']
         return self
 
+    def __exit__(self):
+        pass
+
+
     def temp_file(self, suffix='', prefix=''):
         """create temporary file"""
 
