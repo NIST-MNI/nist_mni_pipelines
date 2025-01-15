@@ -166,9 +166,8 @@ class cache_files(temp_files):
             pass
 
 
-    #def __del__(self):
-        #self.do_cleanup()
-    #    pass
+    def __del__(self):
+        self.do_cleanup()
 
     def __enter__(self):
         return self
