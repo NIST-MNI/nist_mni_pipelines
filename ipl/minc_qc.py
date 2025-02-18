@@ -109,7 +109,8 @@ def qc(
     bg_color=None,
     fg_color=None,
     style=None,
-    crop=None
+    crop=None,
+    range_pct=False,
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -139,6 +140,7 @@ def qc(
         fg_color -- foreground color
         style    -- name of the matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
         crop     -- Crop input image: [x1,x2,y1,y2,z1,z2]
+        range_pct -- image range is specified in percentiles
     """
     
     _img=minc2_file(input)
@@ -190,8 +192,12 @@ def qc(
     # setup ranges
     vmin=vmax=0.0
     if image_range is not None:
-        vmin=image_range[0]
-        vmax=image_range[1]
+        if range_pct:
+            vmin=np.nanpercentile(_idata,image_range[0])
+            vmax=np.nanpercentile(_idata,image_range[1])
+        else:
+            vmin=image_range[0]
+            vmax=image_range[1]
     else:
         vmin=np.nanmin(_idata)
         vmax=np.nanmax(_idata)
