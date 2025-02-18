@@ -1,12 +1,15 @@
-from scoop import futures, shared
+import os
+import ray
 
-import iplScoopGenerateModel as gm
+
+from ipl.model_ldd.regress_ldd  import regress_ldd_csv
 
 if __name__ == '__main__':
   # setup data for parallel processing
   os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='1'
+  ray.init()
   
-  gm.regress_ldd_csv(
+  regress_ldd_csv(
     'subjects_1.lst',
     work_prefix='tmp_regress_LCC_1',
     options={

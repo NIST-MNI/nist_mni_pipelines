@@ -66,7 +66,8 @@ def pipeline_t2pdpreprocessing(patient, tp):
                 patient[tp].stx_mnc['t1'],
                 patient[tp].qc_jpg['t1t2'],
                 title=patient[tp].qc_title,
-                image_range=[0, 100],
+                image_range=[20, 80],
+                mask_range= [40, 90],
                 mask=patient[tp].stx_mnc['t2'],
                 samples=20,dpi=200,use_max=True,
                 image_cmap='red',
@@ -126,7 +127,6 @@ def t2pdpreprocessing_v10(patient, tp):
 
             #     if spacing.count( 'irregular' ):
             #         minc.set_attribute( tmpt2, s + ':spacing', 'regular__' )
-            
             # 1. Do nlm
             if patient.denoise:
                 tmpnlm = patient[tp].den['t2']

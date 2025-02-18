@@ -87,7 +87,7 @@ def generate_nonlinear_average(
 
             flip_all.append( generate_flip_sample.remote(s )  )
 
-        ray.wait(flip_all, num_returns=len(flip_all))
+        ray.get(flip_all)
     # go through all the iterations
     it=0
     for (i,p) in enumerate(protocol):
@@ -195,7 +195,7 @@ def generate_nonlinear_average(
 
             # wait for jobs to finish
             if it>skip and it<stop_early:
-                ray.wait(transforms, num_returns=len(transforms))
+                ray.get(transforms)
 
             if cleanup and it>1 :
                 # remove information from previous iteration
@@ -210,7 +210,7 @@ def generate_nonlinear_average(
             # 2 average all transformations
             if it>skip and it<stop_early:
                 result=average_transforms.remote(inv_transforms, avg_inv_transform, nl=True, symmetric=symmetric)
-                ray.wait([result])
+                ray.get([result])
 
             corr=[]
             corr_transforms=[]
@@ -234,7 +234,7 @@ def generate_nonlinear_average(
                 corr_samples.append(c)
 
             if it>skip and it<stop_early:
-                ray.wait(corr, num_returns=len(corr))
+                ray.get(corr)
 
             # cleanup transforms
             if cleanup :
@@ -247,7 +247,7 @@ def generate_nonlinear_average(
             # 4 average resampled samples to create new estimate
             if it>skip and it<stop_early:
                 result=average_samples.remote( corr_samples, next_model, next_model_sd, symmetric=symmetric, symmetrize=symmetric,median=use_median)
-                ray.wait([result])
+                ray.get([result])
 
             if cleanup and it>1:
                 # remove previous template estimate

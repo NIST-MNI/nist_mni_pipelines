@@ -1,12 +1,15 @@
-from scoop import futures, shared
+import ray
+import os
 
-import iplScoopGenerateModel as gm
+from ipl.model_ldd.generate_nonlinear_ldd  import generate_ldd_model_csv
+
 
 if __name__ == '__main__':
   # setup data for parallel processing
   os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS']='1'
-  
-  gm.generate_ldd_model_csv('subjects.lst',
+  ray.init()
+
+  generate_ldd_model_csv('subjects.lst',
     work_prefix='tmp_ldd_nr',
     options={'symmetric':False,
              'refine':False,

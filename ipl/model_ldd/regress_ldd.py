@@ -440,7 +440,7 @@ def build_estimate(description_json, parameters, output_prefix, int_par_count=No
        print(desc["velocity_model"]["volume"])
        print("velocity_parameters={}".format(repr(velocity_parameters)))
        
-       raise mincError("{} inconsisten number of paramters, expected {}". 
+       raise mincError("{} inconsisten number of parameters, expected {}". 
                        format(repr(intensity_parameters),
                               len(desc["velocity_model"]["volume"])))
 

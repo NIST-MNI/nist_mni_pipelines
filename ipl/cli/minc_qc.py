@@ -48,6 +48,12 @@ def parse_options():
                     nargs=2,
                     default=None,
                     help="Main image range" )
+    
+    parser.add_argument("--percentile",
+                    dest="percentile",
+                    action="store_true",
+                    default=False,
+                    help="Use range and mask_range specify percentiles" )
 
     parser.add_argument("--percentile",
                     action="store_true",
@@ -174,7 +180,7 @@ def main():
                 show_overlay_bar=options.mask_bar,
                 style=options.style,
                 crop=options.crop,
-                range_pct=options.range_pct
+                percentile=options.percentile
                 )
     else:
         print("Refusing to run without input data, run --help")

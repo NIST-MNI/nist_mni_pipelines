@@ -135,7 +135,7 @@ def pipeline_stx2_skullstripping(patient, tp):
 # Last preprocessing (or more common one)
 
 def runSkullstripping(params, synthstrip_onnx=None):
-    skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx)  # beast by simon fristed
+    skullstripping_v10(params, synthstrip_onnx=synthstrip_onnx) 
 
 
 # function using beast
@@ -145,7 +145,7 @@ def skullstripping_v10(params,
                        synthstrip_onnx=None):
 
     with mincTools()  as minc:
-        if synthstrip_onnx is not None:
+        if synthstrip_onnx is not None: # use deep learning
             # apply synthstrip in the native space to ease everything else
             # need to resample to 1x1x1mm^2
             ray.get(run_synthstrip_onnx.remote(params.stxt1, 

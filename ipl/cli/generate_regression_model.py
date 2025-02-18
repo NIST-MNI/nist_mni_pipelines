@@ -7,53 +7,65 @@
 #
 # Generate average model
 
-# import shutil
-# import os
-# import sys
-# import csv
-# import traceback
+import shutil
+import os
+import sys
+import csv
+import traceback
 import argparse
 
-# from ipl.minc_tools import mincTools,mincError
+from ipl.minc_tools import mincTools,mincError
 
 # high level functions
+from ipl.model.generate_linear             import generate_linear_average
+from ipl.model.generate_linear             import generate_linear_model
 from ipl.model.generate_linear             import generate_linear_model_csv
+
+from ipl.model.generate_nonlinear          import generate_nonlinear_average
 from ipl.model.generate_nonlinear          import generate_nonlinear_model_csv
-#from ipl.model_ldd.generate_nonlinear_ldd  import generate_ldd_model_csv
+from ipl.model.generate_nonlinear          import generate_nonlinear_model
+
+from ipl.model_ldd.generate_nonlinear_ldd  import generate_ldd_average
+from ipl.model_ldd.generate_nonlinear_ldd  import generate_ldd_model_csv
+from ipl.model_ldd.generate_nonlinear_ldd  import generate_ldd_model
+
+from ipl.model_ldd.regress_ldd             import regress_ldd
+from ipl.model_ldd.regress_ldd             import regress_ldd_csv
+from ipl.model_ldd.regress_ldd             import regress_ldd_simple
+from ipl.model_ldd.regress_ldd             import build_estimate as build_estimate_ldd
+
+from ipl.model.regress                     import regress
+from ipl.model.regress                     import regress_csv
+from ipl.model.regress                     import regress_simple
+from ipl.model.regress                     import build_estimate as build_estimate_std
+
 
 # parallel processing
 import ray
 
+
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                 description='Build model average')
+                                 description='Build model estimate')
 
-    parser.add_argument('--list',
-                    help="List of comma separated files: scan,mask",
+    parser.add_argument('--ldd_estimate',
+                    help="Model estimation description (for example results_final.json)",
+                    dest='ldd_estimate')
+    
+    parser.add_argument('--model',
+                    help="Model estimation description (for example results_final.json)",
                     dest='ldd_estimate')
 
     parser.add_argument('--output',
                     help="Output prefix",
                     dest='output')
-
-    parser.add_argument('--model',
-                    help="initial model")
+                    
+    parser.add_argument('--int_par_count',
+                    help="Intensity paramters count",
+                    dest='int_par_count',
+                    type=int,default=None
+                    )
     
-    parser.add_argument('--mask',
-                    help="initial model mask")
-
-    parser.add_argument('--sym',
-                    action="store_true",
-                    dest="symmetric",
-                    default=False,
-                    help='Make symmetric model' )
-
-    parser.add_argument('--nl',
-                    action="store_true",
-                    dest="nonlinear",
-                    default=False,
-                    help='Make nonlinear model' )
-
     parser.add_argument('--debug',
                     action="store_true",
                     dest="debug",
@@ -67,6 +79,7 @@ def parse_options():
         action='store_true',
         default=False,
         )
+    
     
     parser.add_argument('--ray_start',type=int,
                         help='start local ray instance')
@@ -101,31 +114,7 @@ def main():
         else:
             ray.init(address='auto',log_to_driver=not options.quiet)
 
-    if options.nonlinear:
-        generate_nonlinear_model_csv('subjects.lst',
-            work_prefix=options.output,
-            options={'symmetric':options.symmetric,
-                     'protocol': [  {'iter':4,'level':16},
-                                    {'iter':4,'level':8},
-                                    {'iter':4,'level':4},
-                                    {'iter':4,'level':2},
-                                ],
-                     'cleanup': True,
-                     'refine': True
-                    },
-            model=options.model,
-            mask=options.mask,
-        )
-    else:
-        generate_linear_model_csv('subjects.lst',
-            work_prefix=options.output,
-            options={'symmetric':options.symmetric,
-                    'iterations':4,
-                    'cleanup': True,
-                     'refine': True
-                    },
-            model=options.model,
-            mask=options.mask,
-        )
+        parameters=[float(i) for i in options.parameters]
+        build_estimate_ldd(options.ldd_estimate, parameters, options.output, int_par_count=options.int_par_count)
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80;show-tabs on

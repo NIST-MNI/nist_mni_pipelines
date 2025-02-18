@@ -110,7 +110,7 @@ def qc(
     fg_color=None,
     style=None,
     crop=None,
-    range_pct=False,
+    percentile=False
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -140,7 +140,7 @@ def qc(
         fg_color -- foreground color
         style    -- name of the matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
         crop     -- Crop input image: [x1,x2,y1,y2,z1,z2]
-        range_pct -- image range is specified in percentiles
+        percentile - use percentile for image range
     """
     
     _img=minc2_file(input)
@@ -170,8 +170,12 @@ def qc(
             omin=np.nanmin(_ovl_data)
             omax=np.nanmax(_ovl_data)
         else:
-            omin=mask_range[0]
-            omax=mask_range[1]
+            if percentile:
+                omin=np.nanpercentile(_ovl_data, image_range[0])
+                omax=np.nanpercentile(_ovl_data, image_range[1])
+            else:
+                omin=mask_range[0]
+                omax=mask_range[1]
             ### set values below mask_range[0] to NaN
             _ovl_data[_ovl_data<omin]=math.nan
         _odata=_ovl_data
@@ -192,9 +196,10 @@ def qc(
     # setup ranges
     vmin=vmax=0.0
     if image_range is not None:
-        if range_pct:
-            vmin=np.nanpercentile(_idata,image_range[0])
-            vmax=np.nanpercentile(_idata,image_range[1])
+
+        if percentile:
+            vmin=np.nanpercentile(_idata, image_range[0])
+            vmax=np.nanpercentile(_idata, image_range[1])
         else:
             vmin=image_range[0]
             vmax=image_range[1]
@@ -472,7 +477,7 @@ def qc_field_contour(
 
 
 # register custom maps
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('red',
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('red',
     {'red':   ((0.0, 0.0, 0.0),
                 (1.0, 1.0, 1.0)),
 
@@ -486,7 +491,7 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('red',
                 (1.0, 1.0, 1.0))         
     }))
       
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('green', 
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('green', 
     {'green': ((0.0, 0.0, 0.0),
                 (1.0, 1.0, 1.0)),
 
@@ -500,7 +505,8 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('green',
                 (1.0, 1.0, 1.0))         
     }))
 
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue', 
+
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('blue', 
     {'blue':  ((0.0, 0.0, 0.0),
                 (1.0, 1.0, 1.0)),
 
@@ -514,7 +520,7 @@ plt.register_cmap(cmap=colors.LinearSegmentedColormap('blue',
                 (1.0, 1.0, 1.0))         
     }))
 
-plt.register_cmap(cmap=colors.LinearSegmentedColormap('spectral',
+matplotlib.colormaps.register(cmap=colors.LinearSegmentedColormap('spectral',
     {
         'red': [
             (0.0, 0.0, 0.0), (0.05, 0.4667, 0.4667),

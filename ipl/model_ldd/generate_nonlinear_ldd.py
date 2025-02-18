@@ -18,7 +18,7 @@ from .registration_ldd     import non_linear_register_step_ldd
 from .registration_ldd     import average_transforms_ldd
 from .resample_ldd         import concat_resample_ldd
 
-from scoop import futures, shared
+import ray
 
 def generate_ldd_average(
     samples,
@@ -107,8 +107,7 @@ def generate_ldd_average(
                         prev_transform = corr_transforms[i]
 
                     transforms.append(
-                        futures.submit(
-                            non_linear_register_step_ldd,
+                        non_linear_register_step_ldd.remote(
                             s,
                             current_model,
                             sample_xfm,

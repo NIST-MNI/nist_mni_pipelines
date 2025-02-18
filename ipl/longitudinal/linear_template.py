@@ -65,7 +65,7 @@ def pipeline_linearlngtemplate(patient):
 
             if not os.path.exists(modeloutline):
                 modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
-                outline_range=[1,1]
+                outline_range=[0.5,1]
                 mask_cmap='red'
 
             # qc linear template

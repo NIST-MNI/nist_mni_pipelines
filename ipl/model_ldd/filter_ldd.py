@@ -9,6 +9,9 @@ import copy
 from ipl.minc_tools import mincTools,mincError
 from .structures_ldd       import MriDataset, LDDMriTransform, LDDMRIEncoder,MriDatasetRegress
 
+import ray
+
+@ray.remote
 def generate_flip_sample(input):
     '''generate flipped version of sample'''
     with mincTools() as m:
@@ -17,7 +20,6 @@ def generate_flip_sample(input):
         if input.mask is not None:
             m.flip_volume_x(input.mask,input.mask_f,labels=True)
 
-        print("Flipped!")
     return True
 
 
@@ -42,7 +44,7 @@ def normalize_sample(
     return output
 
 
-
+@ray.remote
 def average_samples(
     samples,
     output,
@@ -92,6 +94,7 @@ def average_samples(
         traceback.print_exc(file=sys.stdout)
         raise
     
+@ray.remote
 def average_stats(
     avg,
     sd,

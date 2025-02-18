@@ -99,7 +99,7 @@ def pipeline_t1preprocessing(patient, tp):
 
     if not os.path.exists(modeloutline):
         modeloutline = patient.modeldir + os.sep + patient.modelname + '_outline.mnc'
-        outline_range=[1,1]
+        outline_range=[0.5,1]
         mask_cmap='red'
 
     if not os.path.exists(patient[tp].qc_jpg['stx_t1']):
@@ -216,12 +216,12 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
                                     threads=n_threads, dist=True,largest=True,
                                     ) # 
 
-        
         if out_qc is not None:
             minc_qc.qc(
                 in_t1w,
                 out_qc,
                 title=qc_title,
+                image_range=[0, 120],
                 mask=out_synthstrip,dpi=200,use_max=True,
                 samples=20,bg_color="black",fg_color="white"
                 )

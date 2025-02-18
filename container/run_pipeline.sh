@@ -51,7 +51,7 @@ function Usage {
   --- Optional parameters ---
     -u/--help                        :  show this usage
     --prl <int>                      :  number of parallel processes (default 4)
-    --threads <int>                  :  number of maximu threads per process (default 4), should be less then number of processes
+    --threads <int>                  :  number of maximum threads per process (default 4), should be less then number of processes
     --cleanup                        :  remove intermediate files to save disk space
     --fast                           :  run fast version of the pipeline, mostly for testing (rough nonlinear registration, no denoising)
 EOF
