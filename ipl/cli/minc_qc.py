@@ -50,16 +50,16 @@ def parse_options():
                     help="Main image range" )
     
     parser.add_argument("--percentile",
+                    action="store_true",
                     dest="percentile",
-                    action="store_true",
-                    default=False,
-                    help="Use range and mask_range specify percentiles" )
-
-    parser.add_argument("--percentile",
-                    action="store_true",
-                    dest="range_pct",
                     default=False,
                     help="Image range specied in percentiles [0-100]" )
+    
+    parser.add_argument("--mask_percentile",
+                    action="store_true",
+                    dest="mask_percentile",
+                    default=False,
+                    help="Mask range specied in percentiles [0-100]" )
 
     parser.add_argument("--mask_cmap",
                     dest="mask_cmap",
@@ -180,7 +180,8 @@ def main():
                 show_overlay_bar=options.mask_bar,
                 style=options.style,
                 crop=options.crop,
-                percentile=options.percentile
+                percentile=options.percentile,
+                mask_percentile=options.mask_percentile
                 )
     else:
         print("Refusing to run without input data, run --help")

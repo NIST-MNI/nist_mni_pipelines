@@ -427,6 +427,7 @@ def infer(input,
 
     # load classifier
     model_f=load_pfx + os.sep + f'{method}.pkl'
+    print(f"Loading classifier from {model_f}")
     clf = joblib.load(model_f) # TODO: use appropriate name
     if n_jobs is not None:
         clf.n_jobs = n_jobs
