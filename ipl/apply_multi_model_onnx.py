@@ -555,7 +555,8 @@ def segment_with_onnx(  in_scans,
     save_minc_volume(out_seg,dset_out, orig_aff, ref_fname=ref_file, history=history)
     return out_seg
 
-if __name__ == '__main__':
+
+def main():
     _history=format_history(sys.argv)
     params = parse_options()
     
@@ -615,5 +616,8 @@ if __name__ == '__main__':
       print("Run with --help")
    
 
+
+if __name__ == '__main__':
+    main()
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80
