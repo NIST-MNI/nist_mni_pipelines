@@ -110,7 +110,8 @@ def qc(
     fg_color=None,
     style=None,
     crop=None,
-    percentile=False
+    percentile=False,
+    mask_percentile=False
     ):
     """QC image generation, drop-in replacement for minc_qc.pl
     Arguments:
@@ -141,6 +142,7 @@ def qc(
         style    -- name of the matplotlib style, see https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html#sphx-glr-gallery-style-sheets-style-sheets-reference-py
         crop     -- Crop input image: [x1,x2,y1,y2,z1,z2]
         percentile - use percentile for image range
+        mask_percentile - use percentile for mask range
     """
     
     _img=minc2_file(input)
@@ -170,7 +172,7 @@ def qc(
             omin=np.nanmin(_ovl_data)
             omax=np.nanmax(_ovl_data)
         else:
-            if percentile:
+            if mask_percentile:
                 omin=np.nanpercentile(_ovl_data, image_range[0])
                 omax=np.nanpercentile(_ovl_data, image_range[1])
             else:
