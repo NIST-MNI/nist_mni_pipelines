@@ -99,7 +99,7 @@ def pipeline_classification(patient, tp):
         #             use_max=True,
         #             bg_color="black",
         #             fg_color="white",
-        #             mask_cmap="gray",cmap='red' )
+        #             mask_cmap="gray",image_cmap='red' )
         # else: # only show T1
         minc_qc.qc( 
                 patient[tp].stx2_mnc['t1'],
@@ -113,7 +113,8 @@ def pipeline_classification(patient, tp):
                 use_max=True,
                 bg_color="black",
                 fg_color="white",
-                mask_cmap="green",cmap='red' )
+                mask_cmap="green",
+                image_cmap='red' )
     return True
 
 
