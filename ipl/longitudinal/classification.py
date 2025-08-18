@@ -110,11 +110,11 @@ def pipeline_classification(patient, tp):
                 mask=patient[tp].stx2_mnc['wmh'],
                 dpi=200,
                 samples=20, 
-                use_max=True,
+                use_over=True,
                 bg_color="black",
                 fg_color="white",
-                mask_cmap="green",
-                image_cmap='red' )
+                mask_cmap="red",
+                image_cmap='gray' )
     return True
 
 
