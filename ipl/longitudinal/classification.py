@@ -77,12 +77,43 @@ def pipeline_classification(patient, tp):
                 title=patient[tp].qc_title, 
                 mask_range=[0.5,3.5],
                 image_range=[0,120],
-                mask=patient[tp].stx2_mnc['classification'],dpi=200,
+                mask=patient[tp].stx2_mnc['classification'],
+                dpi=200,
                 samples=20, 
                 use_max=True,
                 bg_color="black",
                 fg_color="white",
                 mask_cmap="jet" )
+    
+    if patient.wmh_bison_pfx is not None: # generate WMH QC
+        # if patient.mri3T and 'flair' in patient[tp].native: # include FLAIR
+        #     minc_qc.qc( 
+        #             patient[tp].stx2_mnc['t1'],
+        #             patient[tp].qc_jpg['wmh'],
+        #             title=patient[tp].qc_title, 
+        #             mask_range=[0.5,1.1],
+        #             image_range=[0,120],
+        #             mask=patient[tp].stx2_mnc['wmh'],
+        #             dpi=200,
+        #             samples=20, 
+        #             use_max=True,
+        #             bg_color="black",
+        #             fg_color="white",
+        #             mask_cmap="gray",cmap='red' )
+        # else: # only show T1
+        minc_qc.qc( 
+                patient[tp].stx2_mnc['t1'],
+                patient[tp].qc_jpg['wmh'],
+                title=patient[tp].qc_title, 
+                mask_range=[0.9,1.1],
+                image_range=[0,120],
+                mask=patient[tp].stx2_mnc['wmh'],
+                dpi=200,
+                samples=20, 
+                use_max=True,
+                bg_color="black",
+                fg_color="white",
+                mask_cmap="green",cmap='red' )
     return True
 
 

@@ -683,6 +683,8 @@ def setFilenames(patient):
 
         patient[tp].qc_jpg['classification'] = patient.qcdir \
             + 'qc_cls_' + patient.id + '_' + tp + '.jpg'
+        patient[tp].qc_jpg['wmh'] = patient.qcdir \
+            + 'qc_wmh_' + patient.id + '_' + tp + '.jpg'
         patient[tp].qc_jpg['lobes'] = patient.qcdir + 'qc_lob_' \
             + patient.id + '_' + tp + '.jpg'
 
