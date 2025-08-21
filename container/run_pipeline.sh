@@ -22,10 +22,11 @@ progname=$(basename $0)
 
 MAJOR_VERSION=0
 MINOR_VERSION=2
-MICRO_VERSION=0
+MICRO_VERSION=4
 # this version relies much more on the priors
 ver=${MAJOR_VERSION}.${MINOR_VERSION}.${MICRO_VERSION}
 
+# default parameters
 function Usage {
   cat <<EOF
 
@@ -54,6 +55,8 @@ function Usage {
     --threads <int>                  :  number of maximum threads per process (default 4), should be less then number of processes
     --cleanup                        :  remove intermediate files to save disk space
     --fast                           :  run fast version of the pipeline, mostly for testing (rough nonlinear registration, no denoising)
+    --nl <step>                      :  nonlinear registration step (default 1.0)
+    --batch <n>                      :  batch size for ray (default 4)
 EOF
 }
 if [[ $# -eq 0 ]]; then Usage; exit 1; fi
@@ -73,6 +76,8 @@ while  [[ $# -gt 0 ]]; do
   elif [[ $1 = --dbm ]]; then DBM=YES; shift
   elif [[ $1 = --fast ]]; then FAST=YES; shift
   elif [[ $1 = --large_atrophy ]]; then LARGE_ATROPHY=YES; shift
+  elif [[ $1 = --nl    ]]; then NL=$2;shift 2;
+  elif [[ $1 = --batch ]]; then BATCH=$2;shift 2;
   else
     args=( ${args[@]} $1 )
     shift
@@ -91,6 +96,7 @@ if [[ -z $out_pfx ]]; then
   exit 1
 fi
 
+#set default parameters if not set
 PRL=${PRL:-4}
 THREADS=${THREADS:-4}
 FIELD=${FIELD:-3}
@@ -99,6 +105,8 @@ VBM=${VBM:-NO}
 DBM=${DBM:-NO}
 FAST=${FAST:-NO}
 LARGE_ATROPHY=${LARGE_ATROPHY:-NO}
+NL=${NL:-1.0}
+BATCH=${BATCH:-4}
 ########
 
 if [[ $CLEANUP == YES ]];then
@@ -110,7 +118,7 @@ fi
 if [[ $FAST == YES ]];then
     fast_par="--nl_step 4.0 "
 else
-    fast_par="--denoise  --nl_step 1.0 "
+    fast_par="--denoise  --nl_step $NL "
 fi
 
 if [[ $VBM == YES ]];then
@@ -145,12 +153,13 @@ python /opt/pipeline/ipl_longitudinal_pipeline.py \
     --model-name=mni_icbm152_t1_tal_nlin_sym_09c  \
     --ray_start $PRL \
     --threads $THREADS \
+    --ray_batch $BATCH \
     --nl_ants \
     --nl_cost_fun CC \
     --bison_pfx /opt/models/ipl_bison_1.3.0 \
     --bison_method  HGB1 \
     --wmh_bison_pfx /opt/models/wmh_bison_1.3.0 \
     --wmh_bison_method HGB1 \
-    --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx \
+    --redskull_onnx /opt/models/redskull/redskull_fp.onnx \
+    --redskull_native \
     $CLEANUP
-
