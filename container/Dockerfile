@@ -1,4 +1,5 @@
-FROM ghcr.io/mamba-org/micromamba:2.0.2-ubuntu20.04 as builder
+#FROM ghcr.io/mamba-org/micromamba:2.0.2-ubuntu20.04 as builder
+FROM mambaorg/micromamba:2.3.1 AS builder
 
 # add some packages 
 #USER root
@@ -36,7 +37,7 @@ USER root
 RUN mkdir /opt/pipeline  && \
     chown $MAMBA_USER:$MAMBA_USER -R /opt/pipeline
 
-COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines_0.2.03.beta.tar.gz /tmp/nist_mni_pipelines.tar.gz
+COPY --chown=$MAMBA_USER:$MAMBA_USER nist_mni_pipelines_0.2.04.3.beta.tar.gz /tmp/nist_mni_pipelines.tar.gz
 USER $MAMBA_USER
 RUN tar -xzvf /tmp/nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1 && \
     rm -f /tmp/nist_mni_pipelines.tar.gz
@@ -52,7 +53,7 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER run_pipeline.sh /opt/pipeline/
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/icbm152_model_09c   /opt/models/icbm152_model_09c
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0     /opt/models/ipl_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0     /opt/models/wmh_bison_1.3.0
-COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip          /opt/models/synthstrip
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/redskull            /opt/models/redskull
 
 # Distroless for execution
 # FROM gcr.io/distroless/base-debian12

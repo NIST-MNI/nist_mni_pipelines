@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-ver=0.2.03
+ver=0.2.04
 
 FIELD=1.5
 PRL=4

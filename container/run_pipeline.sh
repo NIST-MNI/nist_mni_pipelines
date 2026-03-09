@@ -43,6 +43,7 @@ function Usage {
 
     --field <string>                 :  1.5 or 3 (default 3) scanner field strength
     --large_atrophy                  :  assume large atrophy
+    --denoise                        :  apply denoising
 
   --- output data ---
     --out <output dir>              :  output directory
@@ -74,7 +75,7 @@ while  [[ $# -gt 0 ]]; do
   elif [[ $1 = --cleanup ]]; then CLEANUP=YES; shift
   elif [[ $1 = --vbm ]]; then VBM=YES; shift
   elif [[ $1 = --dbm ]]; then DBM=YES; shift
-  elif [[ $1 = --fast ]]; then FAST=YES; shift
+  elif [[ $1 = --denoise ]]; then DENOISE="--denoise"; shift
   elif [[ $1 = --large_atrophy ]]; then LARGE_ATROPHY=YES; shift
   elif [[ $1 = --nl    ]]; then NL=$2;shift 2;
   elif [[ $1 = --batch ]]; then BATCH=$2;shift 2;
@@ -103,7 +104,6 @@ FIELD=${FIELD:-3}
 CLEANUP=${CLEANUP:-NO}
 VBM=${VBM:-NO}
 DBM=${DBM:-NO}
-FAST=${FAST:-NO}
 LARGE_ATROPHY=${LARGE_ATROPHY:-NO}
 NL=${NL:-1.0}
 BATCH=${BATCH:-4}
@@ -113,12 +113,6 @@ if [[ $CLEANUP == YES ]];then
     CLEANUP=--cleanup
 else
     CLEANUP=
-fi
-
-if [[ $FAST == YES ]];then
-    fast_par="--nl_step 4.0 "
-else
-    fast_par="--denoise  --nl_step $NL "
 fi
 
 if [[ $VBM == YES ]];then
