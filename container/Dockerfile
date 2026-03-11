@@ -1,5 +1,5 @@
 #FROM ghcr.io/mamba-org/micromamba:2.0.2-ubuntu20.04 as builder
-FROM mambaorg/micromamba:2.3.1 AS builder
+FROM mambaorg/micromamba:2.5.0 AS builder
 
 # add some packages 
 #USER root
@@ -13,12 +13,13 @@ FROM mambaorg/micromamba:2.3.1 AS builder
 #     chown $MAMBA_USER:$MAMBA_USER -R /opt/models /opt/pipeline 
 
 USER $MAMBA_USER
-COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml
+# 1.9.18.8
+COPY --chown=$MAMBA_USER:$MAMBA_USER env.yaml /tmp/env.yaml 
 RUN --mount=type=cache,target=/opt/conda/pkgs \
     micromamba install -y -n base -f /tmp/env.yaml
 
 RUN micromamba clean --all --yes && \
-    rm -f /tmp/env.yaml
+    rm -f /tmp/env.yaml # 1.9.18.8
 
 
 # Download and install nist_mni_pipelines
@@ -54,6 +55,8 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER models/icbm152_model_09c   /opt/models/icbm
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/ipl_bison_1.3.0     /opt/models/ipl_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/wmh_bison_1.3.0     /opt/models/wmh_bison_1.3.0
 COPY --chown=$MAMBA_USER:$MAMBA_USER models/redskull            /opt/models/redskull
+COPY --chown=$MAMBA_USER:$MAMBA_USER models/synthstrip          /opt/models/
+
 
 # Distroless for execution
 # FROM gcr.io/distroless/base-debian12

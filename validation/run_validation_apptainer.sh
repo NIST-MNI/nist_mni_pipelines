@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-ver=0.2.03
+ver=0.2.05
 
 FIELD=1.5
 PRL=4
@@ -29,5 +29,3 @@ apptainer run \
     --compat -e --net --network none \
     --env FIELD=$FIELD,PRL=$PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
     ../container/nist_pipeline_${ver}.sif  --csv subject43.csv  --out ${out}
-
-

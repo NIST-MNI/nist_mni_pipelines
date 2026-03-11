@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-ver=0.2.04
+ver=0.2.05
 
 FIELD=1.5
 PRL=4
@@ -24,5 +24,5 @@ END
 mkdir -p $out
 
 docker run --rm --shm-size=10gb -v $(pwd):/data -w /data --user $(id -u):$(id -g) \
-	--env PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
+	--env FIELD=$FIELD,PRL=$PRL,THREADS=$THREADS,RAY_memory_monitor_refresh_ms=0,CLEANUP=$CLEANUP \
          nistmni/nist_mni_pipeline:${ver} --csv subject43.csv --out output_docker_${ver}

@@ -153,15 +153,15 @@ def parse_tags(tag):
             line=line.rstrip('\r\n')
             
             if not started:
-                m = re.match(".*Volumes = (\S)",line)
+                m = re.match(r".*Volumes = (\S)",line)
                 
-                if re.match(".*Points =",line): 
+                if re.match(r".*Points =",line): 
                     started=True
                     continue
                 elif m is not None : 
                     volumes=int(m.group(1))
             else:
-                if re.match('.*;',line) is not None: # this is the last line
+                if re.match(r'.*;',line) is not None: # this is the last line
                     line=line.replace(';','')
                     # last line?
                 c=line.split(' ')
@@ -223,9 +223,9 @@ def lin_xfm_to_elastix(xfm,elastix_par):
         
         with open(minc.tmp('input.txt'),'r') as f:
             for ln in f:
-                if re.match('^Parameters: ', ln):
+                if re.match(r'^Parameters: ', ln):
                     param=ln.split(' ')
-                if re.match('^FixedParameters: ', ln):
+                if re.match(r'^FixedParameters: ', ln):
                     fix_param=ln.split(' ')
         param.pop(0)
         fix_param.pop(0)
@@ -530,7 +530,7 @@ def register_elastix(
                         # going to read the output of iterations
                         out_=minc.execute_w_output(cmd).split("\n")
                         for l,j in enumerate(out_):
-                            if re.match("^1\:ItNr\s2\:Metric\s.*",j):
+                            if re.match(r"^1\:ItNr\s2\:Metric\s.*",j):
                                 outcome=float(out_[l+1].split("\t")[1])
                                 break
                         else:

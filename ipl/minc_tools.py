@@ -1408,11 +1408,11 @@ class mincTools(temp_files):
         try:
             (out, err) = subprocess.Popen(['xfm2param', input],
                     stdout=subprocess.PIPE).communicate()
-            scale_ = list(filter(lambda x: re.match('^\-scale', x),
+            scale_ = list(filter(lambda x: re.match(r'^\-scale', x),
                             out.decode().split('\n')))
             if len(scale_) != 1:
                 raise mincError("Can't extract scale from " + input)
-            scale__ = re.split('\s+', scale_[0])
+            scale__ = re.split(r'\s+', scale_[0])
             cmd = ['param2xfm']
             cmd.extend(scale__)
             cmd.extend([scale])
@@ -1999,7 +1999,7 @@ class mincTools(temp_files):
 
         out=self.execute_w_output(['xfm2param', input])
         
-        params_=[ [ float(k) if s>0 else k for s,k in enumerate(re.split('\s+', l))] for l in out.split('\n') if re.match('^\-', l) ]
+        params_=[ [ float(k) if s>0 else k for s,k in enumerate(re.split(r'\s+', l))] for l in out.split('\n') if re.match(r'^\-', l) ]
             
         return { k[0][1:] :[k[1],k[2],k[3]] for k in params_ }
         

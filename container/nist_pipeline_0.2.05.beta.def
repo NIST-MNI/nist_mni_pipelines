@@ -1,22 +1,25 @@
 Bootstrap: docker
-From: ghcr.io/mamba-org/micromamba:2.0.2-ubuntu20.04
-
+From: mambaorg/micromamba:2.5.0
 
 %files
     env.yaml
-    nist_mni_pipelines_0.2.03.beta.tar.gz /nist_mni_pipelines.tar.gz
-    run_pipeline.sh            /opt/pipeline/
+    nist_mni_pipelines_0.2.04.3.beta.tar.gz /nist_mni_pipelines.tar.gz
+    run_pipeline.sh            /run_pipeline.sh
     models/icbm152_model_09c   /opt/models/
     models/ipl_bison_1.3.0     /opt/models/
     models/wmh_bison_1.3.0     /opt/models/
     models/synthstrip          /opt/models/
+    models/redskull            /opt/models/
 
 %post
     micromamba install -q -y -n base -f /env.yaml
     micromamba clean --all --yes
     rm -f  /env.yaml
+    mkdir -p /opt/pipeline
     tar -xzvf /nist_mni_pipelines.tar.gz -C /opt/pipeline --strip-components=1 
-    rm -f /nist_mni_pipelines.tar.gz
+    cp /run_pipeline.sh /opt/pipeline/
+    rm -f /nist_mni_pipelines.tar.gz /run_pipeline.sh 
+
 
 %environment
     #export PYTHONPATH=/opt/pipeline
