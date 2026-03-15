@@ -709,9 +709,9 @@ def main():
 
     if opts.ray_start is not None: # HACK?
         ray.init(num_cpus=opts.ray_start,log_to_driver=not opts.quiet)
-        if opts.threads>opts.rays_start:
-            print(f"Warning: threads {opts.threads} > parallel {opts.rays_start}")
-            opts.threads=opts.rays_start
+        if opts.threads>opts.ray_start:
+            print(f"Warning: threads {opts.threads} > parallel {opts.ray_start}")
+            opts.threads=opts.ray_start
 
     elif opts.ray_local:
         ray.init(local_mode=True,log_to_driver=not opts.quiet)
