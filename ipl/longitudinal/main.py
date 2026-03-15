@@ -47,6 +47,55 @@ from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 import ray
 
 
+def _convert_nifti_inputs(patient):
+    """Convert any NIfTI input files in patient[tp].native to MINC in-place."""
+    for tp in patient.keys():
+        nii_dir = os.path.join(patient[tp].tpdir, 'nii_input', '')
+        os.makedirs(nii_dir, exist_ok=True)
+        for seq in list(patient[tp].native.keys()):
+            src = patient[tp].native[seq]
+            if not isinstance(src, str):
+                continue
+            if src.endswith('.nii.gz'):
+                mnc_name = os.path.basename(src)[:-7] + '.mnc'
+            elif src.endswith('.nii'):
+                mnc_name = os.path.basename(src)[:-4] + '.mnc'
+            else:
+                continue
+            mnc_path = nii_dir + mnc_name
+            with mincTools() as minc:
+                minc.nii2mnc(src, mnc_path)
+            patient[tp].native[seq] = mnc_path
+
+
+def _mnc_to_nii_gz(path):
+    """Derive .nii.gz path from a .mnc path."""
+    return path[:-4] + '.nii.gz'
+
+
+_SKIP_KEYS = {'xfm', 'ixfm', 'grid', 'igrid'}
+
+
+def _convert_outputs_to_nifti(patient):
+    """Convert all final .mnc image outputs to .nii.gz."""
+    def convert_dict(d, skip_keys=_SKIP_KEYS):
+        for key, path in d.items():
+            if key in skip_keys:
+                continue
+            if isinstance(path, str) and path.endswith('.mnc') and os.path.exists(path):
+                with mincTools() as minc:
+                    minc.mnc2nii(path, _mnc_to_nii_gz(path))
+                os.unlink(path)
+
+    for tp in patient.keys():
+        convert_dict(patient[tp].stx2_mnc)
+        convert_dict(patient[tp].vbm)
+        convert_dict(patient[tp].lng_det)
+
+    # Patient-level template images (.xfm entries skipped by .mnc extension check)
+    convert_dict(patient.template)
+
+
 @ray.remote
 def runTimePoint_FirstStageA(tp, patient):
     '''
@@ -244,6 +293,7 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             patient = LngPatient.read(pickle)
 
         setFilenames(patient)
+        _convert_nifti_inputs(patient)
 
         if workdir is not None:
             patient.workdir=workdir
@@ -303,6 +353,9 @@ def runPipeline(pickle=None, patient=None, workdir=None):
         else:
             # no need to write it, if we will cleanup
             patient.write(patient.pickle)  # copy new images in the pickle
+
+        if getattr(patient, 'output_nifti', False):
+            _convert_outputs_to_nifti(patient)
 
         return patient.id
     except mincError as e:

@@ -1,0 +1,5 @@
+subject,visit,t1w,t2w,pdw,age,sex
+subject43,1,subject43_nifti/subject43_1_t1w.nii.gz,subject43_nifti/subject43_1_t2w.nii.gz,subject43_nifti/subject43_1_pdw.nii.gz,28.5,Male
+subject43,2,subject43_nifti/subject43_2_t1w.nii.gz,subject43_nifti/subject43_2_t2w.nii.gz,subject43_nifti/subject43_2_pdw.nii.gz,28.5,Male
+subject43,3,subject43_nifti/subject43_3_t1w.nii.gz,subject43_nifti/subject43_3_t2w.nii.gz,subject43_nifti/subject43_3_pdw.nii.gz,28.5,Male
+subject43,4,subject43_nifti/subject43_4_t1w.nii.gz,subject43_nifti/subject43_4_t2w.nii.gz,subject43_nifti/subject43_4_pdw.nii.gz,28.5,Male

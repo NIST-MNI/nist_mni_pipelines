@@ -81,6 +81,7 @@ class LngPatient(dict):
         self.vbm_options = {} # VBM options
         self.threads = 1 # number of threads to use per patient
         self.do_cleanup = False # remove intermediate files
+        self.output_nifti = False  # convert final outputs to .nii.gz
 
         # Tissue classification BISON (GM,WM,CSF)
         self.bison_pfx = None # BISON model prefix
@@ -180,6 +181,11 @@ class LngPatient(dict):
             LngPatient._remove_file(self[tp].stx_ns_mnc)
             # lng space
             LngPatient._remove_file(self[tp].lng_mnc)
+
+            # remove converted NIfTI inputs
+            nii_input_dir = os.path.join(self[tp].tpdir, 'nii_input')
+            if os.path.exists(nii_input_dir):
+                shutil.rmtree(nii_input_dir)
 
             # remove extraneous QC files ?
             # for s in self[tp].native.keys():

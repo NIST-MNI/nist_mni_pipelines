@@ -115,6 +115,7 @@ def setup_patient(id, options):
 
     patient.nl_cost_fun = options.nl_cost_fun
     patient.do_cleanup = options.cleanup
+    patient.output_nifti = options.output_nifti
 
     # end of creating a patient
     return patient
@@ -689,8 +690,14 @@ def parse_options():
                      help='Fast mode : quick & dirty mostly for testing pipeline', 
                      action='store_true')
     
-    group.add_argument('--cleanup', 
-                     help='Remove intermediate files to save disk space', 
+    group.add_argument('--cleanup',
+                     help='Remove intermediate files to save disk space',
+                     action='store_true',
+                     default=False)
+
+    group.add_argument('--output-nifti',
+                     dest='output_nifti',
+                     help='Convert all final .mnc image outputs to .nii.gz',
                      action='store_true',
                      default=False)
 
