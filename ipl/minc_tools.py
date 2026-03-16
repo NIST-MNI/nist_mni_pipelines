@@ -2030,6 +2030,9 @@ class mincTools(temp_files):
             cmd.append(str(max_connect))
         self.command(cmd, inputs=[input],outputs=[output], verbose=self.verbose)
 
+    def fill_holes(self,input,output,label=1):
+        cmd = ['mincmorph', '-succ', f'B[{label}:{label}:0:1]GB[1:1:0:1]', input, output, '-clob']
+        self.command(cmd, inputs=[input],outputs=[output], verbose=self.verbose)
 
     def winsorize_intensity(self,input,output,pct1=1,pct2=95):
         # obtain percentile
