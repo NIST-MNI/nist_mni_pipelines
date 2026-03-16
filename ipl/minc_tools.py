@@ -2031,8 +2031,21 @@ class mincTools(temp_files):
         self.command(cmd, inputs=[input],outputs=[output], verbose=self.verbose)
 
     def fill_holes(self,input,output,label=1):
-        cmd = ['mincmorph', '-succ', f'B[{label}:{label}:0:1]GB[1:1:0:1]', input, output, '-clob']
+        cmd = ['mincmorph', '-succ', f'B[{label}:{label}:1:0]GB[1:1:0:1]GB[1:1:0:1]', input, output, '-clob']
         self.command(cmd, inputs=[input],outputs=[output], verbose=self.verbose)
+
+    def crop(self,input,output,crop=1):
+        i = subprocess.Popen(['mincinfo', '-dimlength', 'xspace',
+                                          '-dimlength', 'yspace',
+                                          '-dimlength', 'zspace', 
+                              input],
+                             stdout=subprocess.PIPE).communicate()
+        dims = [int(j) for j in i[0].decode().split('\n')[:3]]
+        self.command(['mincreshape', 
+                   '-dimrange', f'xspace={crop},{dims[0]-crop*2}',
+                   '-dimrange', f'yspace={crop},{dims[1]-crop*2}',
+                   '-dimrange', f'zspace={crop},{dims[2]-crop*2}',
+                  input, output, '-quiet'], inputs=[input],outputs=[output],verbose=self.verbose)
 
     def winsorize_intensity(self,input,output,pct1=1,pct2=95):
         # obtain percentile

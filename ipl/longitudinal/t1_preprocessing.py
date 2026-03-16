@@ -183,7 +183,10 @@ def run_redskull_onnx(in_t1w, out_redskull,
 
             minc.calc([out_redskull],'abs(A[0]-1)<0.5?1:0', 
                 minc.tmp("brain.mnc"), labels=True)
-            minc.fill_holes(minc.tmp("brain.mnc"),out_brain_mask)
+            minc.fill_holes(minc.tmp("brain.mnc"), minc.tmp("brain_filled.mnc"))
+            minc.crop(minc.tmp("brain_filled.mnc"),minc.tmp("brain1.mnc"),crop=1)
+            minc.resample_labels(minc.tmp("brain1.mnc"),out_brain_mask,like=in_t1w,order=0)
+            #minc.zero_border(minc.tmp("brain1.mnc"),out_brain_mask)
 
         # generate unscaling transform
         if unscale_xfm is not None:
