@@ -36,7 +36,7 @@ def parse_options():
                         help='Output probabilities' )
     
     parser.add_argument('--onnx', action="store_true",
-                        dest="prob",
+                        dest="onnx",
                         default=False,
                         help='Use ONNX: output classifier in ONNX format, or run inference in ONNX' )
 
