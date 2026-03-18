@@ -444,8 +444,8 @@ def infer(input,
     if progress:print(f"Processing {nsamp} volumes, batch size:{batch}...",flush=True)
     for b in range(math.ceil(nsamp/batch)):
         infer_sub = get_batch(input, b, batch)
-        infer_vol = load_all_volumes(infer_sub, 
-                        n_cls, 
+        infer_vol = load_all_volumes(infer_sub,
+                        n_cls,
                         modalities=modalities,
                         resample=resample,
                         atlas_pfx=atlas_pfx,
@@ -457,10 +457,9 @@ def infer(input,
             X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
             if use_onnx:
                 ort_inputs = {ort_session.get_inputs()[0].name: X_.astype(np.float32)}
-                out_prob = ort_session.run(None, ort_inputs)[0]
-                out = np.argmax(out_prob, axis=1)
+                out = ort_session.run(None, ort_inputs)[0]
             else:
-                out  = clf.predict(X_)
+                out = clf.predict(X_)
 
             if 'output' in input:
                 out_cls = input['output'][i]
@@ -473,16 +472,16 @@ def infer(input,
                 # saving probabilites
                 if use_onnx:
                     ort_inputs = {ort_session.get_inputs()[0].name: X_.astype(np.float32)}
-                    out_p = ort_session.run(None, ort_inputs)[0]
+                    out_p = ort_session.run(None, ort_inputs)[1]
                 else:
                     out_p = clf.predict_proba(X_)
-                
+
                 for c in range(out_p.shape[1]):
                     out_cls_p = out_cls.rsplit('.',1)[0] + f'_p{c}.mnc'
 
                     if progress: print("Saving:", out_cls_p, flush=True)
                     save_cnt(out_cls_p, input['mask'][i], out_p[:,c], mask=infer_vol['mask'][i])
-        
+
         if progress: print(f"{b}\t",flush=True,end='')
     if progress:print("")
     # done
@@ -574,14 +573,13 @@ def run_cv(CV, sample_vol,
             onnx_model = convert_sklearn(clf, initial_types=initial_type) # target_opset=18 ?
             import onnxruntime as ort
             ort_session = ort.InferenceSession(onnx_model.SerializeToString())
-        
+            
         print("Classifying test set:",te_s)
         for x,y,s in zip(te_X,te_Y,te_s):
             # run CV through ONNX for inference to be version independent
             if use_onnx:
                 ort_inputs = {ort_session.get_inputs()[0].name: x.astype(np.float32)}
-                out_prob = ort_session.run(None, ort_inputs)[0]
-                te_out = np.argmax(out_prob, axis=1)
+                te_out = ort_session.run(None, ort_inputs)[0]
             else:
                 te_out  = clf.predict(x)
 
