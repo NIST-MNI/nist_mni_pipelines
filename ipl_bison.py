@@ -34,6 +34,11 @@ def parse_options():
                         dest="prob",
                         default=False,
                         help='Output probabilities' )
+    
+    parser.add_argument('--onnx', action="store_true",
+                        dest="prob",
+                        default=False,
+                        help='Use ONNX: output classifier in ONNX format, or run inference in ONNX' )
 
     parser.add_argument('--method',
                         choices=['RF-','RF0','RF1','RF2','RF3','NB','SVC','oSVC','LDA','QDA','HGB1','HGB2'],
@@ -150,12 +155,13 @@ if __name__ == "__main__":
         if options.CV is not None:
             run_cv(options.CV, sample_vol, random=options.random, 
                    method=options.method,output=options.output,
-                   clf=clf, n_cls=n_cls )
+                   clf=clf, n_cls=n_cls,use_onnx=options.onnx)
         else:
             train(sample_vol, random=options.random, 
                   method=options.method,
                   output=options.output, 
-                  clf=clf, n_cls=n_cls )
+                  clf=clf, n_cls=n_cls, 
+                  onnx_output=options.onnx)
 
     elif options.infer is not None and \
          options.output is not None and \
@@ -169,7 +175,8 @@ if __name__ == "__main__":
           load_pfx=options.load, atlas_pfx=options.atlas_pfx, 
           inverse_xfm=options.inverse_xfm,
           output=options.output, prob=options.prob,
-          progress=True)
+          progress=True,
+          use_onnx=options.onnx)
     else:
         print("Error in arguments, run with --help")
         exit(1)

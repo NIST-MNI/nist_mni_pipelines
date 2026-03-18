@@ -393,7 +393,8 @@ def infer(input,
           atlases=None,
           inverse_xfm=False,
           output=None,prob=False,
-          progress=False):
+          progress=False,
+          use_onnx=False):
     # recoginized headers:
     # t1,t2,pd,flair,ir
     # pCls<n>,labels,mask
@@ -426,9 +427,16 @@ def infer(input,
             raise Error(f'p{i+1} is missing')
 
     # load classifier
-    model_f=load_pfx + os.sep + f'{method}.pkl'
-    print(f"Loading classifier from {model_f}")
-    clf = joblib.load(model_f) # TODO: use appropriate name
+    if use_onnx:
+        import onnxruntime as ort
+        model_f=load_pfx + os.sep + f'{method}.onnx'
+        print(f"Loading ONNX classifier from {model_f}")
+        ort_session = ort.InferenceSession(model_f)
+    else:
+        model_f=load_pfx + os.sep + f'{method}.pkl'
+        print(f"Loading classifier from {model_f}")
+        clf = joblib.load(model_f) # TODO: use appropriate name
+
     if n_jobs is not None:
         clf.n_jobs = n_jobs
 
@@ -447,7 +455,12 @@ def infer(input,
         
         for i,subj in enumerate( infer_vol['subject'] ):
             X_, _  = load_XY_item(i, infer_vol, hist, n_cls, n_bins)
-            out  = clf.predict(X_)
+            if use_onnx:
+                ort_inputs = {ort_session.get_inputs()[0].name: X_.astype(np.float32)}
+                out_prob = ort_session.run(None, ort_inputs)[0]
+                out = np.argmax(out_prob, axis=1)
+            else:
+                out  = clf.predict(X_)
 
             if 'output' in input:
                 out_cls = input['output'][i]
@@ -458,7 +471,12 @@ def infer(input,
             save_labels(out_cls, input['mask'][i], out, mask=infer_vol['mask'][i])
             if prob:
                 # saving probabilites
-                out_p = clf.predict_proba(X_)
+                if use_onnx:
+                    ort_inputs = {ort_session.get_inputs()[0].name: X_.astype(np.float32)}
+                    out_p = ort_session.run(None, ort_inputs)[0]
+                else:
+                    out_p = clf.predict_proba(X_)
+                
                 for c in range(out_p.shape[1]):
                     out_cls_p = out_cls.rsplit('.',1)[0] + f'_p{c}.mnc'
 
@@ -473,7 +491,7 @@ def infer(input,
 def train(sample_vol, 
           random=None, method=None, 
           output=None, 
-          clf=None, n_cls=None, 
+          clf=None, n_cls=None, onnx_output=False,
           n_bins=256, modalities=bison_modalities):
     # 1st stage : estimage intensity histograms
     hist = estimate_all_histograms(sample_vol, n_cls, n_bins, modalities=modalities)
@@ -490,10 +508,26 @@ def train(sample_vol,
     path_save_classifier = output + os.sep + f'{method}.pkl' # TODO: use appropriate name 
     print("Saving results to ", path_save_classifier)
     joblib.dump(clf, path_save_classifier)
+    # export in ONNX format for use in other environments to be version independent
+    if onnx_output:
+        import skl2onnx
+        from skl2onnx import convert_sklearn
+        from skl2onnx.common.data_types import FloatTensorType
+
+        initial_type = [('float_input', FloatTensorType([None, X.shape[1]]))]
+        onnx_model = convert_sklearn(clf, initial_types=initial_type) # target_opset=18 ?
+        onnx_path = output + os.sep + f'{method}.onnx'
+        print("Saving ONNX model to ", onnx_path)
+        with open(onnx_path, "wb") as f:
+            f.write(onnx_model.SerializeToString())
 
 
 def run_cv(CV, sample_vol, 
-           random=None, method=None, output=None,clf=None, n_cls=None, n_bins=256, modalities=bison_modalities):
+           random=None, method=None, output=None,clf=None, 
+           n_cls=None, n_bins=256, 
+           modalities=bison_modalities,
+           use_onnx=False):
+    
     assert(method is not None)
     assert(n_cls is not None)
 
@@ -531,10 +565,26 @@ def run_cv(CV, sample_vol,
 
         print("Training classifier")
         clf = clf.fit(tr_X , tr_Y)
+        if use_onnx: # pass through ONNX for inference to be version independent
+            import skl2onnx
+            from skl2onnx import convert_sklearn
+            from skl2onnx.common.data_types import FloatTensorType
+
+            initial_type = [('float_input', FloatTensorType([None, tr_X.shape[1]]))]
+            onnx_model = convert_sklearn(clf, initial_types=initial_type) # target_opset=18 ?
+            import onnxruntime as ort
+            ort_session = ort.InferenceSession(onnx_model.SerializeToString())
         
         print("Classifying test set:",te_s)
         for x,y,s in zip(te_X,te_Y,te_s):
-            te_out  = clf.predict(x)
+            # run CV through ONNX for inference to be version independent
+            if use_onnx:
+                ort_inputs = {ort_session.get_inputs()[0].name: x.astype(np.float32)}
+                out_prob = ort_session.run(None, ort_inputs)[0]
+                te_out = np.argmax(out_prob, axis=1) + 1
+            else:
+                te_out  = clf.predict(x)
+
             for c in range(n_cls):
                 gt = (y      == (c+1))
                 sa = (te_out == (c+1))
