@@ -581,7 +581,7 @@ def run_cv(CV, sample_vol,
             if use_onnx:
                 ort_inputs = {ort_session.get_inputs()[0].name: x.astype(np.float32)}
                 out_prob = ort_session.run(None, ort_inputs)[0]
-                te_out = np.argmax(out_prob, axis=1) + 1
+                te_out = np.argmax(out_prob, axis=1)
             else:
                 te_out  = clf.predict(x)
 
