@@ -106,7 +106,7 @@ class LngPatient(dict):
 
         # patient data
         self.id = id  # subject id
-        self.sex = ''  # subject gender
+        self.sex = ''  # subject sex
         self.clinicaldata = {}  # additional info
 
         # common processing
@@ -286,7 +286,6 @@ class TP:
 
         self.tp = visit  # visit name
         self.age = 0  # age of visit
-        self.sex = None  # patient's sex
         self.clinicaldata = {}  # additional info for the timepoint
         self.tpdir = ''  # timepoint directory
 

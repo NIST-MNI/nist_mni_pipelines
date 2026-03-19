@@ -17,14 +17,23 @@ import argparse
 
 from ipl.longitudinal.general            import *  # functions to call binaries and general functions
 from ipl.longitudinal.patient            import *  # class to store all the data
+import logging
 
 
 from ipl.minc_tools import mincTools,mincError
 
 from ipl.longitudinal.main import runPipeline
 
+### reduce warning messages from ray
+os.environ["GRPC_GOOGLE_LOG_SEVERITY_LEVEL"] = "ERROR"
+os.environ["GRPC_VERBOSITY"] = "ERROR"
+
 # parallel processing
 import ray
+
+### reduce warning messages from ray
+logging.getLogger("ray.rpc").setLevel(logging.ERROR)
+logging.getLogger("ray.worker").setLevel(logging.WARNING)
 
 
 def setup_patient(id, options):
@@ -120,7 +129,7 @@ def setup_patient(id, options):
     # end of creating a patient
     return patient
 
-def setup_visit(patient,visit,
+def setup_visit(patient, visit,
                 t1=None,t2=None,pd=None,flair=None,
                 age=None,sex=None,
                 geo_t1=None,geo_t2=None,t2les=None):
@@ -250,6 +259,8 @@ def launchPipeline(options):
             visit=df.loc[i,'visit']
             if id not in patients:
                 patients[id] = setup_patient(id,options)
+                if 'sex' in df.columns:
+                    patients[id].sex=df.loc[i,'sex']
             
             t1=df.loc[i,'t1w']
             # optional fields

@@ -110,7 +110,7 @@ def  lobes_to_json(patient, tp, lobes_txt,
     # old NIHPD pipeline format
     out["SubjectID"]=patient.id
     out["VisitID"]=tp
-    out["Gender"]=patient[tp].sex
+    out["Gender"]=patient.sex
     out["Age"]=patient[tp].age
 
     if lobes_json is not None:

@@ -44,7 +44,7 @@ def parse_options():
                         help="pretrained model (ONNX or OpenVino)")
     
     parser.add_argument("input", type=str, 
-                        help="Input minc file, or input spec in [a,b,...] where a,b is ether const number of file name")
+                        help="Input minc file")
     
     parser.add_argument("output", type=str, nargs='?',
                         help="Output minc file")
@@ -401,26 +401,34 @@ def segment_with_onnx(  in_scans,
     # TODO: deal with floating point values
     orig_aff = None
     orig_shape = None
-    
+    data_shape = None
+
     for i in in_scans:
-        ref_file = i
-        data, aff = load_minc_volume_np(i, dtype='float32')
-
-        # make sure all files have the same shape and orientation
-        if orig_shape is not None:
-            assert(np.all(orig_shape == np.array(data.shape)))
-        else:
-            orig_shape = np.array(data.shape)
         
-        if orig_aff is not None:
-            assert(np.all(orig_aff - aff < 1e-3))
-        else:
-            orig_aff = aff
+        if isinstance(i, str):
+            ref_file = i
+            data, aff = load_minc_volume_np(i, dtype='float32')
 
-        if uniformize is not None:
-            data, new_aff = uniformize_volume(data, aff, step=uniformize)
+            # make sure all files have the same shape and orientation
+            if orig_shape is not None:
+                assert(np.all(orig_shape == np.array(data.shape)))
+            else:
+                orig_shape = np.array(data.shape)
+            
+            if orig_aff is not None:
+                assert(np.all(orig_aff - aff < 1e-3))
+            else:
+                orig_aff = aff
 
-        inputs+=[np.expand_dims(data, axis=(0, 1))]
+            if uniformize is not None:
+                data, new_aff = uniformize_volume(data, aff, step=uniformize)
+            
+            if data_shape is None:
+                data_shape = data.shape
+        else: # assume it's a constant value
+            data = np.full(data_shape, i, dtype='float32')
+
+        inputs+=[ np.expand_dims(data, axis=(0, 1)) ]
     # 
     dset = np.concatenate(inputs, axis=1)
 
@@ -563,37 +571,16 @@ def main():
     if params.model is not None and \
        params.input is not None:
         
-        m = re.match("\[(.*)\]", params.input)
-        if m is not None:
-            inp = m[1].split(",")
-            shape = None
-            inputs=[]
-            for i in inp:
-                q=re.match(r"^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$",i)
-                if q is not None:
-                    inputs.append(float(q[0]))
-                else:
-                    inputs.append(i)
-            ####
-            dset=[]
-            for i in inputs:
-                if isinstance(i,np.ndarray):
-                    dset+=[i]
-                else:
-                    dset+=[np.full(shape, i)]
-
-            dset = np.concatenatecat(dset, axis=1)
-        else:
-            ref_file=params.input
-            inputs=[params.input]
-
-            # attach additional channels
-            if params.add is not None:
-                for a in params.add:
-                    inputs.append(a)
-            if params.channels>1:
-                for i in range(params.channels-1):
-                    inputs.append(params.fill)
+        inputs=[params.input]
+        # TODO: add handling of multiple inputs and constant values
+        
+        # attach additional channels
+        if params.add is not None:
+            for a in params.add:
+                inputs.append(a)
+        if params.channels>1:
+            for i in range(params.channels-1):
+                inputs.append(params.fill)
 
         segment_with_onnx(inputs, params.output, model=params.model,
                             n_classes=params.n_classes,

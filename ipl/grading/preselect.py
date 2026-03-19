@@ -103,7 +103,7 @@ def calculate_similarity(sample1, sample2,
             if mask is not None:
                 cmds.extend( ['-source_mask', mask])
 
-            output=re.search( '^Final objective function value = (\S+)' , m.execute_w_output(cmds, verbose=0), flags=re.MULTILINE).group(1)
+            output=re.search( r'^Final objective function value = (\S+)' , m.execute_w_output(cmds, verbose=0), flags=re.MULTILINE).group(1)
 
             return float(output)
             
