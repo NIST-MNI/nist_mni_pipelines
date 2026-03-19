@@ -280,6 +280,7 @@ class TP:
 
         self.tp = visit  # visit name
         self.age = 0  # age of visit
+        self.sex = None  # patient's sex
         self.clinicaldata = {}  # additional info for the timepoint
         self.tpdir = ''  # timepoint directory
 

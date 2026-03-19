@@ -121,7 +121,7 @@ def setup_patient(id, options):
 
 def setup_visit(patient,visit,
                 t1=None,t2=None,pd=None,flair=None,
-                age=None,
+                age=None,sex=None,
                 geo_t1=None,geo_t2=None,t2les=None):
     assert visit not in patient , f' -- ERROR : Timepoint {visit} repeated in patient {patient.id}'
 
@@ -152,6 +152,9 @@ def setup_visit(patient,visit,
 
     if age is not None:
         patient[visit].age = age
+
+    if sex is not None and len(sex) > 0:
+        patient[visit].sex = sex
 
     if geo_t1 is not None and len(geo_t1) > 0:
         patient[visit].geo['t1'] = geo_t1

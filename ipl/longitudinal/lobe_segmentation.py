@@ -106,8 +106,12 @@ def  lobes_to_json(patient, tp, lobes_txt,
                     out[k]=v
             else:
                 raise mincError('Invalid key in lobes file:'+str(k))
+    
+    # old NIHPD pipeline format
     out["SubjectID"]=patient.id
     out["VisitID"]=tp
+    out["Gender"]=patient[tp].sex
+    out["Age"]=patient[tp].age
 
     if lobes_json is not None:
         with open(lobes_json,'w') as f:
