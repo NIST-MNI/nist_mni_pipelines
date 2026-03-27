@@ -300,8 +300,8 @@ def segment_with_patches_overlap_ov(
         dataset=dataset.transpose([0,1,4,2,3])[:,:,:,::-1,:].copy()
 
     if normalize:
-        dataset -= dataset.min()
-        dataset = np.clip(dataset / np.percentile(dataset,99),0.0, 1.0)
+        dataset = dataset - dataset.min()
+        dataset = np.clip(dataset / np.percentile(dataset,99), 0.0, 1.0)
     elif normalize_max:
         dataset = dataset / np.max(dataset)
 
@@ -313,7 +313,7 @@ def segment_with_patches_overlap_ov(
     output_fuzzy  = np.zeros( output_size_fuzzy, dtype=np.float32 )
     output_weight = np.zeros( output_size, dtype=np.float32 )
 
-    patch_sz_ = [patch_sz[0] - crop*2,patch_sz[1] - crop*2,patch_sz[2] - crop*2]
+    patch_sz_ = [patch_sz[0] - crop*2, patch_sz[1] - crop*2, patch_sz[2] - crop*2]
     
     out_roi = [dsize[2]-crop*2, dsize[3]-crop*2, dsize[4]-crop*2 ]
 
@@ -323,7 +323,7 @@ def segment_with_patches_overlap_ov(
                 c = [k*stride[0] + crop, l*stride[1] + crop, m*stride[2] + crop]
 
                 for i in range(3):
-                    c[i] = max(min(c[i], dsize[i+2] - patch_sz[i] + crop - 1),crop)
+                    c[i] = max(min( c[i], dsize[i+2] - patch_sz[i] + crop ), crop)
 
                 # extract a patch
                 in_data = np.ascontiguousarray(
@@ -417,7 +417,7 @@ def segment_with_onnx(  in_scans,
             orig_shape = np.array(data.shape)
         
         if orig_aff is not None and aff is not None:
-            assert(np.all(orig_aff - aff < 1e-3))
+            assert(np.all(np.abs(orig_aff - aff) < 1e-3))
         elif aff is not None:
             orig_aff = aff
 
@@ -604,7 +604,8 @@ def main():
                             normalize_max=params.max_normalize,
                             largest=params.largest,
                             quant_size=params.quant,
-                            dist=params.distance)
+                            dist=params.distance,
+                            padfill=params.padfill)
 
 
     else:
