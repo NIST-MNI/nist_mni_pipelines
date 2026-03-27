@@ -583,7 +583,7 @@ def main():
                 else:
                     dset+=[np.full(shape, i)]
 
-            dset = np.concatenatecat(dset, axis=1)
+            dset = np.concatenate(dset, axis=1)
         else:
             ref_file=params.input
             inputs=[params.input]
