@@ -201,15 +201,15 @@ def segment_with_patches_whole(
         dataset_norm = dataset-dataset.min()
         dataset_norm = np.clip(dataset_norm / np.percentile(dataset_norm,99),0.0, 1.0)
     elif normalize_max:
-        dataset_norm = dataset / np.max(conformed)
+        dataset_norm = dataset / np.max(dataset)
     else:
         dataset_norm = dataset
 
-    if np.any(target_shape != dataset.shape[2:]):
+    if np.any(target_shape != dataset_norm.shape[2:]):
         conformed = np.zeros( (1,1, *target_shape), dtype='float32')
-        conformed[:,:, :dataset.shape[2], :dataset.shape[3], :dataset.shape[4]] = dataset
+        conformed[:,:, :dataset_norm.shape[2], :dataset_norm.shape[3], :dataset_norm.shape[4]] = dataset_norm   
     else:
-        conformed = dataset.astype('float32') # to be compatible with spatial expectation of the model
+        conformed = dataset_norm.astype('float32') # to be compatible with spatial expectation of the model
 
     if freesurfer:
         conformed=conformed.transpose([0,1,4,2,3])[:,:,:,::-1,:].copy()
@@ -220,8 +220,8 @@ def segment_with_patches_whole(
     if freesurfer:
         out=out[:,:,:,::-1,:].transpose([0,1,3,4,2])
 
-    if np.any(target_shape != dataset.shape[2:]):
-        out=out[:,:,:dataset.shape[2], :dataset.shape[3], :dataset.shape[4]]
+    if np.any(target_shape != dataset_norm.shape[2:]):
+        out=out[:,:,:dataset_norm.shape[2], :dataset_norm.shape[3], :dataset_norm.shape[4]]
 
     if out.shape[1]==1 : # single channel distance 
         output_fuzzy = out
