@@ -403,8 +403,12 @@ def segment_with_onnx(  in_scans,
     orig_shape = None
     
     for i in in_scans:
-        ref_file = i
-        data, aff = load_minc_volume_np(i, dtype='float32')
+        if isinstance(i, float):
+            data = np.full(orig_shape, i, dtype='float32')
+            aff = None
+        else:
+            ref_file = i
+            data, aff = load_minc_volume_np(i, dtype='float32')
 
         # make sure all files have the same shape and orientation
         if orig_shape is not None:
@@ -412,12 +416,12 @@ def segment_with_onnx(  in_scans,
         else:
             orig_shape = np.array(data.shape)
         
-        if orig_aff is not None:
+        if orig_aff is not None and aff is not None:
             assert(np.all(orig_aff - aff < 1e-3))
-        else:
+        elif aff is not None:
             orig_aff = aff
 
-        if uniformize is not None:
+        if uniformize is not None and aff is not None:
             data, new_aff = uniformize_volume(data, aff, step=uniformize)
 
         inputs+=[np.expand_dims(data, axis=(0, 1))]
@@ -564,10 +568,9 @@ def main():
     if params.model is not None and \
        params.input is not None:
         
-        m = re.match("\[(.*)\]", params.input)
+        m = re.match(r"\[(.*)\]", params.input)
         if m is not None:
             inp = m[1].split(",")
-            shape = None
             inputs=[]
             for i in inp:
                 q=re.match(r"^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$",i)
@@ -575,15 +578,6 @@ def main():
                     inputs.append(float(q[0]))
                 else:
                     inputs.append(i)
-            ####
-            dset=[]
-            for i in inputs:
-                if isinstance(i,np.ndarray):
-                    dset+=[i]
-                else:
-                    dset+=[np.full(shape, i)]
-
-            dset = np.concatenate(dset, axis=1)
         else:
             ref_file=params.input
             inputs=[params.input]
