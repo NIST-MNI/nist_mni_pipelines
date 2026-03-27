@@ -513,6 +513,7 @@ def segment_with_onnx(  in_scans,
         dset_out = dset_out_
 
         if fuzzy is not None:
+            orig_fuzzy_size=list(orig_fuzzy_size)
             orig_fuzzy_size[1] = dset_out_fuzzy.shape[1]
             dset_out_fuzzy_ = np.zeros(orig_fuzzy_size)
             dset_out_fuzzy_[:, :, cropvol: orig_size[2]-cropvol*2, cropvol: orig_size[3]-cropvol*2, cropvol: orig_size[4]-cropvol*2]=\
