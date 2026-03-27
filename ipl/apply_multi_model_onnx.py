@@ -440,7 +440,7 @@ def segment_with_onnx(  in_scans,
         orig_size = dset.shape
         orig_fuzzy_size = dset.shape
         orig_vae_size = dset.shape
-        dset = dset[:, :, cropvol: orig_size[2]-cropvol*2, cropvol: orig_size[3]-cropvol*2, cropvol: orig_size[4]-cropvol*2]
+        dset = dset[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]
     elif padvol>0:
         orig_size = dset.shape
         orig_fuzzy_size = dset.shape
