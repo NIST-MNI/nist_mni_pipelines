@@ -512,7 +512,7 @@ def segment_with_onnx(  in_scans,
     if cropvol>0:
         dset_out_ = np.full(orig_size, bck, dtype=np.uint8)
 
-        dset_out_[:, :, cropvol: orig_size[2]-cropvol*2, cropvol: orig_size[3]-cropvol*2, cropvol: orig_size[4]-cropvol*2]=\
+        dset_out_[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]=\
             dset_out
         dset_out = dset_out_
 
@@ -520,7 +520,7 @@ def segment_with_onnx(  in_scans,
             orig_fuzzy_size=list(orig_fuzzy_size)
             orig_fuzzy_size[1] = dset_out_fuzzy.shape[1]
             dset_out_fuzzy_ = np.zeros(orig_fuzzy_size)
-            dset_out_fuzzy_[:, :, cropvol: orig_size[2]-cropvol*2, cropvol: orig_size[3]-cropvol*2, cropvol: orig_size[4]-cropvol*2]=\
+            dset_out_fuzzy_[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]=\
                 dset_out_fuzzy
             dset_out_fuzzy = dset_out_fuzzy_
     elif padvol>0:
