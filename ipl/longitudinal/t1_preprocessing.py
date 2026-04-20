@@ -145,15 +145,17 @@ def run_redskull_onnx(in_t1w, out_redskull,
 
             if redskull_var=='seg':
                 segment_with_onnx([in_t1w_], out_redskull_,
-                                    model=redskull_model,
-                                    whole=False, freesurfer=False, 
-                                    normalize=True, 
-                                    dist=False, 
-                                    largest=False,
-                                    patch_sz=[160, 160, 160],
-                                    stride=80,
                                     threads=n_threads,
-                                    n_classes=3
+                                    settings=dict(
+                                        whole=False, freesurfer=False, 
+                                        normalize=True, 
+                                        dist=False,
+                                        use_gaussian_weights=True,
+                                        padvol=16,
+                                        patch_sz=[160, 160, 160],
+                                        stride=80,
+                                        n_classes=3,
+                                        models=[redskull_model])
                                     ) # 
             # elif redskull_var=='synth': # experimental
             #     segment_with_onnx([in_t1w_], out_redskull_,
@@ -233,16 +235,19 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
             if normalize_1x1x1:
                 minc.resample_smooth(in_t1w, minc.tmp('t1_1x1x1.mnc'), unistep=1.0)
                 segment_with_onnx([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
-                                    model=synthstrip_model,
-                                    whole=True,freesurfer=True,normalize=True,
-                                    threads=n_threads, dist=True,largest=True,
+                                    
+                                    settings=dict(whole=True,freesurfer=True,normalize=True,
+                                                 threads=n_threads, dist=True,largest=True,
+                                                 models=[synthstrip_model],
+                                                 )
                                     ) # 
                 minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
             else:
                 segment_with_onnx([in_t1w], out_synthstrip,
-                                    model=synthstrip_model,
-                                    whole=True,freesurfer=True,normalize=True,
-                                    threads=n_threads, dist=True,largest=True,
+                                    settings=dict(whole=True,freesurfer=True,normalize=True,
+                                                  threads=n_threads, dist=True,largest=True,
+                                                  models=[synthstrip_model],
+                                                  )
                                     ) # 
 
         if out_qc is not None:
