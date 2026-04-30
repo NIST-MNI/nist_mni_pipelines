@@ -274,42 +274,24 @@ def segment_whole(
         output_fuzzy: Fuzzy output 
     """
 
-    if continuous:
-        out_name = "scan_out"
-    elif dist:
-        out_name = "dist"
+    out_name = "seg" if not dist else "dist"
+
+    target_shape = np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size
+
+    # normalize before padding with zeros
+    if normalize:
+        dataset_norm = dataset-dataset.min()
+        dataset_norm = np.clip(dataset_norm / np.percentile(dataset_norm,99),0.0, 1.0)
+    elif normalize_max:
+        dataset_norm = dataset / np.max(dataset)
     else:
         out_name = "seg" 
 
-
-##
-    batch_size = dataset.shape[0]
-
-    if trim:
-        target_shape = (np.floor(np.array(dataset.shape[2:]) / quant_size) * quant_size).astype(int)
-
-        if np.any(target_shape != dataset.shape[2:]):
-            _trim = ((dataset.shape[2:] - target_shape) // 2).astype(int)
-            ### HACK: do not shift Z axis, to avoid cutting cerebellum
-            _trim[2] = 0
-            
-            conformed = np.ascontiguousarray(
-                            dataset[:,:,
-                                    _trim[0]:_trim[0]+target_shape[0], 
-                                    _trim[1]:_trim[1]+target_shape[1], 
-                                    _trim[2]:_trim[2]+target_shape[2]]).astype('float32')
-        else:
-            conformed = dataset.astype('float32')
+    if np.any(target_shape != dataset_norm.shape[2:]):
+        conformed = np.zeros( (1,1, *target_shape), dtype='float32')
+        conformed[:,:, :dataset_norm.shape[2], :dataset_norm.shape[3], :dataset_norm.shape[4]] = dataset_norm   
     else:
-        target_shape = np.ceil(np.array(dataset.shape[2:]) / quant_size).astype(int) * quant_size
-
-        if np.any(target_shape != dataset.shape[2:]):
-            conformed = np.zeros( (batch_size,1, *target_shape), dtype='float32')
-            conformed[:,:, :dataset.shape[2], :dataset.shape[3], :dataset.shape[4]] = dataset
-        else:
-            conformed = dataset.astype('float32') # to be compatible with spatial expectation of the model
-
-    print(f"{dataset.shape=} {conformed.shape=}")
+        conformed = dataset_norm.astype('float32') # to be compatible with spatial expectation of the model
 
     if freesurfer:
         conformed=np.ascontiguousarray(conformed.transpose([0,1,4,3,2])[:,:,:,::-1,:]).copy()
@@ -349,17 +331,27 @@ def segment_whole(
     
     print(f"{dataset.shape=} {out.shape=}")
 
-    # unpad
-    if np.any(target_shape != dataset.shape[2:]):
-        if trim:
-            # pad with zeros
-            _out=np.zeros((out.shape[0], out.shape[1], dataset.shape[2], dataset.shape[3], dataset.shape[4]))
-            _out[:,0,:,:,:] = 1.0 # set BG
-            _out[:,:,
-                _trim[0]:_trim[0]+target_shape[0], 
-                _trim[1]:_trim[1]+target_shape[1], 
-                _trim[2]:_trim[2]+target_shape[2]]=out
-            out = _out
+    if np.any(target_shape != dataset_norm.shape[2:]):
+        out=out[:,:,:dataset_norm.shape[2], :dataset_norm.shape[3], :dataset_norm.shape[4]]
+
+    if out.shape[1]==1 : # single channel distance 
+        output_fuzzy = out
+        output_seg = (out < dist_border)
+    elif dist:
+        output_fuzzy = out
+        output_seg = np.expand_dims( np.argmin(output_fuzzy, axis=1).astype(np.uint8), axis=1)
+    else:
+        output_fuzzy = log_softmax(out, axis=1)
+        output_seg = np.expand_dims( np.argmax(output_fuzzy, axis=1).astype(np.uint8), axis=1)
+
+    if largest_component:
+        from scipy.ndimage import label
+        # find largest CC 
+        structure = np.ones((3, 3, 3), dtype=np.int32)
+        if out.shape[1]==1 or out.shape[1]==2:
+            # To be compatible
+            output_seg= np.expand_dims(np.expand_dims(
+                find_largest_component(output_seg.squeeze()),axis=0),axis=0) 
         else:
             out=out[:,:,:dataset.shape[2], :dataset.shape[3], :dataset.shape[4]]
 
@@ -458,7 +450,7 @@ def segment_with_patches_overlap(
     # MONAI-style normalization
     if normalize:
         dataset = dataset - dataset.min()
-        dataset = np.clip(dataset / np.percentile(dataset,99), min=0.0, max=1.0)
+        dataset = np.clip(dataset / np.percentile(dataset,99), 0.0, 1.0)
     elif normalize_max:
         dataset = np.clip(dataset / np.max(dataset), min=0.0, max=1.0)
     elif normalize_mean_std:
@@ -472,8 +464,9 @@ def segment_with_patches_overlap(
     output_size_fuzzy = list(dsize)
     output_size_fuzzy[1] = out_classes
 
-    output_fuzzy  = np.zeros(output_size_fuzzy, dtype=np.float32)
-    output_weight = np.zeros(output_size, dtype=np.float32)
+    patch_sz_ = [patch_sz[0] - crop*2, patch_sz[1] - crop*2, patch_sz[2] - crop*2]
+    
+    out_roi = [dsize[2]-crop*2, dsize[3]-crop*2, dsize[4]-crop*2 ]
 
     patch_sz_ = [patch_sz[0] - crop*2, patch_sz[1] - crop*2, patch_sz[2] - crop*2]
     out_roi = [dsize[2]-crop*2, dsize[3]-crop*2, dsize[4]-crop*2]
@@ -491,7 +484,7 @@ def segment_with_patches_overlap(
                 c = [k*stride[0] + crop, l*stride[1] + crop, m*stride[2] + crop]
 
                 for i in range(3):
-                    c[i] = max(min(c[i], dsize[i+2] - patch_sz[i] + crop), crop)
+                    c[i] = max(min( c[i], dsize[i+2] - patch_sz[i] + crop ), crop)
 
                 # Extract patch
                 in_data = np.ascontiguousarray(
@@ -605,11 +598,12 @@ def segment_with_onnx(in_scans, out_seg, settings,
         ref_aff = None
     
     for i in in_scans:
-        ref_file = i
-        if i .endswith('.mnc'):
-            data, aff = load_volume_np(i, dtype='float32')
+        if isinstance(i, float):
+            data = np.full(orig_shape, i, dtype='float32')
+            aff = None
         else:
-            data, aff = load_volume_np(i, dtype='float32')
+            ref_file = i
+            data, aff = load_minc_volume_np(i, dtype='float32')
 
         # make sure all files have the same shape and orientation
         if orig_shape is not None:
@@ -617,14 +611,12 @@ def segment_with_onnx(in_scans, out_seg, settings,
         else:
             orig_shape = np.array(data.shape)
         
-        if orig_aff is not None:
-            assert(np.all(orig_aff - aff < 1e-3))
-        else:
+        if orig_aff is not None and aff is not None:
+            assert(np.all(np.abs(orig_aff - aff) < 1e-3))
+        elif aff is not None:
             orig_aff = aff
 
-        if ref_aff is not None:
-            data, new_aff = resample_volume(data, aff, ref_data.shape, ref_aff)
-        if uniformize is not None:
+        if uniformize is not None and aff is not None:
             data, new_aff = uniformize_volume(data, aff, step=uniformize)
 
         inputs+=[ np.expand_dims(data, axis=(0, 1))]
@@ -658,7 +650,7 @@ def segment_with_onnx(in_scans, out_seg, settings,
     if cropvol>0:
         orig_size = dset.shape
         orig_fuzzy_size = dset.shape
-        orig_vae_size = dset.shape 
+        orig_vae_size = dset.shape
         dset = dset[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]
     elif padvol>0:
         orig_size = dset.shape
@@ -721,18 +713,13 @@ def segment_with_onnx(in_scans, out_seg, settings,
     else:
         dset_out_fuzzy = all_fuzzy_outputs[0]
 
-    if continuous:
-        dset_out = dset_out_fuzzy
-    elif dist and dset_out_fuzzy.shape[1]==1 and dset_out is None:
-        dset_out = (dset_out_fuzzy < 1.0)
-    elif dist and dset_out is None:
-        dset_out = np.argmin(dset_out_fuzzy, axis=1,keepdims=True).astype(np.uint8)
-    elif dset_out is None:
-        dset_out_fuzzy = softmax(dset_out_fuzzy, axis=1)
-        dset_out = np.argmax(dset_out_fuzzy, axis=1,keepdims=True).astype(np.uint8)
+        dset_out_[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]=\
+            dset_out
+        dset_out = dset_out_
 
     if cropvol>0: # unpcrop output
         if fuzzy is not None:
+            orig_fuzzy_size=list(orig_fuzzy_size)
             orig_fuzzy_size[1] = dset_out_fuzzy.shape[1]
             dset_out_fuzzy_ = np.zeros(orig_fuzzy_size)
             dset_out_fuzzy_[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]=\
@@ -859,304 +846,9 @@ def segment_with_onnx_batched(in_scans, out_segs,
     if device_id is not None:
         cuda_opts["device_id"] = device_id
         
-    if cpu:
-        providers=['CPUExecutionProvider']
-    else:
-        # Configure CUDA execution provider with TF32 precision control
-        providers=[("CUDAExecutionProvider", cuda_opts)]
-
-    # load all models
-    if not isinstance(models, list):
-        models = [models]
-
-    models_onnx = [onnxruntime.InferenceSession(i, sess_options, providers=providers) for i in models]
-    all_measurements=[]
-    # load all inputs
-    # TODO: deal with floating point values
-
-    if reference is not None:
-        if reference .endswith('.mnc'):
-            ref_data, ref_aff = load_volume_np(reference, dtype='uint8', as_byte=True)
-        else:
-            ref_data, ref_aff = load_volume_np(reference, dtype='uint8', as_byte=True)
-    else:
-        ref_data = None
-        ref_aff = None
-
-    if progress:
-        from tqdm import tqdm
-        prog = tqdm(total=len(in_scans), desc="Processing scans", unit="scan")
-    
-    for b in range(0, len(in_scans), minibatch_size):
-        # inputs
-        batch_scans = in_scans[b:b+minibatch_size]
-        # outputs
-        out_batch_segs = out_segs[b:b+minibatch_size]
-
-        batch_inputs = []
-
-        orig_aff = None
-        orig_shape = None
-        
-
-        try:
-            # check if inputs and output exists
-            input_exists= all([os.path.exists(i) for i in batch_scans])
-            output_exists= all([os.path.exists(i) for i in out_batch_segs])
-
-            if not input_exists:
-                print(f"Skipping batch {batch_scans}: some input files do not exist",file=sys.stderr)
-                if labels_desc is not None and not continuous and measure is not None:
-                    all_measurements += [measure_volumes(None, None, labels_desc, out_seg_f=out_seg, in_scan=in_scan ) for in_scan, out_seg in zip(batch_scans, out_batch_segs)]
-                if progress:
-                    prog.update(len(batch_scans))
-                continue
-
-            if not output_exists or not recover:
-                for in_scan in batch_scans:
-                    ref_file = in_scan
-                    if in_scan.endswith('.mnc'):
-                        data, aff = load_volume_np(in_scan, dtype='float32')
-                    else:
-                        data, aff = load_volume_np(in_scan, dtype='float32')
-
-                    # make sure all files have the same shape and orientation
-                    if orig_shape is not None:
-                        assert(np.all(orig_shape == np.array(data.shape)))
-                    else:
-                        orig_shape = np.array(data.shape)
-                    
-                    if orig_aff is not None:
-                        assert(np.all(orig_aff - aff < 1e-3))
-                    else:
-                        orig_aff = aff
-
-                    if ref_aff is not None:
-                        data, new_aff = resample_volume(data, aff, ref_data.shape, ref_aff)
-                    if uniformize is not None:
-                        data, new_aff = uniformize_volume(data, aff, step=uniformize)
-
-                    batch_inputs.append(np.expand_dims(data, axis=(0, 1)))
-
-                    if augment_tta is not None:
-                        if "flip_x" in augment_tta:
-                            batch_flipped = [np.flip(i,axis=flip_axis) for i in batch_inputs] # flip along X axis 
-                            batch_inputs += batch_flipped
-                
-                dset=np.concatenate(batch_inputs, axis=0)
-
-                if whole:
-                    patch_sz = np.clip(np.ceil((np.array(dset.shape[2:]) - cropvol*2 + padvol*2) / quant_size).astype(int) * quant_size, quant_size*2, quant_size*5).tolist()
-                    stride = patch_sz
-                elif not isinstance(patch_sz, list):
-                    patch_sz = [patch_sz, patch_sz, patch_sz]
-                
-                if cropvol>0:
-                    orig_size = dset.shape
-                    orig_fuzzy_size = dset.shape
-                    orig_vae_size = dset.shape
-                    dset = dset[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]
-                elif padvol>0:
-                    orig_size = dset.shape
-                    orig_fuzzy_size = dset.shape
-                    orig_vae_size = dset.shape
-                    
-                    dset = np.ascontiguousarray( np.pad(dset, pad_width=((0,0),(0,0),(padvol,padvol),(padvol,padvol),(padvol,padvol)),
-                        mode='constant', constant_values = padfill))
-            
-                # Apply models and collect results
-                all_fuzzy_outputs = []
-                for model in models_onnx:
-                    #model=onnxruntime.InferenceSession(m, sess_options, providers=providers)
-
-                    if whole:
-                        dset_out_fuzzy = segment_whole(
-                            dset, model,
-                            freesurfer=freesurfer,
-                            nibabel=nibabel,
-                            normalize=normalize,
-                            normalize_max=normalize_max,
-                            normalize_mean_std=normalize_mean_std,
-                            dist=dist,
-                            continuous=continuous,
-                            trim=trim,
-                            use_classes=use_classes,
-                            channel_last=channel_last) 
-                    else:
-                        dset_out_fuzzy = segment_with_patches_overlap(
-                            dset, model, 
-                            n_classes=n_classes,use_classes=use_classes,
-                            patch_sz=patch_sz, crop=crop, 
-                            bck=bck, stride=stride, 
-                            freesurfer=freesurfer,
-                            nibabel=nibabel,
-                            normalize=normalize,
-                            normalize_max=normalize_max,
-                            normalize_mean_std=normalize_mean_std,
-                            dist=dist,
-                            use_gaussian_weights=use_gaussian_weights,
-                            continuous=continuous,
-                            orig_aff=orig_aff,
-                            channel_last=channel_last)
-                    all_fuzzy_outputs.append(dset_out_fuzzy)
-
-                if len(models) > 1:
-                    if majority and not continuous:
-                        if dist and all_fuzzy_outputs[0].shape[1]==1:
-                            stacked_outputs = np.stack([(i<1.0).astype(np.uint8) for i in all_fuzzy_outputs],axis=0)
-                        elif dist:
-                            stacked_outputs = np.stack([np.argmin(i, axis=1,keepdims=True).astype(np.uint8) for i in all_fuzzy_outputs],axis=0)
-                        else:
-                            stacked_outputs = np.stack([np.argmax(i, axis=1,keepdims=True).astype(np.uint8) for i in all_fuzzy_outputs],axis=0)
-                        dset_out = np.apply_along_axis(lambda x: np.bincount(x.astype(np.int32)).argmax(), 0, stacked_outputs.squeeze())
-                        dset_out_fuzzy = np.mean(all_fuzzy_outputs, axis=0)
-                    else:
-                        dset_out_fuzzy = np.mean(all_fuzzy_outputs, axis=0)
-                else:
-                    dset_out_fuzzy = all_fuzzy_outputs[0]
-
-                if augment_tta is not None:
-                    if "flip_x" in augment_tta:
-                        # average original and flipped outputs
-                        half = dset_out_fuzzy.shape[0] // 2
-                        dset_out_fuzzy_orig = dset_out_fuzzy[:half]
-                        dset_out_fuzzy_flip = np.flip(dset_out_fuzzy[half:], axis=flip_axis) # flip back
-                        if continuous:
-                            dset_out_fuzzy = (dset_out_fuzzy_orig + dset_out_fuzzy_flip) / 2.0
-                        else:
-                            dset_out_fuzzy = softmax(dset_out_fuzzy_orig,axis=1)*0.5 + \
-                                            softmax(dset_out_fuzzy_flip[:,flip_map,:,:,:],axis=1) * 0.5 # remap classes
-                else:
-                    if not continuous and not dist:
-                        dset_out_fuzzy = softmax(dset_out_fuzzy, axis=1)
-
-                if continuous:
-                    dset_out = dset_out_fuzzy
-                elif dist and dset_out_fuzzy.shape[1]==1:
-                    dset_out = (dset_out_fuzzy < 1.0)
-                elif dist:
-                    dset_out = np.argmin(dset_out_fuzzy, axis=1,keepdims=True).astype(np.uint8)
-                else :
-                    dset_out = np.argmax(dset_out_fuzzy, axis=1,keepdims=True).astype(np.uint8)
-        
-                if cropvol>0:
-                    dset_out_ = np.zeros(dset_out.shape,dtype=dset_out.dtype) 
-                    dset_out_[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]=\
-                        dset_out
-
-                    if fuzzy_output :
-                        orig_fuzzy_size[1] = dset_out_fuzzy.shape[1]
-                        dset_out_fuzzy_ = np.zeros(orig_fuzzy_size)
-                        dset_out_fuzzy_[:, :, cropvol: orig_size[2]-cropvol, cropvol: orig_size[3]-cropvol, cropvol: orig_size[4]-cropvol]=\
-                            dset_out_fuzzy
-                        dset_out_fuzzy = dset_out_fuzzy_
-                elif padvol>0:
-                    dset_out = dset_out[:, :, padvol: orig_size[2]+padvol, padvol: orig_size[3]+padvol, padvol: orig_size[4]+padvol]
-                    if fuzzy_output:
-                        dset_out_fuzzy = dset_out_fuzzy[:, :, padvol: orig_size[2]+padvol, padvol: orig_size[3]+padvol, padvol: orig_size[4]+padvol]
-
-                if not continuous:
-                    dset_out = np.astype(dset_out, np.uint8)
-                else:
-                    dset_out = np.astype(dset_out, np.float32)
-
-                for i, out_seg in enumerate(out_batch_segs):
-                    dst_out_ = dset_out[i,:,:,:,:].squeeze()
-
-                    # TODO: make this configurable, to output uniformized volumes
-                    if not save_uniformized and (uniformize is not None or ref_aff is not None) and np.any(np.array(dst_out_.shape) != orig_shape):
-                        dst_out_ = resample_volume(dst_out_, new_aff, orig_shape, orig_aff, order=0, fill=bck)[0]
-
-                    if save_uniformized:
-                        # adjust  for output
-                        orig_aff = new_aff
-
-                    save_volume(out_seg, dst_out_, orig_aff, ref_fname=ref_file, history=history)
-
-                    if labels_desc is not None and not continuous and measure is not None:
-                        # save label measurements as json
-                        all_measurements+=[measure_volumes(dset_out, orig_aff, labels_desc, out_seg_f=out_seg, in_scan=in_scan)]
-            else:
-                if labels_desc is not None and not continuous and measure is not None:
-                    all_measurements += [measure_volumes(None, None, labels_desc, out_seg_f=out_seg, in_scan=in_scan, load_output=True) for in_scan, out_seg in zip(batch_scans, out_batch_segs)]
-
-        except KeyboardInterrupt as e:
-            raise e
-        except Exception as e:
-            print(f"Error processing batch scans {batch_scans}: {e}",file=sys.stderr)
-            print(traceback.format_exc(),file=sys.stderr)
-            if crash:
-                raise e # if crash flag is set, otherwise just skip to next batch
-            if labels_desc is not None and not continuous and measure is not None:
-                all_measurements+=[measure_volumes(None, None, labels_desc, out_seg_f=out_seg, in_scan=in_scan)  for in_scan, out_seg in zip(batch_scans, out_batch_segs)]
-
-        
-        if progress:
-            prog.update(len(batch_scans))
-
-    if progress:
-        prog.close()
-
-    if measure is not None and len(all_measurements)>0:
-        save_measurements(measure, all_measurements)
-
-if __name__ == '__main__':
-    _history = format_history(sys.argv)
-    params = parse_options()
-    # Create settings dictionary from parameters
-
-    if params.config is not None:
-        with open(params.config, 'r') as f:
-            settings = json.load(f)
-        # allow overrrides from command line
-        if params.model is not None:
-            settings['models'] = params.model
-    else:
-        settings = {
-            'models': params.model,
-            'n_classes': params.n_classes,
-            'use_classes': params.use_classes,
-            'patch_sz': params.patch_sz,
-            'crop': params.crop,
-            'bck': params.bck,
-            'stride': params.stride,
-            'padvol': params.padvol,
-            'cropvol': params.cropvol,
-            'mask': params.mask,
-            'uniformize': params.uniformize,
-            'reference': params.reference,
-            'save_uniformized': params.saveuniform,
-            'history': _history,
-            'whole': params.whole,
-            'freesurfer': params.freesurfer,
-            'nibabel': params.nibabel,
-            'normalize': params.normalize,
-            'normalize_max': params.max_normalize,
-            'normalize_mean_std': params.mean_std_normalize,
-            'largest': params.largest,
-            'quant_size': params.quant,
-            'dist': params.distance,
-            'use_gaussian_weights': params.use_gaussian_weights,
-            'continuous': params.continuous,
-            'trim': params.trim,
-            'channel_last': params.channel_last,
-            'majority': params.majority
-        }
-    
-    if params.model_prefix is not None:
-        if not isinstance(settings['models'], list):
-            settings['models'] = [settings['models']]
-        settings['models'] = [params.model_prefix + m for m in settings['models']]
-        if settings.get('reference', None) is not None:
-            settings['reference'] = params.model_prefix + settings['reference']
-
-    if params.input is not None and \
-       params.output is not None:
-        
         m = re.match(r"\[(.*)\]", params.input)
         if m is not None:
             inp = m[1].split(",")
-            shape = None
             inputs=[]
             for i in inp:
                 q=re.match(r"^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$",i)
@@ -1164,15 +856,6 @@ if __name__ == '__main__':
                     inputs.append(float(q[0]))
                 else:
                     inputs.append(i)
-            ####
-            dset=[]
-            for i in inputs:
-                if isinstance(i,np.ndarray):
-                    dset+=[i]
-                else:
-                    dset+=[np.full(shape, i)]
-
-            dset = np.concatenate(dset, axis=1)
         else:
             ref_file=params.input
             inputs=[params.input]
@@ -1185,47 +868,22 @@ if __name__ == '__main__':
                 for i in range(params.channels-1):
                     inputs.append(params.fill)
 
-        segment_with_onnx(inputs, params.output, settings,
-            cpu=params.cpu,
-            threads=params.threads,
-            device_id=params.device_id,
-            use_tf32=params.use_tf32,
-            measure=params.measure,
-            history=_history)
-            
-    elif params.bi is not None and params.bo is not None:
-            segment_with_onnx_batched(params.bi, params.bo, settings,
-                cpu=params.cpu,
-                threads=params.threads,
-                device_id=params.device_id,
-                use_tf32=params.use_tf32,
-                progress=params.progress)
-    elif params.li is not None and params.lo is not None:
-            # read lists of input and output files
-            with open(params.li, 'r') as f:
-                li = [line.strip() for line in f if line.strip()]
-            with open(params.lo, 'r') as f:
-                lo = [line.strip() for line in f if line.strip()]
-
-            import time
-
-            start_time = time.time()
-            segment_with_onnx_batched(li, lo, settings,
-                cpu=params.cpu,
-                threads=params.threads,
-                device_id=params.device_id,
-                use_tf32=params.use_tf32,
-                minibatch_size=params.minibatch_size,
-                progress=params.progress,
-                measure=params.measure,
-                recover=params.recover,
-                crash=params.crash)
-            elapsed_time = time.time() - start_time
-
-            if not params.progress:
-                print(f"Processed {len(li)} scans in {elapsed_time:.2f} seconds")
-                if len(li) > 0:
-                    print(f"Average time per scan: {elapsed_time/len(li):.4f} seconds")
+        segment_with_onnx(inputs, params.output, model=params.model,
+                            n_classes=params.n_classes,
+                            patch_sz=params.patch_sz, crop=params.crop,
+                            bck=params.bck, stride=params.stride,
+                            padvol=params.padvol, cropvol=params.cropvol,
+                            mask=params.mask, fuzzy=params.fuzzy, 
+                            threads=params.threads, cpu=params.cpu,
+                            uniformize=params.uniformize,
+                            history=_history,whole=params.whole,
+                            freesurfer=params.freesurfer,
+                            normalize=params.normalize,
+                            normalize_max=params.max_normalize,
+                            largest=params.largest,
+                            quant_size=params.quant,
+                            dist=params.distance,
+                            padfill=params.padfill)
 
 
     else:
