@@ -152,7 +152,7 @@ def skullstripping_v10(params):
     with mincTools()  as minc:
         if params["synthstrip_onnx"] is not None: # use deep learning
             # apply synthstrip 
-            run_synthstrip_onnx_c = run_synthstrip_onnx.options(num_cpus=params.threads)
+            run_synthstrip_onnx_c = run_synthstrip_onnx.options(num_cpus=params["threads"])
             ray.get(run_synthstrip_onnx_c.remote(params["stxt1"], 
                     params["stx_mask"], 
                     synthstrip_model=params["synthstrip_onnx"]))
