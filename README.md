@@ -70,10 +70,66 @@ Example:
     --bison_method  HGB1 \
     --wmh_bison_pfx /opt/models/wmh_bison_1.3.0 \
     --wmh_bison_method HGB1 \
-    --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx 
+    --synthstrip_onnx /opt/models/synthstrip/synthstrip.1.onnx \
+    --onnx-segmentation-config /path/to/segmentation_config.json
 
 ```
-will  execute pipeline using 4 cores 
+will  execute pipeline using 4 cores
+
+### ONNX Segmentation
+
+The pipeline supports arbitrary ONNX segmentation models via configuration file. This replaces the standalone `run_mindglide.sh` script and integrates segmentation directly into the pipeline flow.
+
+#### Configuration File
+
+Create a JSON configuration file specifying the model and parameters:
+
+```json
+{
+    "name": "mindglide",
+    "input_space": "stx2",
+    "input_sequence": "t1",
+    "models": ["average_model_quant.onnx"],
+    "model_prefix": "/path/to/models/",
+    "n_classes": 20,
+    "labels_desc": [
+        "CSF", "Ventricles_3_4_5", "DGM", ...
+    ],
+    "apply_multi_model_onnx_options": {
+        "patch_sz": [128, 128, 64],
+        "stride": [100, 100, 48],
+        "whole": false,
+        "freesurfer": true,
+        "normalize_mean_std": true,
+        "use_gaussian_weights": true,
+        "majority": true
+    },
+    "output_suffix": "mindglide",
+    "qc_enabled": true
+}
+```
+
+See `/app/examples/onnx_segmentation/template_config.json` for all available options.
+
+#### Output Files
+
+ONNX segmentation produces:
+- `<subject>/<visit>/seg/seg_<suffix>_<subject>_<visit>.mnc` - Segmentation mask
+- `<subject>/<visit>/vol/vol_<suffix>_<subject>_<visit>.txt` - Volume measurements
+- `<subject>/<visit>/vol/vol_<suffix>_<subject>_<visit>.json` - Volume measurements (JSON)
+- `<subject>/<visit>/vol/vol_<suffix>_<subject>_<visit>.csv` - Volume measurements (CSV)
+- `<subject>/qc/qc_onnx_seg_<suffix>_<subject>_<visit>.jpg` - QC image
+
+#### Example Usage
+
+```bash
+python iplLongitudinalPipeline.py \
+    -l subjects.lst -o output \
+    --onnx-segmentation-config /path/to/mindglide_config.json \
+    --ray_start 4 --threads 4
+```
+
+Example configuration files are provided in `/app/examples/onnx_segmentation/`. 
 
 ### Output Files
 
@@ -100,6 +156,7 @@ The pipeline produces following files:
     `<subject>/qc/qc_nl_template_<subject>.jpg` - average non-linear T1w
     `<subject>/qc/qc_cls_<subject>_<visit>.jpg` - tissue classification
     `<subject>/qc/qc_lob_<subject>_<visit>.jpg` - lobe segmentations
+    `<subject>/qc/qc_onnx_seg_<suffix>_<subject>_<visit>.jpg` - ONNX segmentation (if enabled)
 
 * Files in the native space, after intensity normalization
 
@@ -144,6 +201,13 @@ The pipeline produces following files:
     `<subject>/<visit>/cls/cls_<subject>_<visit>.mnc` - tissue classification results: 1 - CSF, 2- GM , 3- WM 
     `<subject>/<visit>/cls/lob_<subject>_<visit>.mnc` - lobe segmentation results
     `<subject>/<visit>/cls/wmh_<subject>_<visit>.mnc` - white matter hyperintensities segmentation
+
+* ONNX Segmentation results (if enabled)
+
+    `<subject>/<visit>/seg/seg_<suffix>_<subject>_<visit>.mnc` - arbitrary ONNX segmentation
+    `<subject>/<visit>/vol/vol_<suffix>_<subject>_<visit>.txt` - volume measurements
+    `<subject>/<visit>/vol/vol_<suffix>_<subject>_<visit>.json` - volume measurements (JSON)
+    `<subject>/<visit>/vol/vol_<suffix>_<subject>_<visit>.csv` - volume measurements (CSV)
 
 * Subject-specific anatomical average
 

@@ -43,6 +43,9 @@ from ipl.longitudinal.add                import pipeline_run_add_tp,pipeline_run
 # to be deprecated
 from ipl.longitudinal.lobe_segmentation  import pipeline_lobe_segmentation
 
+# ONNX segmentation
+from ipl.longitudinal.onnx_segmentation import pipeline_onnx_segmentation
+
 # parallel processing
 import ray
 
@@ -192,6 +195,11 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         pipeline_lobe_segmentation(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
 
+        # ONNX segmentation
+        if patient.onnx_segmentation_config is not None:
+            pipeline_onnx_segmentation(patient, tp, patient.onnx_segmentation_config, patient.onnx_model_prefix)
+            patient.write(patient.pickle)  # copy new images in the pickle
+
         # Additional steps because there is only one timepoint actually
         # ######################
         if len(patient.add)>0:
@@ -261,6 +269,11 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         # ######################
         pipeline_lobe_segmentation(patient, tp)
         patient.write(patient.pickle)  # copy new images in the pickle
+
+        # ONNX segmentation (multi-TP case)
+        if patient.onnx_segmentation_config is not None and len(patient) > 1:
+            pipeline_onnx_segmentation(patient, tp, patient.onnx_segmentation_config, patient.onnx_model_prefix)
+            patient.write(patient.pickle)  # copy new images in the pickle
 
         # vbm images
         # ###########

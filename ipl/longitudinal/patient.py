@@ -103,6 +103,8 @@ class LngPatient(dict):
         self.redskull_onnx = None # Redskull segmentation library for ONNX
         self.redskull_var = None # Redskull variant
         self.synthstrip_onnx = None # Synthstrip segmentation library for ONNX
+        self.onnx_model_prefix = None # Optional model prefix for ONNX models
+        self.onnx_segmentation_config = None # Path to ONNX segmentation config JSON
 
         # patient data
         self.id = id  # subject id
@@ -698,6 +700,8 @@ def setFilenames(patient):
             + 'qc_lngcls_' + patient.id + '_' + tp + '.jpg'
         patient[tp].qc_jpg['lnglobes'] = patient.qcdir + 'qc_lnglob_' \
             + patient.id + '_' + tp + '.jpg'
+        
+        # ONNX segmentation outputs (paths are constructed dynamically based on config suffix)
 
         # vbm analysis
 

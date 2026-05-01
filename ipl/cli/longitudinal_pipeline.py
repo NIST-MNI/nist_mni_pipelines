@@ -10,6 +10,7 @@ import traceback
 import json
 import six
 import sys
+import re
 
 import argparse
 
@@ -30,10 +31,6 @@ os.environ["GRPC_VERBOSITY"] = "ERROR"
 
 # parallel processing
 import ray
-
-### reduce warning messages from ray
-logging.getLogger("ray.rpc").setLevel(logging.ERROR)
-logging.getLogger("ray.worker").setLevel(logging.WARNING)
 
 
 def setup_patient(id, options):
@@ -125,6 +122,8 @@ def setup_patient(id, options):
     patient.nl_cost_fun = options.nl_cost_fun
     patient.do_cleanup = options.cleanup
     patient.output_nifti = options.output_nifti
+    patient.onnx_segmentation_config = options.onnx_segmentation_config
+    patient.onnx_model_prefix = options.onnx_model_prefix
 
     # end of creating a patient
     return patient
@@ -567,6 +566,18 @@ def parse_options():
                      help='onnx library for synthstrip segmentation'
                      )
     
+    group.add_argument('--onnx-segmentation-config',
+                     dest='onnx_segmentation_config',
+                     help='Path to ONNX segmentation configuration JSON file',
+                     type=str,
+                     default=None)
+    
+    group.add_argument('--onnx-model-prefix',
+                     dest='onnx_model_prefix',
+                     help='Model prefix for ONNX segmentation models',
+                     type=str,
+                     default=None)
+    
     group.add_argument('--bison_pfx', 
                      help='Bison tissue classification model prefix'
                      )
@@ -645,6 +656,13 @@ def parse_options():
         default=[],
         )
 
+    group.add_argument(
+        '--log',
+        dest='log',
+        help='Save log into a file',
+        )
+
+
     group = parser.add_argument_group('Execution options ',
                          ' Once the picke files are created')
 
@@ -715,18 +733,36 @@ def parse_options():
                      action='store_true',
                      default=False)
 
-
     options = parser.parse_args()
-
 
     return options
 
+
+class NoRayNoise(logging.Filter):
+    def __init__(self):
+        super().__init__()
+
+    def filter(self, record):
+        # remove repeating messages like [2026-05-01 12:56:27,332 E 1493033 1493057] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-05-01_12-55-36_368271_1492802 is over 95% full, available space: 11.3846 GB; capacity: 915.141 GB. Object creation will fail if spilling is required.
+        return 'file_system_monitor.cc:116' not in record.getMessage()
 
 ## If used in a stand-alone application on one patient
 def main():
     opts = parse_options()
     # VF: disabled in public release
     opts.temporalregu = False
+
+    #### remove some logging messages from ray
+    if opts.log is not None:
+        logging.basicConfig(filename=opts.log, 
+                            level=logging.INFO, 
+                            format='%(asctime)s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S',)
+    else:
+        logging.basicConfig(level=logging.INFO, 
+                            format='%(asctime)s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S',)
+
 
     if opts.ray_start is not None: # HACK?
         ray.init(num_cpus=opts.ray_start,log_to_driver=not opts.quiet)
@@ -739,7 +775,7 @@ def main():
     elif opts.ray_host is not None:
         ray.init(address=opts.ray_host+':6379',log_to_driver=not opts.quiet)
     else:
-        ray.init(address='auto',log_to_driver=not opts.quiet)
+        ray.init(address='auto', log_to_driver=not opts.quiet)
 
     if opts.list is not None or \
        opts.json is not None or \

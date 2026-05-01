@@ -20,11 +20,11 @@ import numpy as np
 from minc2_simple import minc2_file
 
 # seg_common utilities
-from seg_common.io import load_volume_np, save_volume, format_history
-from seg_common.volume import (autonorm_np, maxnorm_np, mean_std_normalize_np,
+from .seg_common.io import load_volume_np, save_volume, format_history
+from .seg_common.volume import (autonorm_np, maxnorm_np, mean_std_normalize_np,
                                 apply_cropvol, apply_padvol, undo_cropvol, undo_padvol,
                                 parse_bracket_input)
-from seg_common.postprocess import find_largest_component, measure_volumes, save_measurements
+from .seg_common.postprocess import find_largest_component, measure_volumes, save_measurements
 
 # geo utilities (not moved to seg_common)
 from .minc.geo import decompose, compose
@@ -1100,7 +1100,7 @@ def segment_with_onnx_batched(in_scans, out_segs,
     if measure is not None and len(all_measurements)>0:
         save_measurements(measure, all_measurements)
 
-if __name__ == '__main__':
+def main():
     _history = format_history(sys.argv)
     params = parse_options()
     # Create settings dictionary from parameters
@@ -1232,5 +1232,7 @@ if __name__ == '__main__':
       print("Run with --help")
    
 
+if __name__ == '__main__':
+    main()
 
 # kate: space-indent on; indent-width 4; indent-mode python;replace-tabs on;word-wrap-column 80

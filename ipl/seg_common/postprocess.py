@@ -30,7 +30,7 @@ def find_largest_component(input):
     return labeled == largest
 
 
-def measure_volumes(seg, aff, labels_desc, out_seg_f=None, in_scan=None, load_output=False):
+def measure_volumes(seg, aff, labels_desc, out_seg_f=None, in_scan=None, load_output=False,scale=1.0):
     """
     Measure volumes of labels in segmentation.
     
@@ -45,7 +45,7 @@ def measure_volumes(seg, aff, labels_desc, out_seg_f=None, in_scan=None, load_ou
     Returns:
         dict: Volume measurements per label
     """
-    from seg_common.io import load_volume_np
+    from .io import load_volume_np
     
     if isinstance(labels_desc, dict):
         labels = {int(i): j for i, j in labels_desc.items()}
@@ -75,7 +75,7 @@ def measure_volumes(seg, aff, labels_desc, out_seg_f=None, in_scan=None, load_ou
         results = {'scan': in_scan, 'segmentation': out_seg_f}
         for il, l in labels.items():
             count = np.sum(seg == il)
-            volume = count * voxel_volume
+            volume = count * voxel_volume * scale
             results[l] = volume
     
     return results
