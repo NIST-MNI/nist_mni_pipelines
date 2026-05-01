@@ -68,8 +68,10 @@ def pipeline_onnx_segmentation(patient, tp, config_file, model_prefix=None):
     return True
 
 
-def onnx_segmentation_to_json(patient, tp, seg_data, labels_desc, 
-                               output_json=None, output_csv=None):
+def onnx_segmentation_to_json(patient, tp, seg_data, labels_desc,
+                               output_json=None,
+                               output_csv=None,
+                               stx_scale=1.0):
     """
     Save segmentation volumes to JSON and CSV format.
     Similar to lobes_to_json().
@@ -85,7 +87,7 @@ def onnx_segmentation_to_json(patient, tp, seg_data, labels_desc,
     out = {
         "SubjectID": patient.id,
         "VisitID": tp,
-        "ScaleFactor": 1.0,
+        "ScaleFactor": stx_scale,
         "Age": patient[tp].age,
         "Gender": patient.sex
     }
@@ -141,8 +143,7 @@ def run_onnx_segmentation(input_file, output_file, config, threads=1, model_pref
         [input_file],
         output_file,
         settings=settings,
-        threads=n_threads,
-        measure=config.get('measurements_file')
+        threads=n_threads
     )
 
 
@@ -163,23 +164,23 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
     
     with mincTools() as minc:
         input_file = None
-        
+
+        with mincTools()  as minc:
+            params=minc.xfm2param(patient[tp].stx2_xfm['t1'])
+            stx_scale = params['scale'][0] * params['scale'][1] * params['scale'][2]
+
         if input_space == 'native':
             input_file = patient[tp].clp.get(input_sequence)
-            stx_scale=1.0
+            scale_factor = 1.0
         elif input_space == 'clp':
             input_file = patient[tp].clp.get(input_sequence)
-            stx_scale=1.0
+            scale_factor = 1.0
         elif input_space == 'nsstx':
             input_file = patient[tp].stx_ns_mnc.get(input_sequence)
-            stx_scale=1.0
+            scale_factor = 1.0
         elif input_space == 'stx2':
             input_file = patient[tp].stx2_mnc.get(input_sequence)
-            # need to calculate scaling factor from the transformation
-            with mincTools()  as minc:
-                params=minc.xfm2param(patient[tp].stx2_xfm['t1'])
-                stx_scale = params['scale'][0] * params['scale'][1] * params['scale'][2]
-
+            scale_factor = 1.0/stx_scale
         else:
             raise mincError(f'Invalid input_space: {input_space}')
         
@@ -214,7 +215,7 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
             vols = [measure_volumes(seg_data, aff, labels_desc, 
                                    out_seg_f=seg_output, 
                                    in_scan=input_file,
-                                   scale=1.0/stx_scale)]
+                                   scale=scale_factor)]
             
             with open(vol_txt, 'w') as f:
                 for label in labels_desc:
@@ -223,7 +224,8 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
             
             onnx_segmentation_to_json(patient, tp, vols[0], labels_desc,
                                       output_json=vol_json,
-                                      output_csv=vol_csv)
+                                      output_csv=vol_csv,
+                                      stx_scale=stx_scale)
         
         if qc_enabled:
             mask_cmap = config.get('qc_cmap', 'spectral')

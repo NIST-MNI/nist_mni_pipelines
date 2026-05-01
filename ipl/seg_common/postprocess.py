@@ -30,7 +30,7 @@ def find_largest_component(input):
     return labeled == largest
 
 
-def measure_volumes(seg, aff, labels_desc, out_seg_f=None, in_scan=None, load_output=False,scale=1.0):
+def measure_volumes(seg, aff, labels_desc, out_seg_f=None, in_scan=None, load_output=False, scale=1.0):
     """
     Measure volumes of labels in segmentation.
     

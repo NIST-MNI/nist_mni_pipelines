@@ -779,7 +779,7 @@ def segment_with_onnx(in_scans, out_seg, settings,
 
     if labels_desc is not None and not continuous and measure is not None:
         # save label measurements as json
-        vols=[measure_volumes(dset_out, orig_aff, labels_desc, out_seg_f=out_seg,in_scan=in_scans[0])]
+        vols=[measure_volumes(dset_out, orig_aff, labels_desc, out_seg_f=out_seg, in_scan=in_scans[0])]
         save_measurements(measure, vols)
 
     return out_seg
