@@ -312,6 +312,8 @@ class TP:
         self.stx_xfm = {}  # registration to stereotaxic space
         self.stx_ns_mnc = {}  # images in stereotaxic space (non-scaled)
         self.stx_ns_xfm = {}  # images in stereotaxic space (non-scaled)
+        self.stx2_ns_mnc = {}  # images in stereotaxic space (non-scaled), after stx2
+        self.stx2_ns_xfm = {}  # images in stereotaxic space (non-scaled), after stx2
 
         # improved stereotatic space
         # - images are aligned to the template
@@ -360,6 +362,8 @@ class TP:
         cleanImages(self.stx_xfm)
         cleanImages(self.stx_ns_mnc)
         cleanImages(self.stx_ns_xfm)
+        cleanImages(self.stx2_ns_mnc)
+        cleanImages(self.stx2_ns_xfm)
         cleanImages(self.stx2_mnc)
         cleanImages(self.stx2_xfm)
         cleanImages(self.lng_mnc)
@@ -516,6 +520,15 @@ def setFilenames(patient):
                 + '_' + tp + '_' + s + '.mnc'
             patient[tp].stx2_xfm[s] = stx2dir + 'stx2_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
+            # stx_ns  space
+            patient[tp].stx2_ns_mnc[s] = stx2dir + 'nsstx_' + patient.id \
+                + '_' + tp + '_' + s + '.mnc'
+            patient[tp].stx2_ns_xfm[s] = stx2dir + 'nsstx_' + patient.id \
+                + '_' + tp + '_' + s + '.xfm'
+            # hack
+            patient[tp].stx2_ns_xfm['unscale_'+s] = stx2dir + 'nsstx_unscale_' + patient.id \
+                + '_' + tp + '_' + s + '.xfm'
+
 
             patient[tp].qc_jpg['stx_' + s] = patient.qcdir + 'qc_stx_' + s + '_' + patient.id + '_' + tp + '.jpg'
             patient[tp].qc_jpg['stx2_' + s] = patient.qcdir + 'qc_stx2_' + s + '_' + patient.id + '_' + tp + '.jpg'

@@ -1410,14 +1410,22 @@ class mincTools(temp_files):
                     stdout=subprocess.PIPE).communicate()
             scale_ = list(filter(lambda x: re.match(r'^\-scale', x),
                             out.decode().split('\n')))
+            shear_ = list(filter(lambda x: re.match(r'^\-shear', x),
+                            out.decode().split('\n')))
             if len(scale_) != 1:
                 raise mincError("Can't extract scale from " + input)
+            if len(shear_) != 1:
+                raise mincError("Can't extract shear from " + input)
             scale__ = re.split(r'\s+', scale_[0])
+            shear__ = re.split(r'\s+', shear_[0])
+            # construct scale and shear xfm
             cmd = ['param2xfm']
             cmd.extend(scale__)
+            cmd.extend(shear__)
             cmd.extend([scale])
             self.command(cmd, verbose=self.verbose)
             self.xfminvert(scale, _unscale)
+            # remove both scale and shear
             self.xfmconcat([input, _unscale], output)
         finally:
             if os.path.exists(scale):
