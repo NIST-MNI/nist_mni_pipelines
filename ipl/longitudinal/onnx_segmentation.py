@@ -170,13 +170,13 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
             stx_scale = params['scale'][0] * params['scale'][1] * params['scale'][2]
 
         if input_space == 'native':
-            input_file = patient[tp].clp.get(input_sequence)
+            input_file = patient[tp].native.get(input_sequence)
             scale_factor = 1.0
         elif input_space == 'clp':
-            input_file = patient[tp].clp.get(input_sequence)
+            input_file = patient[tp].clp2.get(input_sequence)
             scale_factor = 1.0
         elif input_space == 'nsstx':
-            input_file = patient[tp].stx_ns_mnc.get(input_sequence)
+            input_file = patient[tp].stx2_ns_mnc.get(input_sequence)
             scale_factor = 1.0
         elif input_space == 'stx2':
             input_file = patient[tp].stx2_mnc.get(input_sequence)
@@ -191,7 +191,7 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
         vol_txt = patient[tp].tpdir + f'vol/vol_{output_suffix}_{patient.id}_{tp}.txt'
         vol_json = patient[tp].tpdir + f'vol/vol_{output_suffix}_{patient.id}_{tp}.json'
         vol_csv = patient[tp].tpdir + f'vol/vol_{output_suffix}_{patient.id}_{tp}.csv'
-        qc_output = patient.qcdir + f'qc_onnx_seg_{output_suffix}_{patient.id}_{tp}.jpg'
+        qc_output = patient.qcdir + f'qc_seg_{output_suffix}_{patient.id}_{tp}.jpg'
         
         if os.path.exists(seg_output) and os.path.exists(qc_output):
             return True

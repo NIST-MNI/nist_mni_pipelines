@@ -91,7 +91,9 @@ def _convert_outputs_to_nifti(patient):
                 os.unlink(path)
 
     for tp in patient.keys():
+        convert_dict(patient[tp].stx2_ns_mnc)
         convert_dict(patient[tp].stx2_mnc)
+        convert_dict(patient[tp].clp2)
         convert_dict(patient[tp].vbm)
         convert_dict(patient[tp].lng_det)
 
