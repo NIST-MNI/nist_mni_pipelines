@@ -521,12 +521,12 @@ def setFilenames(patient):
             patient[tp].stx2_xfm[s] = stx2dir + 'stx2_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
             # stx_ns  space
-            patient[tp].stx2_ns_mnc[s] = stx2dir + 'nsstx_' + patient.id \
+            patient[tp].stx2_ns_mnc[s] = stx2dir + 'nsstx2_' + patient.id \
                 + '_' + tp + '_' + s + '.mnc'
-            patient[tp].stx2_ns_xfm[s] = stx2dir + 'nsstx_' + patient.id \
+            patient[tp].stx2_ns_xfm[s] = stx2dir + 'nsstx2_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
             # hack
-            patient[tp].stx2_ns_xfm['unscale_'+s] = stx2dir + 'nsstx_unscale_' + patient.id \
+            patient[tp].stx2_ns_xfm['unscale_'+s] = stx2dir + 'nsstx2_unscale_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
 
 

@@ -98,6 +98,15 @@ def linearatlasregistration_v10(patient, tp):
                              patient[tp].stx2_mnc['t1'],
                              transform=patient[tp].stx2_xfm['t1'],
                              like=template_mask)
+        
+        ## create unscaled stx2 image  TODO: add a switch to avoid creating unscaled stx2 if not needed
+        minc.xfm_noscale( patient[tp].stx2_xfm['t1'], patient[tp].stx2_ns_xfm['t1'],
+                          unscale=patient[tp].stx2_ns_xfm['unscale_t1'])
+
+        minc.resample_smooth(patient[tp].clp2['t1'],
+                             patient[tp].stx2_ns_mnc['t1'],
+                             like=template_mask,
+                             transform=patient[tp].stx2_ns_xfm['t1'])
 
         modeloutline = patient.modeldir + os.sep + patient.modelname + '_brain_skull_outline.mnc'
         outline_range=[1,2]
