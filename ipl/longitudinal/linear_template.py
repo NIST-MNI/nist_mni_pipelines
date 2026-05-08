@@ -411,6 +411,15 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
                             transform=tp.stx2_xfm['t1'],
                             like=modelt1)
 
+        # create nsstx2 version of the t1 image, add switch to disable this unless needed
+        minc.xfm_noscale( tp.stx2_xfm['t1'], tp.stx2_ns_xfm['t1'],
+                          unscale=tp.stx2_ns_xfm['unscale_t1'])
+
+        minc.resample_smooth(tp.clp2['t1'],
+                             tp.stx2_ns_mnc['t1'],
+                             like=modelt1,
+                             transform=tp.stx2_ns_xfm['t1'])
+
         # 1bis. concatenate all transforms t2 BB
         # todo run N3 on T2 ?
         if 't2' in tp.native:
@@ -427,6 +436,15 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
             minc.resample_smooth(clp_t2_tp,
                     tp.stx2_mnc['t2'],
                     transform=tp.stx2_xfm['t2'], like=modelt1)
+            
+            # create nsstx2 version of the t2 image, add switch to disable this unless needed
+            minc.xfm_noscale( tp.stx2_xfm['t2'], tp.stx2_ns_xfm['t2'],
+                            unscale=tp.stx2_ns_xfm['unscale_t2'])
+
+            minc.resample_smooth(tp.clp2['t2'],
+                                tp.stx2_ns_mnc['t2'],
+                                like=modelt1,
+                                transform=tp.stx2_ns_xfm['t2'])
 
         if 'pd' in tp.native:
             # Warning: assume distortion correction for t2 and pd are the same
@@ -442,6 +460,15 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
             minc.resample_smooth(clp_pd_tp,
                     tp.stx2_mnc['pd'],
                     transform=tp.stx2_xfm['pd'], like=modelt1)
+            
+            # create nsstx2 version of the pd image, add switch to disable this unless needed
+            minc.xfm_noscale( tp.stx2_xfm['pd'], tp.stx2_ns_xfm['pd'],
+                            unscale=tp.stx2_ns_xfm['unscale_pd'])
+
+            minc.resample_smooth(tp.clp2['pd'],
+                                tp.stx2_ns_mnc['pd'],
+                                like=modelt1,
+                                transform=tp.stx2_ns_xfm['pd'])
 
         if 't2les' in tp.native:
             stx2_t2=tp.stx2_xfm['t2']
@@ -467,6 +494,16 @@ def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=No
             minc.resample_smooth(clp_flair_tp,
                     tp.stx2_mnc['flair'],
                     transform=tp.stx2_xfm['flair'], like=modelt1)
+            
+            # create nsstx2 version of the t2 image, add switch to disable this unless needed
+            minc.xfm_noscale( tp.stx2_xfm['flair'], tp.stx2_ns_xfm['flair'],
+                            unscale=tp.stx2_ns_xfm['unscale_flair'])
+
+            minc.resample_smooth(tp.clp2['flair'],
+                                tp.stx2_ns_mnc['flair'],
+                                like=modelt1,
+                                transform=tp.stx2_ns_xfm['flair'])
+
 
 
 def linearlngtemplate_v11(patient):
