@@ -30,7 +30,7 @@ def parse_options():
 
     parser.add_argument('--list',
                     help="List of comma separated files: scan,mask",
-                    dest='ldd_estimate')
+                    dest='list')
 
     parser.add_argument('--output',
                     help="Output prefix",
@@ -89,7 +89,7 @@ def parse_options():
 def main():
     options = parse_options()
 
-    if options.output is None or options.parameters is None or options.ldd_estimate is None:
+    if options.output is None or options.parameters is None or options.list is None:
          print("Error in arguments, run with --help")
     else:
         if options.ray_start is not None: # HACK?
@@ -102,7 +102,7 @@ def main():
             ray.init(address='auto',log_to_driver=not options.quiet)
 
     if options.nonlinear:
-        generate_nonlinear_model_csv('subjects.lst',
+        generate_nonlinear_model_csv(options.list,
             work_prefix=options.output,
             options={'symmetric':options.symmetric,
                      'protocol': [  {'iter':4,'level':16},
@@ -117,7 +117,7 @@ def main():
             mask=options.mask,
         )
     else:
-        generate_linear_model_csv('subjects.lst',
+        generate_linear_model_csv(options.list,
             work_prefix=options.output,
             options={'symmetric':options.symmetric,
                     'iterations':4,
