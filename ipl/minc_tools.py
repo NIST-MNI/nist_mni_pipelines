@@ -1723,16 +1723,11 @@ class mincTools(temp_files):
         self.command(cmd, inputs=[input_nii], outputs=[output_mnc], verbose=self.verbose)
 
     def mnc2nii(self, input_mnc, output_nii_gz):
-        """Convert MINC to .nii.gz (mnc2nii + Python gzip)"""
-        import gzip
+        """Convert MINC to .nii.gz """
         if not mincTools.checkfiles(inputs=[input_mnc], outputs=[output_nii_gz]):
             return  # already up-to-date
-        nii_tmp = output_nii_gz[:-3]  # strip .gz
-        cmd = ['mnc2nii', '-nii', input_mnc, nii_tmp]
-        self.command(cmd, inputs=[input_mnc], outputs=[nii_tmp], verbose=self.verbose)
-        with open(nii_tmp, 'rb') as f_in, gzip.open(output_nii_gz, 'wb') as f_out:
-            f_out.writelines(f_in)
-        os.unlink(nii_tmp)
+        cmd = ['mnc2nii', '-nii', input_mnc, output_nii_gz ]
+        self.command(cmd, inputs=[input_mnc], outputs=[output_nii_gz], verbose=self.verbose)
 
     def reshape(
         self,

@@ -10,9 +10,8 @@ mkdir -p subject43_nifti
 for f in subject43/*.mnc; do
     base=$(basename "$f" .mnc)
     out="subject43_nifti/${base}.nii.gz"
-    if [ ! -f "$out" ]; then
-        mnc2nii -nii "$f" "subject43_nifti/${base}.nii"
-        gzip "subject43_nifti/${base}.nii"
+    if [[ ! -f "$out" ]]; then
+        mnc2nii -nii "$f" "subject43_nifti/${base}.nii.gz"
     fi
 done
 
@@ -30,3 +29,4 @@ python ../ipl_longitudinal_pipeline.py \
     --redskull_onnx $loc_pfx/models/redskull/redskull_fp.onnx \
     --redskull_native \
     --output-nifti
+    
