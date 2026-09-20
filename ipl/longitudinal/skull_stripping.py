@@ -206,7 +206,7 @@ def skullstripping_v10(params):
 
         # reformat mask into native space if needed
         if params["clp_mask"] is not None and \
-            (params["synthstrip_onnx"] is None or params["run_redskull_onnx"] is not None)  and \
+            (params["synthstrip_onnx"] is None or params["redskull_onnx"] is not None)  and \
             os.path.exists(params["xfmt1"]) and \
             os.path.exists(params["clpt1"]):
 
