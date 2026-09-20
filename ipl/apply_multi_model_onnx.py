@@ -309,8 +309,6 @@ def segment_whole(
         else:
             conformed = dataset.astype('float32') # to be compatible with spatial expectation of the model
 
-    print(f"{dataset.shape=} {conformed.shape=}")
-
     if freesurfer:
         conformed=np.ascontiguousarray(conformed.transpose([0,1,4,3,2])[:,:,:,::-1,:]).copy()
     elif nibabel:
@@ -347,8 +345,6 @@ def segment_whole(
     elif nibabel:
         out=np.ascontiguousarray(out.transpose([0,1,4,3,2]))
     
-    print(f"{dataset.shape=} {out.shape=}")
-
     # unpad
     if np.any(target_shape != dataset.shape[2:]):
         if trim:
