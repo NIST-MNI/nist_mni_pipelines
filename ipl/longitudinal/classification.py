@@ -123,7 +123,7 @@ def classification_v10(patient, tp):
 
     wmh_bison_pfx=None
     wmh_bison_atlases=None
-    
+    wmh_bison_atlas_pfx=None
     # first run WMH classification , if possible
     if patient.wmh_bison_pfx is not None:
         #
