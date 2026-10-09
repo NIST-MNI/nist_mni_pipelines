@@ -42,10 +42,16 @@ def pipeline_linearlngtemplate(patient):
 
         for (i, tp) in patient.items():
             outputImages.extend([tp.stx2_xfm['t1'], 
-                                 tp.stx2_mnc['t1']])  # TODO add T2/PD ?
+                                 tp.stx2_mnc['t1']])
+            if 't2' in tp.native:
+                outputImages.extend([tp.stx2_xfm['t2'], 
+                                     tp.stx2_mnc['t2']]) 
+            if 'pd' in tp.native:
+                outputImages.extend([tp.stx2_xfm['pd'], 
+                                     tp.stx2_mnc['pd']]) 
+
 
         # check if images exists
-
         allDone = True
         for i in outputImages:
             if not os.path.exists(i):
@@ -331,179 +337,186 @@ def register_using_skull(in_t1w, in_skull,     in_brain,
 
 # apply additional processing steps
 @ray.remote
-def post_process(patient, i, tp, transform, biascorr, rigid=False, transform2=None, scale_xfm=None):
+def post_process(patient, i, tp, transform, biascorr, 
+                 rigid=False, 
+                 transform2=None, scale_xfm=None):
     # bias in stx space
-    modelt1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
-    modelmask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
-    
-    with mincTools() as minc:
-        xfmfile = transform.xfm
-        stx_xfm_file = tp.stx_ns_xfm['t1'] if rigid else tp.stx_xfm['t1']
-        clp_tp = tp.clp['t1']
+    try:
+        modelt1   = patient.modeldir + os.sep + patient.modelname + '.mnc'
+        modelmask = patient.modeldir + os.sep + patient.modelname + '_mask.mnc'
+        with mincTools() as minc:
+            xfmfile = transform.xfm
+            stx_xfm_file = tp.stx_ns_xfm['t1'] if rigid else tp.stx_xfm['t1']
+            clp_tp = tp.clp['t1']
 
-        if patient.geo_corr and 't1' in patient[i].geo:
-            clp_tp = tp.corr['t1']
+            if patient.geo_corr and 't1' in patient[i].geo:
+                clp_tp = tp.corr['t1']
 
-        if biascorr is not None:
-            stx_bias = biascorr.scan
+            if biascorr is not None:
+                stx_bias = biascorr.scan
 
-            # 1. Transform the stn bias into native
-            native_log_bias = minc.tmp('tmpbias_' + patient.id + '.mnc')
-            minc.calc([stx_bias],"A[0]>0.1?log(A[0]):0.0", minc.tmp('logbias_' + patient.id + '.mnc'))
+                # 1. Transform the stn bias into native
+                native_log_bias = minc.tmp('tmpbias_' + patient.id + '.mnc')
+                minc.calc([stx_bias],"A[0]>0.1?log(A[0]):0.0", minc.tmp('logbias_' + patient.id + '.mnc'))
 
-            # TODO: maybe better to resample with different fill value here?
-            minc.resample_smooth(
-                minc.tmp('logbias_' + patient.id + '.mnc'),
-                native_log_bias,
-                transform=stx_xfm_file,
-                like=tp.clp['t1'],
-                invert_transform=True,
-                resample='linear',
-                order=1
-                )
+                # TODO: maybe better to resample with different fill value here?
+                minc.resample_smooth(
+                    minc.tmp('logbias_' + patient.id + '.mnc'),
+                    native_log_bias,
+                    transform=stx_xfm_file,
+                    like=tp.clp['t1'],
+                    invert_transform=True,
+                    resample='linear',
+                    order=1
+                    )
 
-            # 2. Apply correction to clp image
-            minc.calc([clp_tp, native_log_bias],
-                    'A[0]/exp(A[1])', minc.tmp('clp2_t1.mnc'), datatype='-short')
-            # apply normalization once again
-            minc.volume_pol(
-                minc.tmp('clp2_t1.mnc'),
-                modelt1,
-                tp.clp2['t1'],
-                source_mask=tp.clp['mask'],
-                target_mask=modelmask,
-                datatype='-short' )
+                # 2. Apply correction to clp image
+                minc.calc([clp_tp, native_log_bias],
+                        'A[0]/exp(A[1])', minc.tmp('clp2_t1.mnc'), datatype='-short')
+                # apply normalization once again
+                minc.volume_pol(
+                    minc.tmp('clp2_t1.mnc'),
+                    modelt1,
+                    tp.clp2['t1'],
+                    source_mask=tp.clp['mask'],
+                    target_mask=modelmask,
+                    datatype='-short' )
 
-            clp_tp=tp.clp2['t1']
+                clp_tp=tp.clp2['t1']
 
-        else: # just run Nu correct one more time
-            minc.nu_correct(clp_tp, 
-                            output_image=minc.tmp('clp2_t1.mnc'), 
-                            mask=tp.clp['mask'], 
-                            mri3t=patient.mri3T )
+            else: # just run Nu correct one more time
+                minc.nu_correct(clp_tp, 
+                                output_image=minc.tmp('clp2_t1.mnc'), 
+                                mask=tp.clp['mask'], 
+                                mri3t=patient.mri3T )
 
-            minc.volume_pol(
-                minc.tmp('clp2_t1.mnc'),
-                modelt1,
-                tp.clp2['t1'],
-                source_mask=tp.clp['mask'],
-                target_mask=modelmask,
-                datatype='-short' )
+                minc.volume_pol(
+                    minc.tmp('clp2_t1.mnc'),
+                    modelt1,
+                    tp.clp2['t1'],
+                    source_mask=tp.clp['mask'],
+                    target_mask=modelmask,
+                    datatype='-short' )
 
-            clp_tp=tp.clp2['t1']
+                clp_tp=tp.clp2['t1']
 
-        # 3. concatenate all transforms
-        if patient.skullreg:
-            minc.xfmconcat([stx_xfm_file, 
-                            xfmfile, 
-                            #transform2.xfm,  # DISABLED for now
-                            scale_xfm, 
-                            patient.template['stx2_xfm'] ],
-                        tp.stx2_xfm['t1'] )
-        else:
-            minc.xfmconcat([stx_xfm_file, xfmfile,
-                        patient.template['stx2_xfm']],
-                        tp.stx2_xfm['t1'])
+            # 3. concatenate all transforms
+            if patient.skullreg:
+                minc.xfmconcat([stx_xfm_file, 
+                                xfmfile, 
+                                #transform2.xfm,  # DISABLED for now
+                                scale_xfm, 
+                                patient.template['stx2_xfm'] ],
+                            tp.stx2_xfm['t1'] )
+            else:
+                minc.xfmconcat([stx_xfm_file, xfmfile,
+                            patient.template['stx2_xfm']],
+                            tp.stx2_xfm['t1'])
 
-        # reformat native t1, t2, pd and lesions images into stx2 BB
-        minc.resample_smooth(clp_tp,
-                            tp.stx2_mnc['t1'],
-                            transform=tp.stx2_xfm['t1'],
-                            like=modelt1)
+            # reformat native t1, t2, pd and lesions images into stx2 BB
+            minc.resample_smooth(clp_tp,
+                                tp.stx2_mnc['t1'],
+                                transform=tp.stx2_xfm['t1'],
+                                like=modelt1)
 
-        # create nsstx2 version of the t1 image, add switch to disable this unless needed
-        minc.xfm_noscale( tp.stx2_xfm['t1'], tp.stx2_ns_xfm['t1'],
-                          unscale=tp.stx2_ns_xfm['unscale_t1'])
+            # create nsstx2 version of the t1 image, add switch to disable this unless needed
+            minc.xfm_noscale( tp.stx2_xfm['t1'], tp.stx2_ns_xfm['t1'],
+                            unscale=tp.stx2_ns_xfm['unscale_t1'])
 
-        minc.resample_smooth(tp.clp2['t1'],
-                             tp.stx2_ns_mnc['t1'],
-                             like=modelt1,
-                             transform=tp.stx2_ns_xfm['t1'])
-
-        # 1bis. concatenate all transforms t2 BB
-        # todo run N3 on T2 ?
-        if 't2' in tp.native:
-            clp_t2_tp = tp.clp['t2']
-            
-            if patient.geo_corr and 't2' in patient[i].geo:
-                clp_t2_tp = tp.corr['t2']
-            
-            minc.xfmconcat([tp.clp['t2t1xfm'],
-                        stx_xfm_file,
-                        patient.template['stx2_xfm']],
-                        tp.stx2_xfm['t2'])
-
-            minc.resample_smooth(clp_t2_tp,
-                    tp.stx2_mnc['t2'],
-                    transform=tp.stx2_xfm['t2'], like=modelt1)
-            
-            # create nsstx2 version of the t2 image, add switch to disable this unless needed
-            minc.xfm_noscale( tp.stx2_xfm['t2'], tp.stx2_ns_xfm['t2'],
-                            unscale=tp.stx2_ns_xfm['unscale_t2'])
-
-            minc.resample_smooth(tp.clp2['t2'],
-                                tp.stx2_ns_mnc['t2'],
+            minc.resample_smooth(tp.clp2['t1'],
+                                tp.stx2_ns_mnc['t1'],
                                 like=modelt1,
-                                transform=tp.stx2_ns_xfm['t2'])
+                                transform=tp.stx2_ns_xfm['t1'])
 
-        if 'pd' in tp.native:
-            # Warning: assume distortion correction for t2 and pd are the same
-            clp_pd_tp = tp.clp['pd']
-            
-            if patient.geo_corr and 't2' in patient[i].geo:
-                clp_pd_tp = tp.corr['pd']
+            # 1bis. concatenate all transforms t2 BB
+            # todo run N3 on T2 ?
+            if 't2' in tp.native:
+                clp_t2_tp = tp.clp['t2']
                 
-            minc.xfmconcat([tp.clp['pdt1xfm'],
-                        stx_xfm_file,
-                        patient.template['stx2_xfm']],
-                        tp.stx2_xfm['pd'])
-            minc.resample_smooth(clp_pd_tp,
-                    tp.stx2_mnc['pd'],
-                    transform=tp.stx2_xfm['pd'], like=modelt1)
-            
-            # create nsstx2 version of the pd image, add switch to disable this unless needed
-            minc.xfm_noscale( tp.stx2_xfm['pd'], tp.stx2_ns_xfm['pd'],
-                            unscale=tp.stx2_ns_xfm['unscale_pd'])
-
-            minc.resample_smooth(tp.clp2['pd'],
-                                tp.stx2_ns_mnc['pd'],
-                                like=modelt1,
-                                transform=tp.stx2_ns_xfm['pd'])
-
-        if 't2les' in tp.native:
-            stx2_t2=tp.stx2_xfm['t2']
-            if 't2' in patient[i].geo and patient.geo_corr:
-                tmp_t2_xfm = minc.tmp('t2_corr_xfm.xfm')
-                minc.xfmconcat([patient[i].geo['t2'],tp.stx2_xfm['t2']], tmp_t2_xfm )
-                stx2_t2=tmp_t2_xfm
-
-            minc.resample_labels(tp.native['t2les'],
-                    tp.stx2_mnc['t2les'],
-                    transform=stx2_t2, like=modelt1)
-            
-        if 'flair' in tp.native:
-            clp_flair_tp = tp.clp['flair']
-            
-            if patient.geo_corr and 'flair' in patient[i].geo:
-                clp_flair_tp = tp.corr['flair']
+                if patient.geo_corr and 't2' in patient[i].geo:
+                    clp_t2_tp = tp.corr['t2']
                 
-            minc.xfmconcat([tp.clp['flairt1xfm'],
-                        stx_xfm_file,
-                        patient.template['stx2_xfm']],
-                        tp.stx2_xfm['flair'])
-            minc.resample_smooth(clp_flair_tp,
-                    tp.stx2_mnc['flair'],
-                    transform=tp.stx2_xfm['flair'], like=modelt1)
+                minc.xfmconcat([tp.clp['t2t1xfm'],
+                            stx_xfm_file,
+                            patient.template['stx2_xfm']],
+                            tp.stx2_xfm['t2'])
+
+                minc.resample_smooth(clp_t2_tp,
+                        tp.stx2_mnc['t2'],
+                        transform=tp.stx2_xfm['t2'], like=modelt1)
+                
+                # create nsstx2 version of the t2 image, add switch to disable this unless needed
+                minc.xfm_noscale( tp.stx2_xfm['t2'], tp.stx2_ns_xfm['t2'],
+                                unscale=tp.stx2_ns_xfm['unscale_t2'])
+
+                minc.resample_smooth(clp_t2_tp,
+                                    tp.stx2_ns_mnc['t2'],
+                                    like=modelt1,
+                                    transform=tp.stx2_ns_xfm['t2'])
             
-            # create nsstx2 version of the t2 image, add switch to disable this unless needed
-            minc.xfm_noscale( tp.stx2_xfm['flair'], tp.stx2_ns_xfm['flair'],
-                            unscale=tp.stx2_ns_xfm['unscale_flair'])
+            print("DEBUG:",tp.native)
+            if 'pd' in tp.native:
+                # Warning: assume distortion correction for t2 and pd are the same
+                clp_pd_tp = tp.clp['pd']
+                
+                if patient.geo_corr and 't2' in patient[i].geo:
+                    clp_pd_tp = tp.corr['pd']
+                    
+                minc.xfmconcat([tp.clp['pdt1xfm'],
+                            stx_xfm_file,
+                            patient.template['stx2_xfm']],
+                            tp.stx2_xfm['pd'])
+                
+                minc.resample_smooth(clp_pd_tp,
+                        tp.stx2_mnc['pd'],
+                        transform=tp.stx2_xfm['pd'], like=modelt1)
+                
+                # create nsstx2 version of the pd image, add switch to disable this unless needed
+                minc.xfm_noscale( tp.stx2_xfm['pd'], tp.stx2_ns_xfm['pd'],
+                                unscale=tp.stx2_ns_xfm['unscale_pd'])
 
-            minc.resample_smooth(tp.clp2['flair'],
-                                tp.stx2_ns_mnc['flair'],
-                                like=modelt1,
-                                transform=tp.stx2_ns_xfm['flair'])
+                minc.resample_smooth(clp_pd_tp,
+                                    tp.stx2_ns_mnc['pd'],
+                                    like=modelt1,
+                                    transform=tp.stx2_ns_xfm['pd'])
 
+            if 't2les' in tp.native:
+                stx2_t2=tp.stx2_xfm['t2']
+                if 't2' in patient[i].geo and patient.geo_corr:
+                    tmp_t2_xfm = minc.tmp('t2_corr_xfm.xfm')
+                    minc.xfmconcat([patient[i].geo['t2'],tp.stx2_xfm['t2']], tmp_t2_xfm )
+                    stx2_t2=tmp_t2_xfm
+
+                minc.resample_labels(tp.native['t2les'],
+                        tp.stx2_mnc['t2les'],
+                        transform=stx2_t2, like=modelt1)
+                
+            if 'flair' in tp.native:
+                clp_flair_tp = tp.clp['flair']
+                
+                if patient.geo_corr and 'flair' in patient[i].geo:
+                    clp_flair_tp = tp.corr['flair']
+                    
+                minc.xfmconcat([tp.clp['flairt1xfm'],
+                            stx_xfm_file,
+                            patient.template['stx2_xfm']],
+                            tp.stx2_xfm['flair'])
+                minc.resample_smooth(clp_flair_tp,
+                        tp.stx2_mnc['flair'],
+                        transform=tp.stx2_xfm['flair'], like=modelt1)
+                
+                # create nsstx2 version of the t2 image, add switch to disable this unless needed
+                minc.xfm_noscale( tp.stx2_xfm['flair'], tp.stx2_ns_xfm['flair'],
+                                unscale=tp.stx2_ns_xfm['unscale_flair'])
+
+                minc.resample_smooth(clp_flair_tp,
+                                    tp.stx2_ns_mnc['flair'],
+                                    like=modelt1,
+                                    transform=tp.stx2_ns_xfm['flair'])
+    except mincError as e:
+        print("Exception in post_process:{}".format(str(e)))
+        traceback.print_exc(file=sys.stdout)
+        raise
 
 
 def linearlngtemplate_v11(patient):
@@ -713,6 +726,8 @@ def linearlngtemplate_v11(patient):
         # apply new correction to each timepoint stx file
         k=0
         jobs=[]
+        print("DEBUG:############")
+        print("Applying post-processing to each timepoint")
         
         for (i, tp) in patient.items():
             biascorr=None
@@ -721,11 +736,12 @@ def linearlngtemplate_v11(patient):
             # Here we are relying on the time point order (1) - see above
             if patient.skullreg:
                 # transform2 disabled for now
-                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=True, 
+                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, 
+                            rigid=True, 
                             transform2=None, scale_xfm=patient.template['scale_xfm']))
-                
             else:
-                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, rigid=patient.rigid ))
+                jobs.append(post_process.remote( patient, i, tp, output['xfm'][k], biascorr, 
+                            rigid=patient.rigid ))
             k+=1
         
         # wait for all substeps to finish

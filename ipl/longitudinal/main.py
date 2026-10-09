@@ -182,25 +182,25 @@ def runTimePoint_SecondStage(tp, patient, vbm_options):
         pipeline_linearatlasregistration(patient, tp)
 
         pipeline_stx2_skullstripping(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         pipeline_atlasregistration(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         # tissue classification
         # ######################
         pipeline_classification(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         # lobe segmentation
         # ######################
         pipeline_lobe_segmentation(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         # ONNX segmentation
         if patient.onnx_segmentation_config is not None:
             pipeline_onnx_segmentation(patient, tp, patient.onnx_segmentation_config, patient.onnx_model_prefix)
-            patient.write(patient.pickle)  # copy new images in the pickle
+            #patient.write(patient.pickle)  # copy new images in the pickle
 
         # Additional steps because there is only one timepoint actually
         # ######################
@@ -243,10 +243,10 @@ def runTimePoint_ThirdStage(tp, patient):
     try:
         #########################
         pipeline_concat(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         pipeline_classification(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
     except mincError as e:
         print("Exception in runTimePoint_ThirdStage:{}".format(repr(e)) )
@@ -270,12 +270,12 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
         # lobe segmentation
         # ######################
         pipeline_lobe_segmentation(patient, tp)
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         # ONNX segmentation (multi-TP case)
         if patient.onnx_segmentation_config is not None and len(patient) > 1:
             pipeline_onnx_segmentation(patient, tp, patient.onnx_segmentation_config, patient.onnx_model_prefix)
-            patient.write(patient.pickle)  # copy new images in the pickle
+            #patient.write(patient.pickle)  # copy new images in the pickle
 
         # vbm images
         # ###########
@@ -308,21 +308,24 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             patient = LngPatient.read(pickle)
 
         setFilenames(patient)
+        ### 
         _convert_nifti_inputs(patient)
 
         if workdir is not None:
             patient.workdir=workdir
+        
+        patient.write(patient.pickle)  # copy new images in the pickle        
         
         # prepare qc folder
         tps=sorted(list(patient.keys()))
 
         # first stage A, multithreading steps
         ray.get([runTimePoint_FirstStageA.remote(tp, patient) for tp in tps])
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         # first stage B, single threading steps
         ray.get([runTimePoint_FirstStageB.remote(tp, patient) for tp in tps])
-        patient.write(patient.pickle)  # copy new images in the pickle
+        #patient.write(patient.pickle)  # copy new images in the pickle
 
         jobs=[]
 
@@ -348,6 +351,7 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             # ##########################
             pipeline_atlasregistration(patient)
 
+            # run additional processing if needed
             if len(patient.add)>0:
                 pipeline_run_add(patient)
 
@@ -366,7 +370,8 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             patient.cleanup()
         else:
             # no need to write it, if we will cleanup
-            patient.write(patient.pickle)  # copy new images in the pickle
+            #patient.write(patient.pickle)  # copy new images in the pickle
+            pass
 
         if getattr(patient, 'output_nifti', False):
             _convert_outputs_to_nifti(patient)

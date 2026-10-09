@@ -29,7 +29,8 @@ import traceback
 
 
 try:
-    from ipl.apply_multi_model_onnx import segment_with_onnx
+    #from ipl.apply_multi_model_onnx import segment_with_onnx
+    from apply_seg_onnx import segment as segment_with_onnx
     _have_segmentation_onnx=True
 except:
     _have_segmentation_onnx=False
@@ -146,7 +147,7 @@ def run_redskull_onnx(in_t1w, out_redskull,
             if redskull_var=='seg':
                 segment_with_onnx([in_t1w_], out_redskull_,
                                     threads=n_threads,
-                                    settings=dict(
+                                    config=dict(
                                         whole=False, freesurfer=False, 
                                         normalize=True, 
                                         dist=False,
@@ -235,16 +236,16 @@ def run_synthstrip_onnx(in_t1w, out_synthstrip,
             if normalize_1x1x1:
                 minc.resample_smooth(in_t1w, minc.tmp('t1_1x1x1.mnc'), unistep=1.0)
                 segment_with_onnx([minc.tmp('t1_1x1x1.mnc')], minc.tmp('brain_1x1x1.mnc'),
-                                    
-                                    settings=dict(whole=True,freesurfer=True,normalize=True,
+                                    config=dict(whole=True,freesurfer=True,normalize=True,
                                                  threads=n_threads, dist=True,largest=True,
                                                  models=[synthstrip_model],
                                                  )
                                     ) # 
-                minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,like=in_t1w,datatype='byte')
+                minc.resample_labels(minc.tmp('brain_1x1x1.mnc'),out_synthstrip,
+                                     like=in_t1w,datatype='byte')
             else:
                 segment_with_onnx([in_t1w], out_synthstrip,
-                                    settings=dict(whole=True,freesurfer=True,normalize=True,
+                                    config=dict(whole=True,freesurfer=True,normalize=True,
                                                   threads=n_threads, dist=True,largest=True,
                                                   models=[synthstrip_model],
                                                   )

@@ -214,7 +214,7 @@ class LngPatient(dict):
         # deep copy of the patient
         tmppatient = copy.deepcopy(self)
         # clean patient... removing non existing images
-        tmppatient.clean()
+        #tmppatient.clean()
 
         # write into the pickle
 
@@ -478,8 +478,7 @@ def setFilenames(patient):
         # take the sequences of the patient from the native images
         # this includes t1,t2,pd and t2les
 
-        seqs = patient[tp].native.keys()
-        for s in seqs:
+        for s in patient[tp].native.keys():
 
             # clp space, after denoising
             patient[tp].den[s] = clpdir + 'den_' + patient.id + '_' \
@@ -542,32 +541,32 @@ def setFilenames(patient):
 
             if patient.manualdir is not None:
 
-                patient[tp].manual['clp_' + s] = patient.manualdir \
-                    + os.sep + tp + os.sep + 'clp_manual_' + patient.id + '_' \
-                    + tp + '_' + s + '.mnc'
-                if not os.path.exists(patient[tp].manual['clp_' + s]):
+                if  os.path.exists(patient[tp].manual['clp_' + s]):
 
+                    patient[tp].manual['clp_' + s] = patient.manualdir \
+                                        + os.sep + tp + os.sep + 'clp_manual_' + patient.id + '_' \
+                                        + tp + '_' + s + '.mnc'
+                    
                     # if it does not exists, we remove it from the dictionary
-                    del patient[tp].manual['clp_' + s]
+                    #del patient[tp].manual['clp_' + s]
 
                     # DLC 2016.06.16 , the line was:
                     # + os.sep tp + 'stx_manual_' + patient.id + '_'
                     # which gave two '//' before the timepoint, and no '/' afterwards.
                     
-                patient[tp].manual['stx_' + s] = patient.manualdir \
-                    + os.sep + tp + os.sep + 'stx_manual_' + patient.id + '_' \
-                    + tp + '_' + s + '.xfm'
-
-                # print(out manual stuff...)
-                print('manual xfm is: ' )
-                print(patient[tp].manual['stx_' + s])
-                print('\n')
 
                 
-                if not os.path.exists(patient[tp].manual['stx_' + s]):
+                if os.path.exists(patient[tp].manual['stx_' + s]):
+                    patient[tp].manual['stx_' + s] = patient.manualdir \
+                        + os.sep + tp + os.sep + 'stx_manual_' + patient.id + '_' \
+                        + tp + '_' + s + '.xfm'
 
+                    # print(out manual stuff...)
+                    print('manual xfm is: ' )
+                    print(patient[tp].manual['stx_' + s])
+                    print('\n')
                     # if it does not exists, we remove it from the dictionary
-                    del patient[tp].manual['stx_' + s]
+                    #del patient[tp].manual['stx_' + s]
 
             # end of sequences
 

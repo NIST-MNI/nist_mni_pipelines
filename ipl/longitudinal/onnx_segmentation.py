@@ -24,7 +24,7 @@ from ipl.minc_tools import mincTools, mincError
 from ipl import minc_qc
 
 try:
-    from ipl.apply_multi_model_onnx import segment_with_onnx
+    from apply_seg_onnx import segment as segment_with_onnx
     _have_segmentation_onnx = True
 except:
     _have_segmentation_onnx = False
@@ -142,7 +142,7 @@ def run_onnx_segmentation(input_file, output_file, config, threads=1, model_pref
     segment_with_onnx(
         [input_file],
         output_file,
-        settings=settings,
+        config=settings,
         threads=n_threads
     )
 
@@ -285,7 +285,7 @@ if __name__ == '__main__':
     segment_with_onnx(
         [opts.input],
         opts.output,
-        settings=config.get('apply_multi_model_onnx_options', {}),
+        config=config.get('apply_multi_model_onnx_options', {}),
         threads=int(opts.threads),
         measure=config['measurements_file']
     )

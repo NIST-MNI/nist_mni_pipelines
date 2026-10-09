@@ -129,7 +129,8 @@ def setup_patient(id, options):
     return patient
 
 def setup_visit(patient, visit,
-                t1=None,t2=None,pd=None,flair=None,
+                t1=None,t2=None,
+                pd=None,flair=None,
                 age=None,sex=None,
                 geo_t1=None,geo_t2=None,t2les=None):
     assert visit not in patient , f' -- ERROR : Timepoint {visit} repeated in patient {patient.id}'
@@ -331,6 +332,7 @@ def launchPipeline(options):
     pickles = []
 
     for (id, i) in patients.items():
+        i.printself()
         # writing the pickle file
         if not os.path.exists(i.pickle):
             i.write(i.pickle)
@@ -354,7 +356,7 @@ def launchPipeline(options):
             except ray.exceptions.RayTaskError as e:
                 n_fail+=1
                 print("Exception in runPipeline:{}".format(sys.exc_info()[0]) )
-                print(e.traceback_str,flush=True)
+                print(e,flush=True)
                 ee=e.as_instanceof_cause()
                 print(ee,flush=True)
             except KeyboardInterrupt:
