@@ -274,7 +274,9 @@ def runTimePoint_FourthStage(tp, patient, vbm_options):
 
         # ONNX segmentation (multi-TP case)
         if patient.onnx_segmentation_config is not None and len(patient) > 1:
-            pipeline_onnx_segmentation(patient, tp, patient.onnx_segmentation_config, patient.onnx_model_prefix)
+            pipeline_onnx_segmentation(patient, 
+                                       tp, patient.onnx_segmentation_config, 
+                                       patient.onnx_model_prefix)
             #patient.write(patient.pickle)  # copy new images in the pickle
 
         # vbm images
@@ -308,14 +310,15 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             patient = LngPatient.read(pickle)
 
         setFilenames(patient)
-        ### 
+        ###
         _convert_nifti_inputs(patient)
+        output_nifti=getattr(patient, 'output_nifti', False)
 
         if workdir is not None:
             patient.workdir=workdir
-        
+
         patient.write(patient.pickle)  # copy new images in the pickle        
-        
+
         # prepare qc folder
         tps=sorted(list(patient.keys()))
 
@@ -333,7 +336,6 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             for tp in tps:
                 ray.get([runTimePoint_SecondStage.remote( tp, patient, patient.vbm_options  )])
         else:
-            
             # create longitudinal template
             # ############################
             # it creates a new stx space (stx2) registering the linear template to the atlas
@@ -373,7 +375,7 @@ def runPipeline(pickle=None, patient=None, workdir=None):
             #patient.write(patient.pickle)  # copy new images in the pickle
             pass
 
-        if getattr(patient, 'output_nifti', False):
+        if output_nifti:
             _convert_outputs_to_nifti(patient)
 
         return patient.id
@@ -385,4 +387,3 @@ def runPipeline(pickle=None, patient=None, workdir=None):
         print("Exception in runPipeline:{}".format(sys.exc_info()[0]),flush=True )
         traceback.print_exc(file=sys.stdout)
         raise
-    

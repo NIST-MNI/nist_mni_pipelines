@@ -136,9 +136,6 @@ class LngPatient(dict):
         cleanImages(self.template)
         cleanImages(self.stx_mnc)
         cleanImages(self.stx2_mnc)
-
-        # cleanImages(self.stx2v0_mnc)
-
         cleanImages(self.qc_jpg)
 
         if not os.path.exists(self.nl_xfm):
@@ -194,7 +191,7 @@ class LngPatient(dict):
             #     LngPatient._remove_file(self[tp].qc_jpg['stx_' + s])
         # TODO: reshape _grid files to use short datatype instead of float ?
         # finally remove the pickle
-        LngPatient._remove_file(self.pickle) 
+        LngPatient._remove_file(self.pickle)
 
     @staticmethod  # static function to load pickle
     def read(filename):
@@ -314,7 +311,6 @@ class TP:
         self.stx_ns_xfm = {}  # images in stereotaxic space (non-scaled)
         self.stx2_ns_mnc = {}  # images in stereotaxic space (non-scaled), after stx2
         self.stx2_ns_xfm = {}  # images in stereotaxic space (non-scaled), after stx2
-
         # improved stereotatic space
         # - images are aligned to the template
         # - bias correction is improved, using the template difference
@@ -362,6 +358,7 @@ class TP:
         cleanImages(self.stx_xfm)
         cleanImages(self.stx_ns_mnc)
         cleanImages(self.stx_ns_xfm)
+        print('Cleaning stx2_ns_mnc and stx2_ns_xfm for timepoint ' + self.tp)
         cleanImages(self.stx2_ns_mnc)
         cleanImages(self.stx2_ns_xfm)
         cleanImages(self.stx2_mnc)
@@ -410,11 +407,8 @@ class TP:
         printImages(self.stx2_mnc)
         print('       + stx2_xfm ')
         printImages(self.stx2_xfm)
-
-    # print("       + stx2v0_xfm ")
-    # printImages(self.stx2_mnc)
-    # print("       + stx2v0_mnc ")
-    # printImages(self.stx2_xfm)
+        print('      - stx2_ns_mnc ')
+        printImages(self.stx2_ns_mnc)
 
         print('       + lng_mnc ')
         printImages(self.lng_mnc)
@@ -491,7 +485,6 @@ def setFilenames(patient):
             patient[tp].nuc[s] = clpdir + 'nuc_' + patient.id + '_' \
                 + tp + '_' + s + '.mnc'
 
-
             # clp space, after [denoising] and [distortion] correction
             patient[tp].corr[s] = clpdir + 'corr_' + patient.id + '_' \
                 + tp + '_' + s + '.mnc'
@@ -519,7 +512,10 @@ def setFilenames(patient):
                 + '_' + tp + '_' + s + '.mnc'
             patient[tp].stx2_xfm[s] = stx2dir + 'stx2_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
-            # stx_ns  space
+            #### DEBUG
+            patient[tp].printself()
+            #### DEBUG
+            # stx2_ns space
             patient[tp].stx2_ns_mnc[s] = stx2dir + 'nsstx2_' + patient.id \
                 + '_' + tp + '_' + s + '.mnc'
             patient[tp].stx2_ns_xfm[s] = stx2dir + 'nsstx2_' + patient.id \
@@ -527,7 +523,6 @@ def setFilenames(patient):
             # hack
             patient[tp].stx2_ns_xfm['unscale_'+s] = stx2dir + 'nsstx2_unscale_' + patient.id \
                 + '_' + tp + '_' + s + '.xfm'
-
 
             patient[tp].qc_jpg['stx_' + s] = patient.qcdir + 'qc_stx_' + s + '_' + patient.id + '_' + tp + '.jpg'
             patient[tp].qc_jpg['stx2_' + s] = patient.qcdir + 'qc_stx2_' + s + '_' + patient.id + '_' + tp + '.jpg'
@@ -554,7 +549,6 @@ def setFilenames(patient):
                     # + os.sep tp + 'stx_manual_' + patient.id + '_'
                     # which gave two '//' before the timepoint, and no '/' afterwards.
                     
-
                 
                 if os.path.exists(patient[tp].manual['stx_' + s]):
                     patient[tp].manual['stx_' + s] = patient.manualdir \

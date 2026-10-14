@@ -58,8 +58,6 @@ def pipeline_onnx_segmentation(patient, tp, config_file, model_prefix=None):
     with open(config_file, 'r') as f:
         config = json.load(f)
     
-    output_suffix = config.get('output_suffix', 'onnx_seg')
-    
     if not os.path.exists(patient[tp].tpdir + 'seg/'):
         os.makedirs(patient[tp].tpdir + 'seg/', exist_ok=True)
     
@@ -161,7 +159,8 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
     input_space = config.get('input_space', 'stx2')
     input_sequence = config.get('input_sequence', 't1')
     qc_enabled = config.get('qc_enabled', True)
-    
+    output_nifti=getattr(patient, 'output_nifti', False)
+
     with mincTools() as minc:
         input_file = None
 
@@ -188,6 +187,8 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
             raise mincError(f'Input file not found for {input_space}/{input_sequence}: {input_file}')
         
         seg_output = patient[tp].tpdir + f'seg/seg_{output_suffix}_{patient.id}_{tp}.mnc'
+        seg_output_nifti = patient[tp].tpdir + f'seg/seg_{output_suffix}_{patient.id}_{tp}.nii.gz'
+
         vol_txt = patient[tp].tpdir + f'vol/vol_{output_suffix}_{patient.id}_{tp}.txt'
         vol_json = patient[tp].tpdir + f'vol/vol_{output_suffix}_{patient.id}_{tp}.json'
         vol_csv = patient[tp].tpdir + f'vol/vol_{output_suffix}_{patient.id}_{tp}.csv'
@@ -244,6 +245,11 @@ def onnx_segmentation_v10(patient, tp, config, model_prefix=None):
                 fg_color="white",
                 mask_cmap=mask_cmap
             )
+        
+        if output_nifti:
+            minc.mnc2nii(seg_output, seg_output_nifti)
+            # in this case we can remove the minc output to save space
+            os.unlink(seg_output)
     
     return True
 
